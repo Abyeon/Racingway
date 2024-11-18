@@ -1,31 +1,30 @@
-﻿using System;
+using System;
 using System.Numerics;
+using Dalamud.Interface.Components;
 using Dalamud.Interface.Internal;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
 using ImGuiNET;
 
-namespace SamplePlugin.Windows;
+namespace ParkourTimer.Windows;
 
 public class MainWindow : Window, IDisposable
 {
-    private string GoatImagePath;
     private Plugin Plugin;
 
     // We give this window a hidden ID using ##
     // So that the user will see "My Amazing Window" as window title,
     // but for ImGui the ID is "My Amazing Window##With a hidden ID"
-    public MainWindow(Plugin plugin, string goatImagePath)
-        : base("My Amazing Window##With a hidden ID", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse)
+    public MainWindow(Plugin plugin)
+        : base("Race Setup##With a hidden ID", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse)
     {
         SizeConstraints = new WindowSizeConstraints
         {
-            MinimumSize = new Vector2(375, 330),
+            MinimumSize = new Vector2(375, 100),
             MaximumSize = new Vector2(float.MaxValue, float.MaxValue)
         };
 
-        GoatImagePath = goatImagePath;
         Plugin = plugin;
     }
 
@@ -33,26 +32,78 @@ public class MainWindow : Window, IDisposable
 
     public override void Draw()
     {
-        ImGui.Text($"The random config bool is {Plugin.Configuration.SomePropertyToBeSavedAndWithADefault}");
+        ImGui.Text($"Current position: {Plugin.ClientState.LocalPlayer.Position.ToString()}");
 
-        if (ImGui.Button("Show Settings"))
+        ///
+        /// Start box
+        /// 
+
+        if (ImGuiComponents.IconButton(0, Dalamud.Interface.FontAwesomeIcon.LocationArrow))
         {
-            Plugin.ToggleConfigUI();
+            //Plugin.ToggleConfigUI();
+            //ImGui.Text(Plugin.ClientState.LocalPlayer.Position.ToString());
+            Plugin.startBoxMin = Plugin.ClientState.LocalPlayer.Position;
+            //Plugin.ChatGui.Print($"Start box min has been set to {Plugin.startBoxMin}");
+            Plugin.ChatGui.Print($"Start box min has been set to {Plugin.startBoxMin}");
         }
+
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetTooltip("Set the current position as the minimum for your starting box.");
+        }
+
+        ImGui.SameLine();
+        ImGui.DragFloat3("Start Box Min", ref Plugin.startBoxMin);
+
+        if (ImGuiComponents.IconButton(1, Dalamud.Interface.FontAwesomeIcon.LocationArrow))
+        {
+            Plugin.startBoxMax = Plugin.ClientState.LocalPlayer.Position;
+            Plugin.ChatGui.Print($"Start box max has been set to {Plugin.startBoxMax}");
+        }
+
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetTooltip("Set the current position as the maximum for your starting box.");
+        }
+
+        ImGui.SameLine();
+        ImGui.DragFloat3("Start Box Max", ref Plugin.startBoxMax);
+
+        if (ImGuiComponents.IconButton(0, Dalamud.Interface.FontAwesomeIcon.LocationArrow))
+        {
+            //Plugin.ToggleConfigUI();
+            //ImGui.Text(Plugin.ClientState.LocalPlayer.Position.ToString());
+            Plugin.startBoxMin = Plugin.ClientState.LocalPlayer.Position;
+            //Plugin.ChatGui.Print($"Start box min has been set to {Plugin.startBoxMin}");
+            Plugin.ChatGui.Print($"Start box min has been set to {Plugin.startBoxMin}");
+        }
+
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetTooltip("Set the current position as the minimum for your ending box.");
+        }
+
+        ///
+        /// End box
+        /// 
+
+        ImGui.SameLine();
+        ImGui.DragFloat3("End Box Min", ref Plugin.endBoxMin);
+
+        if (ImGuiComponents.IconButton(1, Dalamud.Interface.FontAwesomeIcon.LocationArrow))
+        {
+            Plugin.endBoxMax = Plugin.ClientState.LocalPlayer.Position;
+            Plugin.ChatGui.Print($"End box max has been set to {Plugin.endBoxMax}");
+        }
+
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetTooltip("Set the current position as the maximum for your ending box.");
+        }
+
+        ImGui.SameLine();
+        ImGui.DragFloat3("End Box Max", ref Plugin.endBoxMax);
 
         ImGui.Spacing();
-
-        ImGui.Text("Have a goat:");
-        var goatImage = Plugin.TextureProvider.GetFromFile(GoatImagePath).GetWrapOrDefault();
-        if (goatImage != null)
-        {
-            ImGuiHelpers.ScaledIndent(55f);
-            ImGui.Image(goatImage.ImGuiHandle, new Vector2(goatImage.Width, goatImage.Height));
-            ImGuiHelpers.ScaledIndent(-55f);
-        }
-        else
-        {
-            ImGui.Text("Image not found.");
-        }
     }
 }

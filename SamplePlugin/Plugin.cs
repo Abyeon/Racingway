@@ -1,24 +1,42 @@
-﻿using Dalamud.Game.Command;
+using Dalamud.Game.Command;
 using Dalamud.IoC;
 using Dalamud.Plugin;
 using System.IO;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
-using SamplePlugin.Windows;
+using ParkourTimer.Windows;
+using Dalamud.Game.Inventory;
+using Dalamud.Game.Inventory.InventoryEventArgTypes;
+using System;
+using Dalamud.Game.Network;
+using System.Collections.Generic;
+using Dalamud.Game.ClientState.Objects.Types;
+using System.Linq;
+using Dalamud.Game.ClientState.Objects.SubKinds;
+using System.Numerics;
 
-namespace SamplePlugin;
+namespace ParkourTimer;
 
 public sealed class Plugin : IDalamudPlugin
 {
-    [PluginService] internal static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
+    [PluginService] public static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
     [PluginService] internal static ITextureProvider TextureProvider { get; private set; } = null!;
     [PluginService] internal static ICommandManager CommandManager { get; private set; } = null!;
+    [PluginService] internal static IObjectTable ObjectTable { get; private set; } = null!;
+    [PluginService] internal static IPluginLog Log { get; private set; } = null!;
+    [PluginService] internal static IGameNetwork GameNetwork { get; private set; } = null!;
+    [PluginService] internal static IClientState ClientState { get; private set; } = null!;
+    [PluginService] internal static IChatGui ChatGui { get; private set; } = null!;
 
-    private const string CommandName = "/pmycommand";
+    private const string CommandName = "/race";
 
     public Configuration Configuration { get; init; }
+    public Vector3 startBoxMin = new();
+    public Vector3 startBoxMax = new();
+    public Vector3 endBoxMin = new();
+    public Vector3 endBoxMax = new();
 
-    public readonly WindowSystem WindowSystem = new("SamplePlugin");
+    public readonly WindowSystem WindowSystem = new("ParkourTimer");
     private ConfigWindow ConfigWindow { get; init; }
     private MainWindow MainWindow { get; init; }
 
@@ -30,7 +48,7 @@ public sealed class Plugin : IDalamudPlugin
         var goatImagePath = Path.Combine(PluginInterface.AssemblyLocation.Directory?.FullName!, "goat.png");
 
         ConfigWindow = new ConfigWindow(this);
-        MainWindow = new MainWindow(this, goatImagePath);
+        MainWindow = new MainWindow(this);
 
         WindowSystem.AddWindow(ConfigWindow);
         WindowSystem.AddWindow(MainWindow);
@@ -40,6 +58,8 @@ public sealed class Plugin : IDalamudPlugin
             HelpMessage = "A useful message to display in /xlhelp"
         });
 
+        GameNetwork.NetworkMessage += NetworkMessage;
+
         PluginInterface.UiBuilder.Draw += DrawUI;
 
         // This adds a button to the plugin installer entry of this plugin which allows
@@ -48,6 +68,36 @@ public sealed class Plugin : IDalamudPlugin
 
         // Adds another button that is doing the same but for the main ui of the plugin
         PluginInterface.UiBuilder.OpenMainUi += ToggleMainUI;
+    }
+
+    private void NetworkMessage(nint dataPtr, ushort opCode, uint sourceActorId, uint targetActorId, NetworkMessageDirection direction)
+    {
+        // 127 is client moved
+        // 281 is actor moved
+        if (ClientState.IsLoggedIn && (opCode == 281 ||  opCode == 127))
+        {
+            uint id = targetActorId;
+
+            // If packet is coming from local player, change ID to match
+            if (id == 0 && ClientState.LocalPlayer != null)
+            {
+                id = ClientState.LocalPlayer.EntityId;
+            }
+
+            IGameObject player = GetPlayer(ObjectTable, id);
+
+            Log.Debug($"{player.Name}: {player.Position.ToString()}");
+        }
+    }
+
+    private IGameObject[] GetPlayers(IEnumerable<IGameObject> gameObjects)
+    {
+        return gameObjects.Where(obj => obj is IPlayerCharacter).ToArray();
+    }
+
+    private IGameObject GetPlayer(IEnumerable<IGameObject> gameObjects, uint actorId)
+    {
+        return gameObjects.Where(obj => obj is IPlayerCharacter && obj.EntityId == actorId).First();
     }
 
     public void Dispose()

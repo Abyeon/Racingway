@@ -1,0 +1,13 @@
+{
+  "Author": "Abe Eon",
+  "Name": "Parkour Timer",
+  "Punchline": "Time your jumping puzzles!",
+  "Description": "A simple plugin for timing, logging, and ranking players times for your jumping puzzles!",
+  "ApplicableVersion": "any",
+  "Tags": [
+    "parkour",
+    "plugin",
+    "jump",
+    "util"
+  ]
+}
