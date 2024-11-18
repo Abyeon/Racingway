@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ParkourTimer
+namespace Racingway
 {
     internal class PlayerWatcher : IDisposable
     {

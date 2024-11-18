@@ -7,7 +7,7 @@ using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
 using ImGuiNET;
 
-namespace ParkourTimer.Windows;
+namespace Racingway.Windows;
 
 public class MainWindow : Window, IDisposable
 {

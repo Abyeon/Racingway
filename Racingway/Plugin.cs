@@ -4,7 +4,7 @@ using Dalamud.Plugin;
 using System.IO;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
-using ParkourTimer.Windows;
+using Racingway.Windows;
 using Dalamud.Game.Inventory;
 using Dalamud.Game.Inventory.InventoryEventArgTypes;
 using System;
@@ -15,7 +15,7 @@ using System.Linq;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using System.Numerics;
 
-namespace ParkourTimer;
+namespace Racingway;
 
 public sealed class Plugin : IDalamudPlugin
 {

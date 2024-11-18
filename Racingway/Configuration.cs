@@ -2,7 +2,7 @@
 using Dalamud.Plugin;
 using System;
 
-namespace ParkourTimer;
+namespace Racingway;
 
 [Serializable]
 public class Configuration : IPluginConfiguration

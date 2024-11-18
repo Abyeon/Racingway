@@ -3,7 +3,7 @@ using System.Numerics;
 using Dalamud.Interface.Windowing;
 using ImGuiNET;
 
-namespace ParkourTimer.Windows;
+namespace Racingway.Windows;
 
 public class ConfigWindow : Window, IDisposable
 {
