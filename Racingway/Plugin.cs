@@ -14,6 +14,7 @@ using Dalamud.Game.ClientState.Objects.Types;
 using System.Linq;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using System.Numerics;
+using Racingway.Utils;
 
 namespace Racingway;
 
@@ -27,6 +28,7 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IGameNetwork GameNetwork { get; private set; } = null!;
     [PluginService] internal static IClientState ClientState { get; private set; } = null!;
     [PluginService] internal static IChatGui ChatGui { get; private set; } = null!;
+    [PluginService] internal static IGameGui GameGui { get; private set; } = null!;
 
     private const string CommandName = "/race";
 
@@ -36,9 +38,13 @@ public sealed class Plugin : IDalamudPlugin
     public Vector3 endBoxMin = new();
     public Vector3 endBoxMax = new();
 
+    public List<Player> trackedPlayers = new List<Player>();
+    public List<Trigger> triggers = new List<Trigger>();
+
     public readonly WindowSystem WindowSystem = new("ParkourTimer");
     private ConfigWindow ConfigWindow { get; init; }
     private MainWindow MainWindow { get; init; }
+    private TriggerOverlay TriggerOverlay { get; init; }
 
     public Plugin()
     {
@@ -49,9 +55,11 @@ public sealed class Plugin : IDalamudPlugin
 
         ConfigWindow = new ConfigWindow(this);
         MainWindow = new MainWindow(this);
+        TriggerOverlay = new TriggerOverlay(this);
 
         WindowSystem.AddWindow(ConfigWindow);
         WindowSystem.AddWindow(MainWindow);
+        WindowSystem.AddWindow(TriggerOverlay);
 
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
@@ -72,9 +80,9 @@ public sealed class Plugin : IDalamudPlugin
 
     private void NetworkMessage(nint dataPtr, ushort opCode, uint sourceActorId, uint targetActorId, NetworkMessageDirection direction)
     {
-        // 127 is client moved
-        // 281 is actor moved
-        if (ClientState.IsLoggedIn && (opCode == 281 ||  opCode == 127))
+        // 988 is client moved
+        // 938 is actor moved
+        if (ClientState.IsLoggedIn && (opCode == 938 ||  opCode == 988))
         {
             uint id = targetActorId;
 
@@ -86,16 +94,22 @@ public sealed class Plugin : IDalamudPlugin
 
             IGameObject player = GetPlayer(ObjectTable, id);
 
-            Log.Debug($"{player.Name}: {player.Position.ToString()}");
+            // Player is not tracked
+            if (!trackedPlayers.Any(x=>x.id == id))
+            {
+                trackedPlayers.Add(new Player(id, player, this));
+            }
+
+            trackedPlayers.Find(x => x.id == id).Moved(player.Position);
         }
     }
 
-    private IGameObject[] GetPlayers(IEnumerable<IGameObject> gameObjects)
+    public IGameObject[] GetPlayers(IEnumerable<IGameObject> gameObjects)
     {
         return gameObjects.Where(obj => obj is IPlayerCharacter).ToArray();
     }
 
-    private IGameObject GetPlayer(IEnumerable<IGameObject> gameObjects, uint actorId)
+    public IGameObject GetPlayer(IEnumerable<IGameObject> gameObjects, uint actorId)
     {
         return gameObjects.Where(obj => obj is IPlayerCharacter && obj.EntityId == actorId).First();
     }
@@ -120,4 +134,5 @@ public sealed class Plugin : IDalamudPlugin
 
     public void ToggleConfigUI() => ConfigWindow.Toggle();
     public void ToggleMainUI() => MainWindow.Toggle();
+    public void ToggleTriggerUI() => TriggerOverlay.Toggle();
 }

@@ -6,6 +6,8 @@ using Dalamud.Interface.Utility;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
 using ImGuiNET;
+using ImGuizmoNET;
+using Racingway.Utils;
 
 namespace Racingway.Windows;
 
@@ -31,78 +33,67 @@ public class MainWindow : Window, IDisposable
     public void Dispose() { }
 
     public override void Draw()
-    {
+    {        
         ImGui.Text($"Current position: {Plugin.ClientState.LocalPlayer.Position.ToString()}");
+
+        if (ImGui.Button("Show Trigger Overlay"))
+        {
+            Plugin.ToggleTriggerUI();
+        }
+
+        ImGui.SameLine();
+        if (ImGui.Button("Clear racing lines"))
+        {
+            foreach(var actor in Plugin.trackedPlayers)
+            {
+                actor.raceLine.Clear();
+            }
+        }
+
+        if (ImGui.Button("Add Trigger"))
+        {
+            Plugin.triggers.Add(new Utils.Trigger(Plugin));
+            // Handle making a list of triggers
+        }
+
+        foreach(Trigger trigger in Plugin.triggers)
+        {
+            if (ImGuiComponents.IconButton(0, Dalamud.Interface.FontAwesomeIcon.LocationArrow))
+            {
+                trigger.min = Plugin.ClientState.LocalPlayer.Position;
+                Plugin.ChatGui.Print($"Box min has been set to {trigger.min}");
+            }
+
+            ImGui.SameLine();
+            ImGui.DragFloat3("Trigger min", ref trigger.min);
+
+            if (ImGuiComponents.IconButton(0, Dalamud.Interface.FontAwesomeIcon.LocationArrow))
+            {
+                trigger.max = Plugin.ClientState.LocalPlayer.Position;
+                Plugin.ChatGui.Print($"Box max has been set to {trigger.max}");
+            }
+
+            ImGui.SameLine();
+            ImGui.DragFloat3("Trigger max", ref trigger.max);
+        }
 
         ///
         /// Start box
         /// 
 
-        if (ImGuiComponents.IconButton(0, Dalamud.Interface.FontAwesomeIcon.LocationArrow))
-        {
-            //Plugin.ToggleConfigUI();
-            //ImGui.Text(Plugin.ClientState.LocalPlayer.Position.ToString());
-            Plugin.startBoxMin = Plugin.ClientState.LocalPlayer.Position;
-            //Plugin.ChatGui.Print($"Start box min has been set to {Plugin.startBoxMin}");
-            Plugin.ChatGui.Print($"Start box min has been set to {Plugin.startBoxMin}");
-        }
+        //if (ImGuiComponents.IconButton(0, Dalamud.Interface.FontAwesomeIcon.LocationArrow))
+        //{
+        //    //Plugin.ToggleConfigUI();
+        //    //ImGui.Text(Plugin.ClientState.LocalPlayer.Position.ToString());
+        //    Plugin.startBoxMin = Plugin.ClientState.LocalPlayer.Position;
+        //    //Plugin.ChatGui.Print($"Start box min has been set to {Plugin.startBoxMin}");
+        //    Plugin.ChatGui.Print($"Start box min has been set to {Plugin.startBoxMin}");
+        //}
 
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.SetTooltip("Set the current position as the minimum for your starting box.");
-        }
-
-        ImGui.SameLine();
-        ImGui.DragFloat3("Start Box Min", ref Plugin.startBoxMin);
-
-        if (ImGuiComponents.IconButton(1, Dalamud.Interface.FontAwesomeIcon.LocationArrow))
-        {
-            Plugin.startBoxMax = Plugin.ClientState.LocalPlayer.Position;
-            Plugin.ChatGui.Print($"Start box max has been set to {Plugin.startBoxMax}");
-        }
-
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.SetTooltip("Set the current position as the maximum for your starting box.");
-        }
-
-        ImGui.SameLine();
-        ImGui.DragFloat3("Start Box Max", ref Plugin.startBoxMax);
-
-        if (ImGuiComponents.IconButton(0, Dalamud.Interface.FontAwesomeIcon.LocationArrow))
-        {
-            //Plugin.ToggleConfigUI();
-            //ImGui.Text(Plugin.ClientState.LocalPlayer.Position.ToString());
-            Plugin.startBoxMin = Plugin.ClientState.LocalPlayer.Position;
-            //Plugin.ChatGui.Print($"Start box min has been set to {Plugin.startBoxMin}");
-            Plugin.ChatGui.Print($"Start box min has been set to {Plugin.startBoxMin}");
-        }
-
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.SetTooltip("Set the current position as the minimum for your ending box.");
-        }
-
-        ///
-        /// End box
-        /// 
-
-        ImGui.SameLine();
-        ImGui.DragFloat3("End Box Min", ref Plugin.endBoxMin);
-
-        if (ImGuiComponents.IconButton(1, Dalamud.Interface.FontAwesomeIcon.LocationArrow))
-        {
-            Plugin.endBoxMax = Plugin.ClientState.LocalPlayer.Position;
-            Plugin.ChatGui.Print($"End box max has been set to {Plugin.endBoxMax}");
-        }
-
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.SetTooltip("Set the current position as the maximum for your ending box.");
-        }
-
-        ImGui.SameLine();
-        ImGui.DragFloat3("End Box Max", ref Plugin.endBoxMax);
+        //if (ImGui.IsItemHovered())
+        //{
+        //    ImGui.SetTooltip("Set the current position as the minimum for your starting box.");
+        //}
 
         ImGui.Spacing();
     }
