@@ -35,6 +35,7 @@ namespace Racingway.Utils
 
             if (raceLine.Count > 100)
             {
+                Plugin.Log.Debug($"Player {actor.Name} moved to {pos.ToString()}");
                 raceLine.Dequeue();
             }
         }

@@ -36,6 +36,7 @@ public class MainWindow : Window, IDisposable
     {        
         ImGui.Text($"Current position: {Plugin.ClientState.LocalPlayer.Position.ToString()}");
 
+        ImGui.Text($"{Plugin.TriggerOverlay.IsOpen.ToString()}");
         if (ImGui.Button("Show Trigger Overlay"))
         {
             Plugin.ToggleTriggerUI();
@@ -56,44 +57,31 @@ public class MainWindow : Window, IDisposable
             // Handle making a list of triggers
         }
 
+        int id = 0;
         foreach(Trigger trigger in Plugin.triggers)
         {
-            if (ImGuiComponents.IconButton(0, Dalamud.Interface.FontAwesomeIcon.LocationArrow))
+            if (ImGuiComponents.IconButton(id, Dalamud.Interface.FontAwesomeIcon.LocationArrow))
             {
                 trigger.min = Plugin.ClientState.LocalPlayer.Position;
                 Plugin.ChatGui.Print($"Box min has been set to {trigger.min}");
             }
 
+            id++;
+
             ImGui.SameLine();
             ImGui.DragFloat3("Trigger min", ref trigger.min);
 
-            if (ImGuiComponents.IconButton(0, Dalamud.Interface.FontAwesomeIcon.LocationArrow))
+            if (ImGuiComponents.IconButton(id, Dalamud.Interface.FontAwesomeIcon.LocationArrow))
             {
                 trigger.max = Plugin.ClientState.LocalPlayer.Position;
                 Plugin.ChatGui.Print($"Box max has been set to {trigger.max}");
             }
 
+            id++;
+
             ImGui.SameLine();
             ImGui.DragFloat3("Trigger max", ref trigger.max);
         }
-
-        ///
-        /// Start box
-        /// 
-
-        //if (ImGuiComponents.IconButton(0, Dalamud.Interface.FontAwesomeIcon.LocationArrow))
-        //{
-        //    //Plugin.ToggleConfigUI();
-        //    //ImGui.Text(Plugin.ClientState.LocalPlayer.Position.ToString());
-        //    Plugin.startBoxMin = Plugin.ClientState.LocalPlayer.Position;
-        //    //Plugin.ChatGui.Print($"Start box min has been set to {Plugin.startBoxMin}");
-        //    Plugin.ChatGui.Print($"Start box min has been set to {Plugin.startBoxMin}");
-        //}
-
-        //if (ImGui.IsItemHovered())
-        //{
-        //    ImGui.SetTooltip("Set the current position as the minimum for your starting box.");
-        //}
 
         ImGui.Spacing();
     }

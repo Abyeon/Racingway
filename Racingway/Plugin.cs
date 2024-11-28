@@ -44,7 +44,7 @@ public sealed class Plugin : IDalamudPlugin
     public readonly WindowSystem WindowSystem = new("ParkourTimer");
     private ConfigWindow ConfigWindow { get; init; }
     private MainWindow MainWindow { get; init; }
-    private TriggerOverlay TriggerOverlay { get; init; }
+    public TriggerOverlay TriggerOverlay { get; init; }
 
     public Plugin()
     {
@@ -80,9 +80,9 @@ public sealed class Plugin : IDalamudPlugin
 
     private void NetworkMessage(nint dataPtr, ushort opCode, uint sourceActorId, uint targetActorId, NetworkMessageDirection direction)
     {
-        // 988 is client moved
-        // 938 is actor moved
-        if (ClientState.IsLoggedIn && (opCode == 938 ||  opCode == 988))
+        // 680 is client moved
+        // 743 is actor moved
+        if (ClientState.IsLoggedIn && (opCode == 743 ||  opCode == 680))
         {
             uint id = targetActorId;
 
