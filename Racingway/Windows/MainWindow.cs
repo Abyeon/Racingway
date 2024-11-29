@@ -19,7 +19,7 @@ public class MainWindow : Window, IDisposable
     // So that the user will see "My Amazing Window" as window title,
     // but for ImGui the ID is "My Amazing Window##With a hidden ID"
     public MainWindow(Plugin plugin)
-        : base("Race Setup##With a hidden ID", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse)
+        : base("Race Setup##abe")
     {
         SizeConstraints = new WindowSizeConstraints
         {
@@ -43,6 +43,12 @@ public class MainWindow : Window, IDisposable
         }
 
         ImGui.SameLine();
+        if (ImGui.Button("Toggle Racing Lines"))
+        {
+            Plugin.Configuration.DrawRacingLines = !Plugin.Configuration.DrawRacingLines;
+        }
+
+        ImGui.SameLine();
         if (ImGui.Button("Clear racing lines"))
         {
             foreach(var actor in Plugin.trackedPlayers)
@@ -60,6 +66,15 @@ public class MainWindow : Window, IDisposable
         int id = 0;
         foreach(Trigger trigger in Plugin.triggers)
         {
+            ImGui.Separator();
+            if (ImGuiComponents.IconButton(id, Dalamud.Interface.FontAwesomeIcon.Eraser))
+            {
+                Plugin.triggers.Remove(trigger);
+                continue;
+            }
+
+            id++;
+
             if (ImGuiComponents.IconButton(id, Dalamud.Interface.FontAwesomeIcon.LocationArrow))
             {
                 trigger.min = Plugin.ClientState.LocalPlayer.Position;
@@ -69,7 +84,7 @@ public class MainWindow : Window, IDisposable
             id++;
 
             ImGui.SameLine();
-            ImGui.DragFloat3("Trigger min", ref trigger.min);
+            ImGui.DragFloat3($"Min##{id}", ref trigger.min, 0.1f);
 
             if (ImGuiComponents.IconButton(id, Dalamud.Interface.FontAwesomeIcon.LocationArrow))
             {
@@ -80,7 +95,7 @@ public class MainWindow : Window, IDisposable
             id++;
 
             ImGui.SameLine();
-            ImGui.DragFloat3("Trigger max", ref trigger.max);
+            ImGui.DragFloat3($"Max##{id}", ref trigger.max, 0.1f);
         }
 
         ImGui.Spacing();

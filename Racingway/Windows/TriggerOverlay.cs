@@ -37,28 +37,33 @@ namespace Racingway.Windows
             ImGuiHelpers.SetWindowPosRelativeMainViewport("Trigger Overlay", new Vector2(0, 0));
             
             ImDrawListPtr drawList = ImGui.GetWindowDrawList();
+            DrawHelper draw = new DrawHelper(Plugin, drawList);
 
             Io = ImGui.GetIO();
             ImGui.SetWindowSize(Io.DisplaySize);
 
-            // Loop through players and draw their racing lines (probably very inefficient)
-            foreach (var actor in Plugin.trackedPlayers)
+            if (Plugin.Configuration.DrawRacingLines)
             {
-                Vector3[] raceLine = actor.raceLine.ToArray();
-
-                for (var i = 1; i < raceLine.Length; i++)
+                // Loop through players and draw their racing lines (probably very inefficient)
+                foreach (var actor in Plugin.trackedPlayers)
                 {
-                    if (raceLine[i - 1] == Vector3.Zero) continue;
+                    Vector3[] raceLine = actor.raceLine.ToArray();
 
-                    Vector2 screenPos1 = new Vector2();
-                    Vector2 screenPos2 = new Vector2();
-                    
-                    // These methods return true if the positions are in front of the screen.
-                    if (Plugin.GameGui.WorldToScreen(raceLine[i - 1], out screenPos1) && Plugin.GameGui.WorldToScreen(raceLine[i], out screenPos2))
+                    for (var i = 1; i < raceLine.Length; i++)
                     {
-                        drawList.AddLine(screenPos1, screenPos2, 0xFFFFFFFF, 2.0f);
+                        if (raceLine[i - 1] == Vector3.Zero) continue;
+
+                        draw.DrawLine3d(raceLine[i - 1], raceLine[i], 0x55FFFFFF, 2.0f);
                     }
                 }
+            }
+
+            // Loop through triggers and draw them
+            foreach (var trigger in Plugin.triggers)
+            {
+                if (trigger == null) continue;
+
+                draw.DrawAABB(trigger.min, trigger.max, trigger.color, 5.0f);
             }
         }
     }

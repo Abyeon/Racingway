@@ -16,6 +16,7 @@ namespace Racingway.Utils
         public IGameObject actor;
         public Vector3 position = Vector3.Zero;
         public Queue<Vector3> raceLine = new Queue<Vector3>();
+        public List<Trigger> touchedTriggers = new List<Trigger>();
 
         public bool inParkour = false;
 
@@ -38,11 +39,30 @@ namespace Racingway.Utils
                 Plugin.Log.Debug($"Player {actor.Name} moved to {pos.ToString()}");
                 raceLine.Dequeue();
             }
+
+            CheckCollision(pos);
         }
 
-        public void CheckCollision(Vector3 prevPos, Vector3 currPos)
+        public void CheckCollision(Vector3 pos)
         {
-            // Do magic
+            // Later we will sort triggers by player distance and stop when we hit one
+            foreach (Trigger trigger in Plugin.triggers)
+            {
+                Vector3 min = Vector3.Min(trigger.min, trigger.max);
+                Vector3 max = Vector3.Max(trigger.min, trigger.max);
+
+                if (pos.X > min.X && pos.Y > min.Y && pos.Z > min.Z && pos.X < max.X && pos.Y < max.Y && pos.Z < max.Z)
+                {
+                    if (touchedTriggers.Contains(trigger)) continue;
+
+                    touchedTriggers.Add(trigger);
+                    trigger.Entered(this);
+                } else if(touchedTriggers.Contains(trigger))
+                {
+                    touchedTriggers.Remove(trigger);
+                    trigger.Left(this);
+                }
+            }
         }
     }
 }
