@@ -37,17 +37,23 @@ namespace Racingway.Windows
             ImGuiHelpers.SetWindowPosRelativeMainViewport("Trigger Overlay", new Vector2(0, 0));
             
             ImDrawListPtr drawList = ImGui.GetWindowDrawList();
-            DrawHelper draw = new DrawHelper(Plugin, drawList);
+            DrawHelper draw = new DrawHelper(drawList);
 
             Io = ImGui.GetIO();
             ImGui.SetWindowSize(Io.DisplaySize);
 
             if (Plugin.Configuration.DrawRacingLines)
             {
-                // Loop through players and draw their racing lines (probably very inefficient)
-                foreach (var actor in Plugin.trackedPlayers)
+                foreach (var actor in Plugin.trackedPlayers.Values)
                 {
                     Vector3[] raceLine = actor.raceLine.ToArray();
+
+                    //// Draw a cube around the player for fun
+                    Vector3 pos = actor.position;
+                    float rotation = actor.actor.Rotation;
+
+                    draw.DrawText3d(actor.actor.Name.ToString(), pos, 0xFFFFFFFF);
+                    draw.DrawCube(new Cube(pos, new Vector3(0.5f, 1, 0.5f), new Vector3(rotation, 0, 0)), 0xFFFFFFFF, 2.0f);
 
                     for (var i = 1; i < raceLine.Length; i++)
                     {
@@ -63,7 +69,7 @@ namespace Racingway.Windows
             {
                 if (trigger == null) continue;
 
-                draw.DrawAABB(trigger.min, trigger.max, trigger.color, 5.0f);
+                draw.DrawCube(trigger.cube, trigger.color, 5.0f);
             }
         }
     }

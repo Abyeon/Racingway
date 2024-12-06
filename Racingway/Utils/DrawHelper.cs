@@ -10,13 +10,21 @@ namespace Racingway.Utils
 {
     public class DrawHelper
     {
-        private Plugin plugin;
         private ImDrawListPtr drawList;
 
-        public DrawHelper(Plugin plugin, ImDrawListPtr drawListPtr)
+        public DrawHelper(ImDrawListPtr drawListPtr)
         {
-            this.plugin = plugin;
             this.drawList = drawListPtr;
+        }
+
+        public void DrawText3d(string text, Vector3 position, uint color)
+        {
+            Vector2 screenPos = new Vector2();
+
+            if (Plugin.GameGui.WorldToScreen(position, out screenPos))
+            {
+                drawList.AddText(screenPos, color, text);
+            }
         }
 
         public void DrawLine3d(Vector3 start, Vector3 end, uint color, float thickness)
@@ -33,33 +41,73 @@ namespace Racingway.Utils
 
         public void DrawAABB(Vector3 min, Vector3 max, uint color, float thickness)
         {
-            // Bottom rectangle
-            Vector3 corner1 = new Vector3(min.X, min.Y, max.Z);
-            Vector3 corner2 = new Vector3(max.X, min.Y, max.Z);
-            Vector3 corner3 = new Vector3(max.X, min.Y, min.Z);
-            // Top rectangle
-            Vector3 corner4 = new Vector3(min.X, max.Y, min.Z);
-            Vector3 corner5 = new Vector3(min.X, max.Y, max.Z);
-            // max goes here
-            Vector3 corner6 = new Vector3(max.X, max.Y, min.Z);
+            // Define points of the bounding box
+            Vector3[] points =
+            {
+                min,
+                new Vector3(min.X, min.Y, max.Z),
+                new Vector3(max.X, min.Y, max.Z),
+                new Vector3(max.X, min.Y, min.Z),
+                new Vector3(min.X, max.Y, min.Z),
+                new Vector3(min.X, max.Y, max.Z),
+                max,
+                new Vector3(max.X, max.Y, min.Z)
+            };
 
-            //Draw bottom face
-            DrawLine3d(min, corner1, color, thickness);
-            DrawLine3d(corner1, corner2, color, thickness);
-            DrawLine3d(corner2, corner3, color, thickness);
-            DrawLine3d(corner3, min, color, thickness);
+            // Define line indices
+            int[,] lines =
+            {
+                {0, 1}, {1, 2}, {2, 3}, {3, 0}, // top face
+                {4, 5}, {5, 6}, {6, 7}, {7, 4}, // bottom face
+                {0, 4}, {1, 5}, {2,6}, {3, 7} // Side edges
+            };
 
-            // Draw top face
-            DrawLine3d(corner4, corner5, color, thickness);
-            DrawLine3d(corner5, max, color, thickness);
-            DrawLine3d(max, corner6, color, thickness);
-            DrawLine3d(corner6, corner4, color, thickness);
+            // Go through lines and draw them
+            for (int i = 0; i < lines.GetLength(0); i++)
+            {
+                int start = lines[i, 0];
+                int end = lines[i, 1];
 
-            // Connect top and bottom
-            DrawLine3d(min, corner4, color, thickness);
-            DrawLine3d(corner1, corner5, color, thickness);
-            DrawLine3d(corner2, max, color, thickness);
-            DrawLine3d(corner3, corner6, color, thickness);
+                DrawLine3d(points[start], points[end], color, thickness);
+            }
+        }
+
+        public void DrawCube(Cube cube, uint color, float thickness)
+        {
+            // Define line indices
+            int[,] lines =
+            {
+                {0, 1}, {1, 2}, {2, 3}, {3, 0}, // top face
+                {4, 5}, {5, 6}, {6, 7}, {7, 4}, // bottom face
+                {0, 4}, {1, 5}, {2,6}, {3, 7} // Side edges
+            };
+
+            Vector3[] points = RotatePointsAroundOrigin(cube.Vertices, Vector3.Zero, cube.Rotation);
+            cube.UpdateVerts();
+
+            // Go through lines and draw them
+            for (int i = 0; i < lines.GetLength(0); i++)
+            {
+                int start = lines[i, 0];
+                int end = lines[i, 1];
+
+                DrawLine3d(points[start] + cube.Position, points[end] + cube.Position, color, thickness);
+            }
+        }
+
+        public Vector3[] RotatePointsAroundOrigin(Vector3[] points, Vector3 origin, Vector3 rotation)
+        {
+            Vector3[] tempVecs = points;
+
+            for (int i = 0; i < 8; i++)
+            {
+                Quaternion rotator = Quaternion.CreateFromYawPitchRoll(rotation.X, rotation.Y, rotation.Z);
+                Vector3 relativeVector = tempVecs[i] - origin;
+                Vector3 rotatedVector = Vector3.Transform(relativeVector, rotator);
+                tempVecs[i] = rotatedVector + origin;
+            }
+
+            return tempVecs;
         }
     }
 }

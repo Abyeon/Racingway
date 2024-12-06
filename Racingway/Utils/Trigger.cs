@@ -9,10 +9,7 @@ namespace Racingway.Utils
 {
     public class Trigger
     {
-        private Plugin Plugin;
-
-        public Vector3 min = Vector3.Zero;
-        public Vector3 max = Vector3.Zero;
+        public Cube cube;
 
         private static uint InactiveColor = 0xFFFF3061;
         private static uint ActiveColor = 0xFF00FF00;
@@ -22,10 +19,27 @@ namespace Racingway.Utils
         public bool isTouched = false;
 
         private int touching = 0;
+        private List<uint> touchers = new List<uint>();
 
-        public Trigger(Plugin plugin) 
+        public Trigger(Vector3 position, Vector3 scale, Vector3 rotation) 
         {
-            this.Plugin = plugin;
+            this.cube = new Cube(position, scale, rotation);
+        }
+
+        public void CheckCollision(Player player)
+        {
+            bool inTrigger = cube.PointInCube(player.position);
+
+            if (inTrigger && !touchers.Contains(player.id))
+            {
+                touchers.Add(player.id);
+                this.Entered(player);
+            }
+            else if (!inTrigger && touchers.Contains(player.id))
+            {
+                touchers.Remove(player.id);
+                this.Left(player);
+            }
         }
 
         public void Entered(Player player)

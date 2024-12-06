@@ -25,6 +25,7 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static ICommandManager CommandManager { get; private set; } = null!;
     [PluginService] internal static IObjectTable ObjectTable { get; private set; } = null!;
     [PluginService] internal static IPluginLog Log { get; private set; } = null!;
+    [PluginService] internal static IFramework Framework {  get; private set; } = null!;
     [PluginService] internal static IGameNetwork GameNetwork { get; private set; } = null!;
     [PluginService] internal static IClientState ClientState { get; private set; } = null!;
     [PluginService] internal static IChatGui ChatGui { get; private set; } = null!;
@@ -38,7 +39,7 @@ public sealed class Plugin : IDalamudPlugin
     public Vector3 endBoxMin = new();
     public Vector3 endBoxMax = new();
 
-    public List<Player> trackedPlayers = new List<Player>();
+    //public List<Player> trackedPlayers = new List<Player>();
     public List<Trigger> triggers = new List<Trigger>();
 
     public readonly WindowSystem WindowSystem = new("ParkourTimer");
@@ -66,7 +67,8 @@ public sealed class Plugin : IDalamudPlugin
             HelpMessage = "A useful message to display in /xlhelp"
         });
 
-        GameNetwork.NetworkMessage += NetworkMessage;
+        Framework.Update += OnFrameworkTick;
+        //GameNetwork.NetworkMessage += NetworkMessage;
 
         PluginInterface.UiBuilder.Draw += DrawUI;
 
@@ -78,29 +80,41 @@ public sealed class Plugin : IDalamudPlugin
         PluginInterface.UiBuilder.OpenMainUi += ToggleMainUI;
     }
 
-    private void NetworkMessage(nint dataPtr, ushort opCode, uint sourceActorId, uint targetActorId, NetworkMessageDirection direction)
+    public Dictionary<uint, Player> trackedPlayers = new();
+
+    private void OnFrameworkTick(IFramework framework)
     {
-        // 680 is client moved
-        // 743 is actor moved
-        if (ClientState.IsLoggedIn && (opCode == 743 ||  opCode == 680))
+        // Check if player does not exist anymore
+        foreach (var player in trackedPlayers)
         {
-            uint id = targetActorId;
+            player.Value.lastSeen++;
 
-            // If packet is coming from local player, change ID to match
-            if (id == 0 && ClientState.LocalPlayer != null)
+            // Player no longer exists
+            if (player.Value.lastSeen > 120)
             {
-                id = ClientState.LocalPlayer.EntityId;
+                trackedPlayers.Remove(player.Key);
+                break;
             }
+        }
 
-            IGameObject player = GetPlayer(ObjectTable, id);
+        // Check for people
+        IGameObject[] players = GetPlayers(ObjectTable);
+        foreach (var player in players) 
+        {
+            uint id = player.EntityId;
 
-            // Player is not tracked
-            if (!trackedPlayers.Any(x=>x.id == id))
+            if (!trackedPlayers.ContainsKey(id))
             {
-                trackedPlayers.Add(new Player(id, player, this));
-            }
+                trackedPlayers.Add(id, new Player(id, player, this));
+            } else
+            {
+                if (player.Position != trackedPlayers[id].position)
+                {
+                    trackedPlayers[id].Moved(player.Position);
+                }
 
-            trackedPlayers.Find(x => x.id == id).Moved(player.Position);
+                trackedPlayers[id].lastSeen = 0;
+            }
         }
     }
 

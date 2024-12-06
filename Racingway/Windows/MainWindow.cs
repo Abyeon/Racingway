@@ -33,8 +33,11 @@ public class MainWindow : Window, IDisposable
     public void Dispose() { }
 
     public override void Draw()
-    {        
-        ImGui.Text($"Current position: {Plugin.ClientState.LocalPlayer.Position.ToString()}");
+    {
+        if (Plugin.ClientState.LocalPlayer != null)
+        {
+            ImGui.Text($"Current position: {Plugin.ClientState.LocalPlayer.Position.ToString()}");
+        }
 
         ImGui.Text($"{Plugin.TriggerOverlay.IsOpen.ToString()}");
         if (ImGui.Button("Show Trigger Overlay"))
@@ -51,7 +54,7 @@ public class MainWindow : Window, IDisposable
         ImGui.SameLine();
         if (ImGui.Button("Clear racing lines"))
         {
-            foreach(var actor in Plugin.trackedPlayers)
+            foreach(var actor in Plugin.trackedPlayers.Values)
             {
                 actor.raceLine.Clear();
             }
@@ -59,12 +62,12 @@ public class MainWindow : Window, IDisposable
 
         if (ImGui.Button("Add Trigger"))
         {
-            Plugin.triggers.Add(new Utils.Trigger(Plugin));
-            // Handle making a list of triggers
+            Plugin.triggers.Add(new Trigger(Plugin.ClientState.LocalPlayer.Position, Vector3.One, Vector3.Zero));
         }
 
         int id = 0;
-        foreach(Trigger trigger in Plugin.triggers)
+
+        foreach (Trigger trigger in Plugin.triggers)
         {
             ImGui.Separator();
             if (ImGuiComponents.IconButton(id, Dalamud.Interface.FontAwesomeIcon.Eraser))
@@ -74,28 +77,44 @@ public class MainWindow : Window, IDisposable
             }
 
             id++;
-
+            ImGui.SameLine();
             if (ImGuiComponents.IconButton(id, Dalamud.Interface.FontAwesomeIcon.LocationArrow))
             {
-                trigger.min = Plugin.ClientState.LocalPlayer.Position;
-                Plugin.ChatGui.Print($"Box min has been set to {trigger.min}");
+                trigger.cube.Position = Plugin.ClientState.LocalPlayer.Position;
+                Plugin.ChatGui.Print($"Trigger position set to {trigger.cube.Position}");
+            }
+
+            ImGui.SameLine();
+            if (ImGui.TreeNode($"Type##{id}"))
+            {
+                int selected = -1;
+                for (int i = 0; i < 5; i++)
+                {
+                    ImGui.Indent();
+                    if (ImGui.Selectable($"Object {i}", selected == i))
+                    {
+                        selected = i;
+                    }
+                    ImGui.Unindent();
+                }
+
+                ImGui.TreePop();
             }
 
             id++;
+            ImGui.DragFloat3($"Position##{id}", ref trigger.cube.Position, 0.1f);
 
-            ImGui.SameLine();
-            ImGui.DragFloat3($"Min##{id}", ref trigger.min, 0.1f);
-
-            if (ImGuiComponents.IconButton(id, Dalamud.Interface.FontAwesomeIcon.LocationArrow))
+            id++;
+            if (ImGui.DragFloat3($"Scale##{id}", ref trigger.cube.Scale, 0.1f))
             {
-                trigger.max = Plugin.ClientState.LocalPlayer.Position;
-                Plugin.ChatGui.Print($"Box max has been set to {trigger.max}");
+                trigger.cube.UpdateVerts();
             }
 
             id++;
-
-            ImGui.SameLine();
-            ImGui.DragFloat3($"Max##{id}", ref trigger.max, 0.1f);
+            ImGui.DragFloat3($"Rotation##{id}", ref trigger.cube.Rotation, 0.1f);
+            foreach (Vector3 v in trigger.cube.Vertices) {
+                ImGui.Text(v.ToString());
+            }
         }
 
         ImGui.Spacing();
