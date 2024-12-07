@@ -39,6 +39,27 @@ namespace Racingway.Utils
             }
         }
 
+        public void DrawQuadFilled3d(Vector3 p1, Vector3 p2, Vector3 p3, Vector3 p4, uint color)
+        {
+            bool onScreen = false;
+
+            Vector3[] worldPos = { p1, p2, p3, p4 };
+            Vector2[] screenPos = new Vector2[4];
+
+            for (int i = 0; i < 4; i++)
+            {
+                if (Plugin.GameGui.WorldToScreen(worldPos[i], out screenPos[i]))
+                {
+                    onScreen = true;
+                }
+            }
+
+            if (onScreen)
+            {
+                drawList.AddQuadFilled(screenPos[0], screenPos[1], screenPos[2], screenPos[3], color);
+            }
+        }
+
         public void DrawAABB(Vector3 min, Vector3 max, uint color, float thickness)
         {
             // Define points of the bounding box
@@ -74,7 +95,7 @@ namespace Racingway.Utils
 
         public void DrawCube(Cube cube, uint color, float thickness)
         {
-            // Define line indices
+            // Array of indices defining lines for each face of the cube
             int[,] lines =
             {
                 {0, 1}, {1, 2}, {2, 3}, {3, 0}, // top face
@@ -82,8 +103,10 @@ namespace Racingway.Utils
                 {0, 4}, {1, 5}, {2,6}, {3, 7} // Side edges
             };
 
+            // Get rotated vertices of cube
+            // For some unknown reason this updates the cubes native vertices to be the rotated positions
             Vector3[] points = RotatePointsAroundOrigin(cube.Vertices, Vector3.Zero, cube.Rotation);
-            cube.UpdateVerts();
+            cube.UpdateVerts(); // Revert the cubes vertices back to their axis aligned scaled versions.
 
             // Go through lines and draw them
             for (int i = 0; i < lines.GetLength(0); i++)
@@ -92,6 +115,35 @@ namespace Racingway.Utils
                 int end = lines[i, 1];
 
                 DrawLine3d(points[start] + cube.Position, points[end] + cube.Position, color, thickness);
+            }
+        }
+
+        public void DrawCubeFilled(Cube cube, uint color, float thickness) 
+        {
+            // Arrays of indices for each face
+            int[,] faces =
+            {
+                {0, 1, 2, 3}, // top face
+                {4, 5, 6, 7}, // bottom face
+                {0, 4, 7, 3}, // front face
+                {1, 5, 6, 2}, // back face
+                {1, 5, 4, 0}, // left face
+                {3, 7, 6, 2} // right face
+            };
+
+            // Get rotated vertices of cube
+            // For some unknown reason this updates the cubes native vertices to be the rotated positions
+            Vector3[] points = RotatePointsAroundOrigin(cube.Vertices, Vector3.Zero, cube.Rotation);
+            cube.UpdateVerts(); // Revert the cubes vertices back to their axis aligned scaled versions.
+
+            for (int i = 0; i < faces.GetLength(0); i++)
+            {
+                Vector3 p1 = points[faces[i, 0]];
+                Vector3 p2 = points[faces[i, 1]];
+                Vector3 p3 = points[faces[i, 2]];
+                Vector3 p4 = points[faces[i, 3]];
+
+                DrawQuadFilled3d(p1 + cube.Position, p2 + cube.Position, p3 + cube.Position, p4 + cube.Position, color);
             }
         }
 

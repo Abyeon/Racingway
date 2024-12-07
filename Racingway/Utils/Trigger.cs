@@ -11,12 +11,20 @@ namespace Racingway.Utils
     {
         public Cube cube;
 
-        private static uint InactiveColor = 0xFFFF3061;
-        private static uint ActiveColor = 0xFF00FF00;
+        private static readonly uint InactiveColor = 0x22FF3061;
+        private static readonly uint ActiveColor = 0x2200FF00;
 
         public uint color = InactiveColor;
-
         public bool isTouched = false;
+        public enum TriggerType
+        {
+            Start,
+            Fail,
+            Checkpoint,
+            Finish
+        }
+
+        public TriggerType selectedType = TriggerType.Checkpoint;
 
         private int touching = 0;
         private List<uint> touchers = new List<uint>();
@@ -47,6 +55,40 @@ namespace Racingway.Utils
             Plugin.Log.Debug($"{player.actor.Name} entered trigger");
             touching++;
             color = ActiveColor;
+
+            switch (selectedType)
+            {
+                case TriggerType.Fail:
+                    // Player failed parkour
+                    player.raceLine.Clear();
+                    player.inParkour = false;
+                    Plugin.ChatGui.Print($"{player.actor.Name} just failed the parkour.");
+                    player.timer.Reset();
+                    break;
+                case TriggerType.Checkpoint:
+                    // Player hit checkpoint
+                    break;
+                case TriggerType.Finish:
+                    // Player finished parkour
+                    if (player.inParkour)
+                    {
+                        player.inParkour = false;
+
+                        long elapsedTime = player.timer.ElapsedMilliseconds;
+                        TimeSpan t = TimeSpan.FromMilliseconds(elapsedTime);
+
+                        String prettyPrint = string.Format("{0:D2}h:{1:D2}m:{2:D2}s:{3:D3}ms",
+                            t.Hours,
+                            t.Minutes,
+                            t.Seconds,
+                            t.Milliseconds);
+
+                        player.timer.Stop();
+                        player.timer.Reset();
+                        Plugin.ChatGui.Print($"{player.actor.Name} just finished the parkour in {prettyPrint}");
+                    }
+                    break;
+            }
         }
 
         public void Left(Player player)
@@ -57,6 +99,15 @@ namespace Racingway.Utils
             if (touching == 0)
             {
                 color = InactiveColor;
+            }
+
+            if (selectedType == TriggerType.Start)
+            {
+                // Player started parkour
+                player.inParkour = true;
+                player.raceLine.Clear();
+                player.timer.Reset();
+                player.timer.Start();
             }
         }
     }

@@ -1,4 +1,5 @@
 using System;
+using System.Net.NetworkInformation;
 using System.Numerics;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Internal;
@@ -32,12 +33,14 @@ public class MainWindow : Window, IDisposable
 
     public void Dispose() { }
 
+    private bool hasStart = false;
+    private bool hasFinish = false;
+
     public override void Draw()
     {
-        if (Plugin.ClientState.LocalPlayer != null)
-        {
-            ImGui.Text($"Current position: {Plugin.ClientState.LocalPlayer.Position.ToString()}");
-        }
+        if (Plugin.ClientState == null) return;
+
+        ImGui.Text($"Current position: {Plugin.ClientState.LocalPlayer.Position.ToString()}");
 
         ImGui.Text($"{Plugin.TriggerOverlay.IsOpen.ToString()}");
         if (ImGui.Button("Show Trigger Overlay"))
@@ -62,41 +65,99 @@ public class MainWindow : Window, IDisposable
 
         if (ImGui.Button("Add Trigger"))
         {
-            Plugin.triggers.Add(new Trigger(Plugin.ClientState.LocalPlayer.Position, Vector3.One, Vector3.Zero));
+            // We set the trigger position slightly below the player due to SE position jank.
+            Plugin.triggers.Add(new Trigger(Plugin.ClientState.LocalPlayer.Position - new Vector3(0, 0.1f, 0), Vector3.One, Vector3.Zero));
         }
 
         int id = 0;
 
         foreach (Trigger trigger in Plugin.triggers)
         {
+            switch (trigger.selectedType)
+            {
+                case Trigger.TriggerType.Start:
+                    ImGui.PushStyleColor(ImGuiCol.Text, 0xFF60F542);
+                    break;
+                case Trigger.TriggerType.Fail:
+                    ImGui.PushStyleColor(ImGuiCol.Text, 0xFF425AF5);
+                    break;
+                case Trigger.TriggerType.Finish:
+                    ImGui.PushStyleColor(ImGuiCol.Text, 0xFFF58742);
+                    break;
+                default:
+                    ImGui.PushStyleColor(ImGuiCol.Text, 0xFFFFFFFF);
+                    break;
+            }
+
             ImGui.Separator();
             if (ImGuiComponents.IconButton(id, Dalamud.Interface.FontAwesomeIcon.Eraser))
             {
                 Plugin.triggers.Remove(trigger);
+                updateStartFinishBools(trigger.selectedType);
                 continue;
+            }
+            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            {
+                ImGui.SetTooltip("Erase this trigger.");
             }
 
             id++;
             ImGui.SameLine();
-            if (ImGuiComponents.IconButton(id, Dalamud.Interface.FontAwesomeIcon.LocationArrow))
+            if (ImGuiComponents.IconButton(id, Dalamud.Interface.FontAwesomeIcon.ArrowsToDot))
             {
-                trigger.cube.Position = Plugin.ClientState.LocalPlayer.Position;
-                Plugin.ChatGui.Print($"Trigger position set to {trigger.cube.Position}");
+                // We set the trigger position slightly below the player due to SE position jank.
+                trigger.cube.Position = Plugin.ClientState.LocalPlayer.Position - new Vector3(0, 0.1f, 0);
+                Plugin.ChatGui.Print($"[RACE] Trigger position set to {trigger.cube.Position}");
+            }
+            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            {
+                ImGui.SetTooltip("Set trigger position to your characters position.");
             }
 
             ImGui.SameLine();
             if (ImGui.TreeNode($"Type##{id}"))
             {
-                int selected = -1;
-                for (int i = 0; i < 5; i++)
+                ImGui.Indent();
+
+                // Super dumb way to get all the types of triggers.. Dont judge me.
+                foreach (Trigger.TriggerType triggerType in (Trigger.TriggerType[]) Enum.GetValues(typeof(Trigger.TriggerType)))
                 {
-                    ImGui.Indent();
-                    if (ImGui.Selectable($"Object {i}", selected == i))
+                    if (ImGui.Selectable(triggerType.ToString(), triggerType == trigger.selectedType))
                     {
-                        selected = i;
+                        if (triggerType == trigger.selectedType) continue;
+
+                        switch (triggerType)
+                        {
+                            case Trigger.TriggerType.Start:
+                                if (hasStart)
+                                {
+                                    Plugin.ChatGui.PrintError("[RACE] There is already a start trigger in the list!");
+                                    continue;
+                                } else
+                                {
+                                    hasStart = true;
+                                }
+                                break;
+                            case Trigger.TriggerType.Finish:
+                                if (hasFinish)
+                                {
+                                    Plugin.ChatGui.PrintError("[RACE] There is already a finish trigger in the list!");
+                                    continue;
+                                }
+                                else
+                                {
+                                    hasFinish = true;
+                                }
+                                break;
+                            default:
+                                updateStartFinishBools(trigger.selectedType);
+                                break;
+                        }
+
+                        trigger.selectedType = triggerType;
                     }
-                    ImGui.Unindent();
                 }
+                ImGui.Unindent();
 
                 ImGui.TreePop();
             }
@@ -112,11 +173,25 @@ public class MainWindow : Window, IDisposable
 
             id++;
             ImGui.DragFloat3($"Rotation##{id}", ref trigger.cube.Rotation, 0.1f);
-            foreach (Vector3 v in trigger.cube.Vertices) {
-                ImGui.Text(v.ToString());
-            }
+
+            ImGui.PopStyleColor();
         }
 
         ImGui.Spacing();
+    }
+
+    private void updateStartFinishBools(Trigger.TriggerType selectedType)
+    {
+        switch (selectedType)
+        {
+            case Trigger.TriggerType.Start:
+                hasStart = false;
+                break;
+            case Trigger.TriggerType.Finish:
+                hasFinish = false;
+                break;
+            default:
+                return;
+        }
     }
 }

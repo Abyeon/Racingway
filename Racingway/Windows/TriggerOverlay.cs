@@ -10,6 +10,7 @@ using System.Numerics;
 using Racingway.Utils;
 using Serilog;
 using Dalamud.Game.ClientState.Objects.Types;
+using ImGuizmoNET;
 
 
 namespace Racingway.Windows
@@ -49,11 +50,11 @@ namespace Racingway.Windows
                     Vector3[] raceLine = actor.raceLine.ToArray();
 
                     //// Draw a cube around the player for fun
-                    Vector3 pos = actor.position;
-                    float rotation = actor.actor.Rotation;
+                    //Vector3 pos = actor.position;
+                    //float rotation = actor.actor.Rotation;
 
-                    draw.DrawText3d(actor.actor.Name.ToString(), pos, 0xFFFFFFFF);
-                    draw.DrawCube(new Cube(pos, new Vector3(0.5f, 1, 0.5f), new Vector3(rotation, 0, 0)), 0xFFFFFFFF, 2.0f);
+                    //draw.DrawText3d(actor.actor.Name.ToString(), pos, 0xFFFFFFFF);
+                    //draw.DrawCubeFilled(new Cube(pos, new Vector3(0.5f, 1, 0.5f), new Vector3(rotation, 0, 0)), 0x22FFFFFF, 2.0f);
 
                     for (var i = 1; i < raceLine.Length; i++)
                     {
@@ -69,7 +70,8 @@ namespace Racingway.Windows
             {
                 if (trigger == null) continue;
 
-                draw.DrawCube(trigger.cube, trigger.color, 5.0f);
+                //draw.DrawCube(trigger.cube, trigger.color, 5.0f);
+                draw.DrawCubeFilled(trigger.cube, trigger.color, 5.0f);
             }
         }
     }

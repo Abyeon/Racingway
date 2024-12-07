@@ -1,5 +1,7 @@
 using Dalamud.Game.ClientState.Objects.Types;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Numerics;
 
 namespace Racingway.Utils
@@ -12,6 +14,7 @@ namespace Racingway.Utils
         public IGameObject actor;
         public Vector3 position = Vector3.Zero;
         public Queue<Vector3> raceLine = new Queue<Vector3>();
+        public Stopwatch timer = new Stopwatch();
 
         public int lastSeen;
 
@@ -33,19 +36,21 @@ namespace Racingway.Utils
 
             delayRaceline++;
 
-            if (delayRaceline >= 10)
+            if (inParkour)
             {
-                raceLine.Enqueue(pos);
-
-                if (raceLine.Count > 20)
+                if (delayRaceline >= 10)
                 {
-                    //Plugin.Log.Debug($"Player {actor.Name} moved to {pos.ToString()}");
-                    raceLine.Dequeue();
+                    raceLine.Enqueue(pos);
+
+                    //if (raceLine.Count > 20)
+                    //{
+                    //    //Plugin.Log.Debug($"Player {actor.Name} moved to {pos.ToString()}");
+                    //    raceLine.Dequeue();
+                    //}
+
+                    delayRaceline = 0;
                 }
-
-                delayRaceline = 0;
             }
-
 
             foreach (Trigger trigger in Plugin.triggers)
             {
