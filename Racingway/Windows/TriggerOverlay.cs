@@ -81,7 +81,7 @@ namespace Racingway.Windows
             }
 
             // Loop through triggers and draw them
-            foreach (var trigger in Plugin.triggers)
+            foreach (var trigger in Plugin.Configuration.triggers)
             {
                 if (trigger == null) continue;
 

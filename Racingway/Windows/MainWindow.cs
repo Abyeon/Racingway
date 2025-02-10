@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net.NetworkInformation;
 using System.Numerics;
 using Dalamud.Interface.Components;
@@ -8,6 +9,7 @@ using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
 using ImGuiNET;
 using ImGuizmoNET;
+using Newtonsoft.Json;
 using Racingway.Utils;
 
 namespace Racingway.Windows;
@@ -15,6 +17,9 @@ namespace Racingway.Windows;
 public class MainWindow : Window, IDisposable
 {
     private Plugin Plugin;
+
+    private bool hasStart = false;
+    private bool hasFinish = false;
 
     // We give this window a hidden ID using ##
     // So that the user will see "My Amazing Window" as window title,
@@ -29,12 +34,21 @@ public class MainWindow : Window, IDisposable
         };
 
         Plugin = plugin;
+
+        foreach (Trigger trigger in plugin.Configuration.triggers)
+        {
+            if (trigger.selectedType == Trigger.TriggerType.Start)
+            {
+                hasStart = true;
+            }
+            if (trigger.selectedType == Trigger.TriggerType.Finish)
+            {
+                hasFinish = true;
+            }
+        }
     }
 
     public void Dispose() { }
-
-    private bool hasStart = false;
-    private bool hasFinish = false;
 
     public override void Draw()
     {
@@ -52,6 +66,7 @@ public class MainWindow : Window, IDisposable
         if (ImGui.Button("Toggle Racing Lines"))
         {
             Plugin.Configuration.DrawRacingLines = !Plugin.Configuration.DrawRacingLines;
+            Plugin.Configuration.Save();
         }
 
         ImGui.SameLine();
@@ -66,12 +81,53 @@ public class MainWindow : Window, IDisposable
         if (ImGui.Button("Add Trigger"))
         {
             // We set the trigger position slightly below the player due to SE position jank.
-            Plugin.triggers.Add(new Trigger(Plugin.ClientState.LocalPlayer.Position - new Vector3(0, 0.1f, 0), Vector3.One, Vector3.Zero));
+            Plugin.Configuration.triggers.Add(new Trigger(Plugin.ClientState.LocalPlayer.Position - new Vector3(0, 0.1f, 0), Vector3.One, Vector3.Zero));
+            Plugin.Configuration.Save();
+        }
+
+        ImGui.SameLine();
+        if (ImGuiComponents.IconButton(Dalamud.Interface.FontAwesomeIcon.FileImport))
+        {
+            try
+            {
+                string data = ImGui.GetClipboardText();
+                var Json = ImportExport.FromCompressedBase64(data);
+
+                List<Trigger>? import = null;
+
+                import = JsonConvert.DeserializeObject<List<Trigger>>(Json);
+
+                if (import != null)
+                {
+                    Plugin.Configuration.triggers = import;
+                    Plugin.Configuration.Save();
+                }
+            }
+            catch (JsonReaderException ex)
+            {
+                Plugin.ChatGui.PrintError($"[RACE] Failed to import setup. {ex.Message}");
+                Plugin.Log.Error(ex, "Failed to import setup");
+            }
+        }
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+        {
+            ImGui.SetTooltip("Import config from clipboard.");
+        }
+
+        ImGui.SameLine();
+        if(ImGuiComponents.IconButton(Dalamud.Interface.FontAwesomeIcon.FileExport))
+        {
+            string text = ImportExport.ToCompressedBase64(Plugin.Configuration.triggers);
+            ImGui.SetClipboardText(text);
+        }
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+        {
+            ImGui.SetTooltip("Export config to clipboard.");
         }
 
         int id = 0;
 
-        foreach (Trigger trigger in Plugin.triggers)
+        foreach (Trigger trigger in Plugin.Configuration.triggers)
         {
             switch (trigger.selectedType)
             {
@@ -93,7 +149,8 @@ public class MainWindow : Window, IDisposable
             if (ImGuiComponents.IconButton(id, Dalamud.Interface.FontAwesomeIcon.Eraser))
             {
                 updateStartFinishBools(trigger.selectedType);
-                Plugin.triggers.Remove(trigger);
+                Plugin.Configuration.triggers.Remove(trigger);
+                Plugin.Configuration.Save();
                 continue;
             }
             if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
@@ -108,6 +165,7 @@ public class MainWindow : Window, IDisposable
                 // We set the trigger position slightly below the player due to SE position jank.
                 trigger.cube.Position = Plugin.ClientState.LocalPlayer.Position - new Vector3(0, 0.1f, 0);
                 Plugin.ChatGui.Print($"[RACE] Trigger position set to {trigger.cube.Position}");
+                Plugin.Configuration.Save();
             }
             if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
             {
@@ -150,11 +208,13 @@ public class MainWindow : Window, IDisposable
                                 }
                                 break;
                             default:
-                                updateStartFinishBools(trigger.selectedType);
                                 break;
                         }
 
+                        updateStartFinishBools(trigger.selectedType);
+
                         trigger.selectedType = triggerType;
+                        Plugin.Configuration.Save();
                     }
                 }
                 ImGui.Unindent();
@@ -163,16 +223,23 @@ public class MainWindow : Window, IDisposable
             }
 
             id++;
-            ImGui.DragFloat3($"Position##{id}", ref trigger.cube.Position, 0.1f);
+            if (ImGui.DragFloat3($"Position##{id}", ref trigger.cube.Position, 0.1f))
+            {
+                Plugin.Configuration.Save();
+            }
 
             id++;
             if (ImGui.DragFloat3($"Scale##{id}", ref trigger.cube.Scale, 0.1f))
             {
                 trigger.cube.UpdateVerts();
+                Plugin.Configuration.Save();
             }
 
             id++;
-            ImGui.DragFloat3($"Rotation##{id}", ref trigger.cube.Rotation, 0.1f);
+            if (ImGui.DragFloat3($"Rotation##{id}", ref trigger.cube.Rotation, 0.1f))
+            {
+                Plugin.Configuration.Save();
+            }
 
             ImGui.PopStyleColor();
         }

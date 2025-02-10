@@ -46,7 +46,7 @@ namespace Racingway.Utils
                 }
             }
 
-            foreach (Trigger trigger in Plugin.triggers)
+            foreach (Trigger trigger in Plugin.Configuration.triggers)
             {
                 trigger.CheckCollision(this);
             }

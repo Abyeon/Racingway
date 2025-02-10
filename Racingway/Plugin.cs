@@ -45,9 +45,6 @@ public sealed class Plugin : IDalamudPlugin
     public Vector3 endBoxMin = new();
     public Vector3 endBoxMax = new();
 
-    //public List<Player> trackedPlayers = new List<Player>();
-    public List<Trigger> triggers = new List<Trigger>();
-
     public readonly WindowSystem WindowSystem = new("ParkourTimer");
     private ConfigWindow ConfigWindow { get; init; }
     private MainWindow MainWindow { get; init; }
@@ -57,6 +54,11 @@ public sealed class Plugin : IDalamudPlugin
     {
         eNpcBases = DataManager.GetExcelSheet<ENpcBase>();
         Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+
+        foreach (Trigger trigger in Configuration.triggers)
+        {
+            Log.Debug(trigger.selectedType.ToString());
+        }
 
         // you might normally want to embed resources and load them from the manifest stream
         var goatImagePath = Path.Combine(PluginInterface.AssemblyLocation.Directory?.FullName!, "goat.png");
