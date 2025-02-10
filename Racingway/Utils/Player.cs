@@ -38,15 +38,9 @@ namespace Racingway.Utils
 
             if (inParkour)
             {
-                if (delayRaceline >= 10)
+                if (delayRaceline >= 5)
                 {
                     raceLine.Enqueue(pos);
-
-                    //if (raceLine.Count > 20)
-                    //{
-                    //    //Plugin.Log.Debug($"Player {actor.Name} moved to {pos.ToString()}");
-                    //    raceLine.Dequeue();
-                    //}
 
                     delayRaceline = 0;
                 }
@@ -56,6 +50,21 @@ namespace Racingway.Utils
             {
                 trigger.CheckCollision(this);
             }
+        }
+
+        public float GetDistanceTraveled()
+        {
+            Vector3[] arrayLine = raceLine.ToArray();
+            float distance = 0;
+
+            for (int i = 1; i < raceLine.Count; i++)
+            {
+                if (arrayLine[i - 1] == Vector3.Zero) continue;
+
+                distance += Vector3.Distance(arrayLine[i - 1], arrayLine[i]);
+            }
+
+            return distance;
         }
     }
 }

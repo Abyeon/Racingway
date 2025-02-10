@@ -15,6 +15,9 @@ using System.Linq;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using System.Numerics;
 using Racingway.Utils;
+using FFXIVClientStructs.FFXIV.Common.Component.Excel;
+using Lumina.Excel.Sheets;
+using Lumina.Excel;
 
 namespace Racingway;
 
@@ -30,6 +33,9 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IClientState ClientState { get; private set; } = null!;
     [PluginService] internal static IChatGui ChatGui { get; private set; } = null!;
     [PluginService] internal static IGameGui GameGui { get; private set; } = null!;
+    [PluginService] internal static IDataManager DataManager { get; private set; } = null!;
+
+    public readonly ExcelSheet<ENpcBase> eNpcBases;
 
     private const string CommandName = "/race";
 
@@ -49,6 +55,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public Plugin()
     {
+        eNpcBases = DataManager.GetExcelSheet<ENpcBase>();
         Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
 
         // you might normally want to embed resources and load them from the manifest stream
@@ -81,9 +88,12 @@ public sealed class Plugin : IDalamudPlugin
     }
 
     public Dictionary<uint, Player> trackedPlayers = new();
+    public IGameObject[] trackedNPCs;
 
     private void OnFrameworkTick(IFramework framework)
     {
+        trackedNPCs = GetNPCs(ObjectTable);
+
         // Check if player does not exist anymore
         foreach (var player in trackedPlayers)
         {
@@ -116,6 +126,11 @@ public sealed class Plugin : IDalamudPlugin
                 trackedPlayers[id].lastSeen = 0;
             }
         }
+    }
+
+    public IGameObject[] GetNPCs(IEnumerable<IGameObject> gameObjects)
+    {
+        return gameObjects.Where(obj => obj is INpc).ToArray();
     }
 
     public IGameObject[] GetPlayers(IEnumerable<IGameObject> gameObjects)

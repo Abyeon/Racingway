@@ -59,6 +59,8 @@ namespace Racingway.Utils
             switch (selectedType)
             {
                 case TriggerType.Fail:
+                    if (!player.inParkour) break;
+
                     // Player failed parkour
                     player.raceLine.Clear();
                     player.inParkour = false;
@@ -83,9 +85,11 @@ namespace Racingway.Utils
                             t.Seconds,
                             t.Milliseconds);
 
+                        float distance = player.GetDistanceTraveled();
+
                         player.timer.Stop();
                         player.timer.Reset();
-                        Plugin.ChatGui.Print($"{player.actor.Name} just finished the parkour in {prettyPrint}");
+                        Plugin.ChatGui.Print($"{player.actor.Name} just finished the parkour in {prettyPrint} and {distance} units.");
                     }
                     break;
             }

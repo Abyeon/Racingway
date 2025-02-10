@@ -92,8 +92,8 @@ public class MainWindow : Window, IDisposable
             ImGui.Separator();
             if (ImGuiComponents.IconButton(id, Dalamud.Interface.FontAwesomeIcon.Eraser))
             {
-                Plugin.triggers.Remove(trigger);
                 updateStartFinishBools(trigger.selectedType);
+                Plugin.triggers.Remove(trigger);
                 continue;
             }
             if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
