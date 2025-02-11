@@ -1,3 +1,4 @@
+using Dalamud.Game.ClientState.Objects.SubKinds;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -56,6 +57,8 @@ namespace Racingway.Utils
             touching++;
             color = ActiveColor;
 
+            IPlayerCharacter actor = (IPlayerCharacter)player.actor;
+
             switch (selectedType)
             {
                 case TriggerType.Fail:
@@ -64,7 +67,7 @@ namespace Racingway.Utils
                     // Player failed parkour
                     player.raceLine.Clear();
                     player.inParkour = false;
-                    Plugin.ChatGui.Print($"{player.actor.Name} just failed the parkour.");
+                    Plugin.ChatGui.Print($"{actor.Name} {actor.HomeWorld.Value.Name} just failed the parkour.");
                     player.timer.Reset();
                     break;
                 case TriggerType.Checkpoint:
@@ -89,7 +92,9 @@ namespace Racingway.Utils
 
                         player.timer.Stop();
                         player.timer.Reset();
-                        Plugin.ChatGui.Print($"{player.actor.Name} just finished the parkour in {prettyPrint} and {distance} units.");
+
+
+                        Plugin.ChatGui.Print($"{actor.Name} {actor.HomeWorld.Value.Name} just finished the parkour in {prettyPrint} and {distance} units.");
                     }
                     break;
             }
