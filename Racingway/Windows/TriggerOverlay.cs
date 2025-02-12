@@ -45,31 +45,9 @@ namespace Racingway.Windows
 
             if (Plugin.Configuration.DrawRacingLines)
             {
-                foreach (var npc in Plugin.trackedNPCs)
-                {
-                    //// Draw a cube around the player for fun
-                    if (npc.IsTargetable && npc.ObjectKind == Dalamud.Game.ClientState.Objects.Enums.ObjectKind.EventNpc && npc.Name.ToString() == "Koharu")
-                    {
-                        var npcBase = Plugin.eNpcBases.GetRowOrDefault(npc.DataId);
-                        Plugin.Log.Debug(npcBase.ToString());
-                        Vector3 pos = npc.Position;
-                        float rotation = npc.Rotation;
-
-                        draw.DrawText3d(npc.Name.ToString(), pos, 0xFFFFFFFF);
-                        draw.DrawCubeFilled(new Cube(pos, new Vector3(0.5f, 1, 0.5f), new Vector3(rotation, 0, 0)), 0x22FFFFFF, 2.0f);
-                    }
-                }
-
                 foreach (var actor in Plugin.trackedPlayers.Values)
                 {
                     Vector3[] raceLine = actor.raceLine.ToArray();
-
-                    //// Draw a cube around the player for fun
-                    //Vector3 pos = actor.position;
-                    //float rotation = actor.actor.Rotation;
-
-                    //draw.DrawText3d(actor.actor.Name.ToString(), pos, 0xFFFFFFFF);
-                    //draw.DrawCubeFilled(new Cube(pos, new Vector3(0.5f, 1, 0.5f), new Vector3(rotation, 0, 0)), 0x22FFFFFF, 2.0f);
 
                     for (var i = 1; i < raceLine.Length; i++)
                     {
