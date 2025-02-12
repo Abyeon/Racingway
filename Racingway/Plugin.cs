@@ -60,9 +60,6 @@ public sealed class Plugin : IDalamudPlugin
             Log.Debug(trigger.selectedType.ToString());
         }
 
-        // you might normally want to embed resources and load them from the manifest stream
-        var goatImagePath = Path.Combine(PluginInterface.AssemblyLocation.Directory?.FullName!, "goat.png");
-
         ConfigWindow = new ConfigWindow(this);
         MainWindow = new MainWindow(this);
         TriggerOverlay = new TriggerOverlay(this);
@@ -73,11 +70,10 @@ public sealed class Plugin : IDalamudPlugin
 
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
-            HelpMessage = "A useful message to display in /xlhelp"
+            HelpMessage = "Setup your race!"
         });
 
         Framework.Update += OnFrameworkTick;
-        //GameNetwork.NetworkMessage += NetworkMessage;
 
         PluginInterface.UiBuilder.Draw += DrawUI;
 

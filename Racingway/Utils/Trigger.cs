@@ -58,6 +58,7 @@ namespace Racingway.Utils
             color = ActiveColor;
 
             IPlayerCharacter actor = (IPlayerCharacter)player.actor;
+            DateTime now = DateTime.UtcNow;
 
             switch (selectedType)
             {
@@ -67,7 +68,7 @@ namespace Racingway.Utils
                     // Player failed parkour
                     player.raceLine.Clear();
                     player.inParkour = false;
-                    Plugin.ChatGui.Print($"{actor.Name} {actor.HomeWorld.Value.Name} just failed the parkour.");
+                    Plugin.ChatGui.Print($"{now.ToString("M/dd H:mm:ss")} {actor.Name} {actor.HomeWorld.Value.Name} just failed the parkour.");
                     player.timer.Reset();
                     break;
                 case TriggerType.Checkpoint:
@@ -82,11 +83,13 @@ namespace Racingway.Utils
                         long elapsedTime = player.timer.ElapsedMilliseconds;
                         TimeSpan t = TimeSpan.FromMilliseconds(elapsedTime);
 
-                        String prettyPrint = string.Format("{0:D2}h:{1:D2}m:{2:D2}s:{3:D3}ms",
-                            t.Hours,
-                            t.Minutes,
-                            t.Seconds,
-                            t.Milliseconds);
+                        //String prettyPrint = string.Format("{0:D2}h:{1:D2}m:{2:D2}s:{3:D3}ms",
+                        //    t.Hours,
+                        //    t.Minutes,
+                        //    t.Seconds,
+                        //    t.Milliseconds);
+
+                        String prettyPrint = Time.PrettyFormatTimeSpan(t);
 
                         float distance = player.GetDistanceTraveled();
 
@@ -94,7 +97,7 @@ namespace Racingway.Utils
                         player.timer.Reset();
 
 
-                        Plugin.ChatGui.Print($"{actor.Name} {actor.HomeWorld.Value.Name} just finished the parkour in {prettyPrint} and {distance} units.");
+                        Plugin.ChatGui.Print($"{now.ToString("M/dd H:mm:ss")} {actor.Name} {actor.HomeWorld.Value.Name} just finished the parkour in {prettyPrint} and {distance} units.");
                     }
                     break;
             }
