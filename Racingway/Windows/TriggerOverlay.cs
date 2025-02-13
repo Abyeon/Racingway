@@ -43,6 +43,7 @@ namespace Racingway.Windows
             Io = ImGui.GetIO();
             ImGui.SetWindowSize(Io.DisplaySize);
 
+            // Display player racing lines
             if (Plugin.Configuration.DrawRacingLines)
             {
                 foreach (var actor in Plugin.trackedPlayers.Values)
@@ -58,13 +59,16 @@ namespace Racingway.Windows
                 }
             }
 
-            // Loop through triggers and draw them
-            foreach (var trigger in Plugin.Configuration.triggers)
+            // Display Trigger debug UI.
+            if (Plugin.Configuration.DrawTriggers)
             {
-                if (trigger == null) continue;
+                foreach (var trigger in Plugin.Configuration.triggers)
+                {
+                    if (trigger == null) continue;
 
-                //draw.DrawCube(trigger.cube, trigger.color, 5.0f);
-                draw.DrawCubeFilled(trigger.cube, trigger.color, 5.0f);
+                    //draw.DrawCube(trigger.cube, trigger.color, 5.0f);
+                    draw.DrawCubeFilled(trigger.cube, trigger.color, 5.0f);
+                }
             }
         }
     }

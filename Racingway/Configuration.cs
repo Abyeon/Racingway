@@ -13,6 +13,7 @@ public class Configuration : IPluginConfiguration
 
     public bool IsConfigWindowMovable { get; set; } = true;
     public bool SomePropertyToBeSavedAndWithADefault { get; set; } = true;
+    public bool DrawTriggers { get; set; } = false;
     public bool DrawRacingLines { get; set; } = false;
     public List<Trigger> triggers { get; set; } = new List<Trigger>();
 

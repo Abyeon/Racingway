@@ -15,9 +15,10 @@ using System.Linq;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using System.Numerics;
 using Racingway.Utils;
-using FFXIVClientStructs.FFXIV.Common.Component.Excel;
 using Lumina.Excel.Sheets;
 using Lumina.Excel;
+using FFXIVClientStructs.FFXIV.Client.Game;
+using FFXIVClientStructs.Interop.Generated;
 
 namespace Racingway;
 
@@ -74,6 +75,7 @@ public sealed class Plugin : IDalamudPlugin
         });
 
         Framework.Update += OnFrameworkTick;
+        ClientState.TerritoryChanged += OnTerritoryChange;
 
         PluginInterface.UiBuilder.Draw += DrawUI;
 
@@ -88,10 +90,10 @@ public sealed class Plugin : IDalamudPlugin
     public Dictionary<uint, Player> trackedPlayers = new();
     public IGameObject[] trackedNPCs;
 
+    //private uint lastHousingId
+
     private void OnFrameworkTick(IFramework framework)
     {
-        trackedNPCs = GetNPCs(ObjectTable);
-
         // Check if player does not exist anymore
         foreach (var player in trackedPlayers)
         {
@@ -126,9 +128,13 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
-    public IGameObject[] GetNPCs(IEnumerable<IGameObject> gameObjects)
+    private unsafe void OnTerritoryChange(ushort territory)
     {
-        return gameObjects.Where(obj => obj is INpc).ToArray();
+        var manager = HousingManager.Instance();
+        var ward = manager->GetCurrentWard();
+        var currentPlot = manager->GetCurrentPlot();
+        var currentIndoorHouseId = manager->GetCurrentIndoorHouseId();
+        var isInside = manager->IsInside();
     }
 
     public IGameObject[] GetPlayers(IEnumerable<IGameObject> gameObjects)
@@ -151,10 +157,18 @@ public sealed class Plugin : IDalamudPlugin
         CommandManager.RemoveHandler(CommandName);
     }
 
-    private void OnCommand(string command, string args)
+    private unsafe void OnCommand(string command, string args)
     {
         // in response to the slash command, just toggle the display status of our main ui
         ToggleMainUI();
+        var manager = HousingManager.Instance();
+        var ward = manager->GetCurrentWard();
+        var currentPlot = manager->GetCurrentPlot();
+        var currentIndoorHouseId = manager->GetCurrentIndoorHouseId();
+        var isInside = manager->IsInside();
+
+        Log.Debug(currentIndoorHouseId.ToString());
+
     }
 
     private void DrawUI() => WindowSystem.Draw();

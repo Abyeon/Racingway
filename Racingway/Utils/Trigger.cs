@@ -62,6 +62,14 @@ namespace Racingway.Utils
 
             switch (selectedType)
             {
+                case TriggerType.Start:
+                    if (!player.inParkour) break;
+
+                    player.inParkour = false;
+                    player.raceLine.Clear();
+                    player.timer.Reset();
+
+                    break;
                 case TriggerType.Fail:
                     if (!player.inParkour) break;
 
@@ -95,7 +103,6 @@ namespace Racingway.Utils
 
                         player.timer.Stop();
                         player.timer.Reset();
-
 
                         Plugin.ChatGui.Print($"{now.ToString("M/dd H:mm:ss")} {actor.Name} {actor.HomeWorld.Value.Name} just finished the parkour in {prettyPrint} and {distance} units.");
                     }
