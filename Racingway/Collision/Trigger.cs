@@ -12,12 +12,10 @@ namespace Racingway.Collision
 {
     public class Trigger
     {
-        public Plugin Plugin { get; set; }
         public Cube Cube { get; set; }
 
         public event EventHandler<Player> Entered;
         public event EventHandler<Player> Left;
-
 
         private static readonly uint InactiveColor = 0x22FF3061;
         private static readonly uint ActiveColor = 0x2200FF00;
@@ -37,10 +35,9 @@ namespace Racingway.Collision
         private int touching = 0;
         private List<uint> touchers = new List<uint>();
 
-        public Trigger(Vector3 position, Vector3 scale, Vector3 rotation, Plugin plugin)
+        public Trigger(Vector3 position, Vector3 scale, Vector3 rotation)
         {
             this.Cube = new Cube(position, scale, rotation);
-            this.Plugin = plugin;
         }
 
         public void CheckCollision(Player player)

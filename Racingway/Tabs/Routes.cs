@@ -25,7 +25,7 @@ namespace Racingway.Tabs
         {
             this.Plugin = plugin;
 
-            foreach (Trigger trigger in plugin.Configuration.triggers)
+            foreach (Trigger trigger in plugin.Configuration.Triggers)
             {
                 if (trigger.selectedType == Trigger.TriggerType.Start)
                 {
@@ -50,11 +50,10 @@ namespace Racingway.Tabs
             if (ImGui.Button("Add Trigger"))
             {
                 // We set the trigger position slightly below the player due to SE position jank.
-                Trigger newTrigger = new Trigger(Plugin.ClientState.LocalPlayer.Position - new Vector3(0, 0.1f, 0), Vector3.One, Vector3.Zero, Plugin);
-                newTrigger.Entered += Plugin.Logic.OnEntered;
-                newTrigger.Left += Plugin.Logic.OnLeft;
+                Trigger newTrigger = new Trigger(Plugin.ClientState.LocalPlayer.Position - new Vector3(0, 0.1f, 0), Vector3.One, Vector3.Zero);
+                Plugin.Configuration.Triggers.Add(newTrigger);
+                Plugin.SubscribeToTriggers();
 
-                Plugin.Configuration.triggers.Add(newTrigger);
                 Plugin.Configuration.Save();
             }
 
@@ -72,7 +71,7 @@ namespace Racingway.Tabs
 
                     if (import != null)
                     {
-                        Plugin.Configuration.triggers = import;
+                        Plugin.Configuration.Triggers = import;
                         Plugin.Configuration.Save();
                     }
                 }
@@ -90,7 +89,7 @@ namespace Racingway.Tabs
             ImGui.SameLine();
             if (ImGuiComponents.IconButton(Dalamud.Interface.FontAwesomeIcon.FileExport))
             {
-                string text = ImportExport.ToCompressedBase64(Plugin.Configuration.triggers);
+                string text = ImportExport.ToCompressedBase64(Plugin.Configuration.Triggers);
                 ImGui.SetClipboardText(text);
             }
             if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
@@ -100,7 +99,7 @@ namespace Racingway.Tabs
 
             int id = 0;
 
-            foreach (Trigger trigger in Plugin.Configuration.triggers)
+            foreach (Trigger trigger in Plugin.Configuration.Triggers)
             {
                 switch (trigger.selectedType)
                 {
@@ -122,7 +121,7 @@ namespace Racingway.Tabs
                 if (ImGuiComponents.IconButton(id, Dalamud.Interface.FontAwesomeIcon.Eraser))
                 {
                     updateStartFinishBools(trigger.selectedType);
-                    Plugin.Configuration.triggers.Remove(trigger);
+                    Plugin.Configuration.Triggers.Remove(trigger);
                     Plugin.Configuration.Save();
                     continue;
                 }

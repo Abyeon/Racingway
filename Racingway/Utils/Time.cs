@@ -17,7 +17,7 @@ namespace Racingway.Utils
             if (span.Hours > 0)
                 sb.Append($"{span.Hours}:");
 
-            sb.Append($"{span.Minutes:00}:{span.Seconds:00}.{span.Milliseconds}");
+            sb.Append($"{span.Minutes:00}:{span.Seconds:00}.{span.Milliseconds:000}");
 
             return sb.ToString();
         }

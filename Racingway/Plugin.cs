@@ -52,12 +52,13 @@ public sealed class Plugin : IDalamudPlugin
     {
         Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
 
-        Logic = new Logic(this); // Initiate collision logic
-        foreach (Trigger trigger in Configuration.triggers)
+        foreach(Trigger trigger in Configuration.Triggers)
         {
-            trigger.Entered += Logic.OnEntered;
-            trigger.Left += Logic.OnLeft;
+            Log.Debug(trigger.selectedType.ToString());
         }
+
+        Logic = new Logic(this); // Initiate collision logic
+        SubscribeToTriggers();
 
         ConfigWindow = new ConfigWindow(this);
         MainWindow = new MainWindow(this);
@@ -89,6 +90,17 @@ public sealed class Plugin : IDalamudPlugin
 
     public Dictionary<uint, Player> trackedPlayers = new();
     public IGameObject[] trackedNPCs;
+
+    public void SubscribeToTriggers()
+    {
+        foreach (Trigger trigger in Configuration.Triggers)
+        {
+            trigger.Entered -= Logic.OnEntered;
+            trigger.Left -= Logic.OnLeft;
+            trigger.Entered += Logic.OnEntered;
+            trigger.Left += Logic.OnLeft;
+        }
+    }
 
     private void OnFrameworkTick(IFramework framework)
     {
@@ -151,6 +163,7 @@ public sealed class Plugin : IDalamudPlugin
 
         ConfigWindow.Dispose();
         MainWindow.Dispose();
+        TriggerOverlay.Dispose();
 
         CommandManager.RemoveHandler(CommandName);
     }

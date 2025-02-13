@@ -39,7 +39,13 @@ public class MainWindow : Window, IDisposable
         ];
     }
 
-    public void Dispose() { }
+    public void Dispose()
+    {
+        foreach (var tab in Tabs)
+        {
+            tab.Dispose();
+        }
+    }
 
     public override void Draw()
     {

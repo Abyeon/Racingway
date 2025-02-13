@@ -62,7 +62,7 @@ namespace Racingway.Windows
             // Display Trigger debug UI.
             if (Plugin.Configuration.DrawTriggers)
             {
-                foreach (var trigger in Plugin.Configuration.triggers)
+                foreach (var trigger in Plugin.Configuration.Triggers)
                 {
                     if (trigger == null) continue;
 

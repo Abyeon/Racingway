@@ -11,11 +11,12 @@ public class Configuration : IPluginConfiguration
 {
     public int Version { get; set; } = 0;
 
+    public bool AllowDuplicateRecords = true;
     public bool IsConfigWindowMovable { get; set; } = true;
     public bool SomePropertyToBeSavedAndWithADefault { get; set; } = true;
     public bool DrawTriggers { get; set; } = false;
     public bool DrawRacingLines { get; set; } = false;
-    public List<Trigger> triggers { get; set; } = new List<Trigger>();
+    public List<Trigger> Triggers { get; set; } = new List<Trigger>();
 
     // the below exist just to make saving less cumbersome
     public void Save()

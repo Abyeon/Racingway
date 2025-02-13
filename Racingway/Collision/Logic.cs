@@ -20,7 +20,7 @@ namespace Racingway.Collision
 
         public void CheckCollision(Player player)
         {
-            foreach (Trigger trigger in Plugin.Configuration.triggers)
+            foreach (Trigger trigger in Plugin.Configuration.Triggers)
             {
                 trigger.CheckCollision(player);
             }
