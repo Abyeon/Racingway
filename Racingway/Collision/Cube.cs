@@ -5,7 +5,7 @@ using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Racingway.Utils
+namespace Racingway.Collision
 {
     public class Cube
     {
@@ -17,11 +17,11 @@ namespace Racingway.Utils
 
         public Cube(Vector3 position, Vector3 scale, Vector3 rotation)
         {
-            this.Position = position;
-            this.Scale = scale;
-            this.Rotation = rotation;
+            Position = position;
+            Scale = scale;
+            Rotation = rotation;
 
-            this.Vertices = [
+            Vertices = [
                 new Vector3(-1, 0, -1) * scale,
                 new Vector3(-1, 0, 1) * scale,
                 new Vector3(1, 0, 1) * scale,
@@ -35,25 +35,25 @@ namespace Racingway.Utils
 
         public void UpdateVerts()
         {
-            this.Vertices = [
-                new Vector3(-1, 0, -1) * this.Scale,
-                new Vector3(-1, 0, 1) * this.Scale,
-                new Vector3(1, 0, 1) * this.Scale,
-                new Vector3(1, 0, -1) * this.Scale,
-                new Vector3(-1, 1, -1) * this.Scale,
-                new Vector3(-1, 1, 1) * this.Scale,
-                new Vector3(1, 1, 1) * this.Scale,
-                new Vector3(1, 1, -1) * this.Scale
+            Vertices = [
+                new Vector3(-1, 0, -1) * Scale,
+                new Vector3(-1, 0, 1) * Scale,
+                new Vector3(1, 0, 1) * Scale,
+                new Vector3(1, 0, -1) * Scale,
+                new Vector3(-1, 1, -1) * Scale,
+                new Vector3(-1, 1, 1) * Scale,
+                new Vector3(1, 1, 1) * Scale,
+                new Vector3(1, 1, -1) * Scale
             ];
         }
 
         public bool PointInCube(Vector3 position)
         {
-            Quaternion rotator = Quaternion.CreateFromYawPitchRoll(-this.Rotation.X, -this.Rotation.Y, -this.Rotation.Z);
-            Vector3 relativeVector = position - this.Position;
-            Vector3 rotatedVector = (Vector3.Transform(relativeVector, rotator) + this.Position);
+            var rotator = Quaternion.CreateFromYawPitchRoll(-Rotation.X, -Rotation.Y, -Rotation.Z);
+            var relativeVector = position - Position;
+            var rotatedVector = Vector3.Transform(relativeVector, rotator) + Position;
 
-            Vector3[] moved = GetMovedVertices();
+            var moved = GetMovedVertices();
 
             return
                 rotatedVector.X >= moved[0].X &&
@@ -66,11 +66,11 @@ namespace Racingway.Utils
 
         public Vector3[] GetMovedVertices()
         {
-            Vector3[] temp = new Vector3[8];
+            var temp = new Vector3[8];
 
-            for (int i = 0; i < 8; i++) 
+            for (var i = 0; i < 8; i++)
             {
-                temp[i] = this.Vertices[i] + this.Position;
+                temp[i] = Vertices[i] + Position;
             }
 
             return temp;

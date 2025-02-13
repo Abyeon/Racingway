@@ -19,6 +19,7 @@ using Lumina.Excel.Sheets;
 using Lumina.Excel;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.Interop.Generated;
+using Racingway.Collision;
 
 namespace Racingway;
 
@@ -36,29 +37,26 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IGameGui GameGui { get; private set; } = null!;
     [PluginService] internal static IDataManager DataManager { get; private set; } = null!;
 
-    public readonly ExcelSheet<ENpcBase> eNpcBases;
-
     private const string CommandName = "/race";
 
     public Configuration Configuration { get; init; }
-    public Vector3 startBoxMin = new();
-    public Vector3 startBoxMax = new();
-    public Vector3 endBoxMin = new();
-    public Vector3 endBoxMax = new();
-
-    public readonly WindowSystem WindowSystem = new("ParkourTimer");
+    public readonly WindowSystem WindowSystem = new("Racingway");
+    public Logic Logic { get; init; }
+    public TriggerOverlay TriggerOverlay { get; init; }
     private ConfigWindow ConfigWindow { get; init; }
     private MainWindow MainWindow { get; init; }
-    public TriggerOverlay TriggerOverlay { get; init; }
+
+    public List<Record> RecordList { get; init; }
 
     public Plugin()
     {
-        eNpcBases = DataManager.GetExcelSheet<ENpcBase>();
         Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
 
+        Logic = new Logic(this); // Initiate collision logic
         foreach (Trigger trigger in Configuration.triggers)
         {
-            Log.Debug(trigger.selectedType.ToString());
+            trigger.Entered += Logic.OnEntered;
+            trigger.Left += Logic.OnLeft;
         }
 
         ConfigWindow = new ConfigWindow(this);
@@ -68,6 +66,8 @@ public sealed class Plugin : IDalamudPlugin
         WindowSystem.AddWindow(ConfigWindow);
         WindowSystem.AddWindow(MainWindow);
         WindowSystem.AddWindow(TriggerOverlay);
+
+        RecordList = new List<Record>();
 
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
@@ -89,8 +89,6 @@ public sealed class Plugin : IDalamudPlugin
 
     public Dictionary<uint, Player> trackedPlayers = new();
     public IGameObject[] trackedNPCs;
-
-    //private uint lastHousingId
 
     private void OnFrameworkTick(IFramework framework)
     {

@@ -1,6 +1,7 @@
 using Dalamud.Interface.Components;
 using ImGuiNET;
 using Newtonsoft.Json;
+using Racingway.Collision;
 using Racingway.Utils;
 using System;
 using System.Collections.Generic;
@@ -49,7 +50,11 @@ namespace Racingway.Tabs
             if (ImGui.Button("Add Trigger"))
             {
                 // We set the trigger position slightly below the player due to SE position jank.
-                Plugin.Configuration.triggers.Add(new Trigger(Plugin.ClientState.LocalPlayer.Position - new Vector3(0, 0.1f, 0), Vector3.One, Vector3.Zero));
+                Trigger newTrigger = new Trigger(Plugin.ClientState.LocalPlayer.Position - new Vector3(0, 0.1f, 0), Vector3.One, Vector3.Zero, Plugin);
+                newTrigger.Entered += Plugin.Logic.OnEntered;
+                newTrigger.Left += Plugin.Logic.OnLeft;
+
+                Plugin.Configuration.triggers.Add(newTrigger);
                 Plugin.Configuration.Save();
             }
 
@@ -131,8 +136,8 @@ namespace Racingway.Tabs
                 if (ImGuiComponents.IconButton(id, Dalamud.Interface.FontAwesomeIcon.ArrowsToDot))
                 {
                     // We set the trigger position slightly below the player due to SE position jank.
-                    trigger.cube.Position = Plugin.ClientState.LocalPlayer.Position - new Vector3(0, 0.1f, 0);
-                    Plugin.ChatGui.Print($"[RACE] Trigger position set to {trigger.cube.Position}");
+                    trigger.Cube.Position = Plugin.ClientState.LocalPlayer.Position - new Vector3(0, 0.1f, 0);
+                    Plugin.ChatGui.Print($"[RACE] Trigger position set to {trigger.Cube.Position}");
                     Plugin.Configuration.Save();
                 }
                 if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
@@ -192,20 +197,20 @@ namespace Racingway.Tabs
                 }
 
                 id++;
-                if (ImGui.DragFloat3($"Position##{id}", ref trigger.cube.Position, 0.1f))
+                if (ImGui.DragFloat3($"Position##{id}", ref trigger.Cube.Position, 0.1f))
                 {
                     Plugin.Configuration.Save();
                 }
 
                 id++;
-                if (ImGui.DragFloat3($"Scale##{id}", ref trigger.cube.Scale, 0.1f))
+                if (ImGui.DragFloat3($"Scale##{id}", ref trigger.Cube.Scale, 0.1f))
                 {
-                    trigger.cube.UpdateVerts();
+                    trigger.Cube.UpdateVerts();
                     Plugin.Configuration.Save();
                 }
 
                 id++;
-                if (ImGui.DragFloat3($"Rotation##{id}", ref trigger.cube.Rotation, 0.1f))
+                if (ImGui.DragFloat3($"Rotation##{id}", ref trigger.Cube.Rotation, 0.1f))
                 {
                     Plugin.Configuration.Save();
                 }

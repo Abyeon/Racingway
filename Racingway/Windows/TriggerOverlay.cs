@@ -67,7 +67,7 @@ namespace Racingway.Windows
                     if (trigger == null) continue;
 
                     //draw.DrawCube(trigger.cube, trigger.color, 5.0f);
-                    draw.DrawCubeFilled(trigger.cube, trigger.color, 5.0f);
+                    draw.DrawCubeFilled(trigger.Cube, trigger.color, 5.0f);
                 }
             }
         }

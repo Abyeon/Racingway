@@ -1,4 +1,5 @@
 using Dalamud.Game.ClientState.Objects.Types;
+using Racingway.Collision;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -46,10 +47,7 @@ namespace Racingway.Utils
                 }
             }
 
-            foreach (Trigger trigger in Plugin.Configuration.triggers)
-            {
-                trigger.CheckCollision(this);
-            }
+            Plugin.Logic.CheckCollision(this);
         }
 
         public float GetDistanceTraveled()

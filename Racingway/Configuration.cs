@@ -1,6 +1,6 @@
 using Dalamud.Configuration;
 using Dalamud.Plugin;
-using Racingway.Utils;
+using Racingway.Collision;
 using System;
 using System.Collections.Generic;
 
