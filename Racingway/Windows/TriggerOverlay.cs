@@ -59,11 +59,15 @@ namespace Racingway.Windows
                 }
 
                 // Draw the selected Record's line
-                for (var i = 1; i < Plugin.DisplayedRecord.Line.Length; i++)
-                {
-                    if (Plugin.DisplayedRecord.Line[i - 1] == Vector3.Zero) continue;
 
-                    draw.DrawLine3d(Plugin.DisplayedRecord.Line[i - 1], Plugin.DisplayedRecord.Line[i], 0x55FFCCFF, 2.0f);
+                Record displayedRecord = Plugin.Storage.GetRecords().FindOne(x => x.Id == Plugin.DisplayedRecord);
+                Vector3[] displayedRecordLine = displayedRecord.GetLine();
+
+                for (var i = 1; i < displayedRecordLine.Length; i++)
+                {
+                    if (displayedRecordLine[i - 1] == Vector3.Zero) continue;
+
+                    draw.DrawLine3d(displayedRecordLine[i - 1], displayedRecordLine[i], 0x55FFCCFF, 2.0f);
                 }
             }
 

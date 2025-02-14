@@ -74,7 +74,9 @@ namespace Racingway.Collision
 
                         try
                         {
-                            Plugin.RecordList.Add(new Record(now, actor.Name.ToString(), actor.HomeWorld.Value.Name.ToString(), t, distance, player.raceLine.ToArray()));
+                            Record record = new Record(now, actor.Name.ToString(), actor.HomeWorld.Value.Name.ToString(), t, distance, player.raceLine.ToArray());
+                            Plugin.RecordList.Add(record);
+                            Plugin.Storage.AddRecord(record);
                         }
                         catch (Exception ex)
                         {

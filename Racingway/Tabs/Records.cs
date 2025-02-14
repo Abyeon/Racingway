@@ -28,15 +28,17 @@ namespace Racingway.Tabs
 
         private List<Record> GetRecords()
         {
-            List<Record> records = Plugin.RecordList;
+            //List<Record> records = Plugin.RecordList;
 
-            if (!Plugin.Configuration.AllowDuplicateRecords)
-            {
-                // Remove duplicates by sort magic
-                records = records.GroupBy(x => x.Name)
-                    .Select(g => g.OrderByDescending(x => x.Time).Last())
-                    .ToList();
-            }
+            //if (!Plugin.Configuration.AllowDuplicateRecords)
+            //{
+            //    // Remove duplicates by sort magic
+            //    records = records.GroupBy(x => x.Name)
+            //        .Select(g => g.OrderByDescending(x => x.Time).Last())
+            //        .ToList();
+            //}
+
+            List<Record> records = Plugin.Storage.GetRecords().Query().ToList();
 
             return records;
         }
@@ -64,6 +66,12 @@ namespace Racingway.Tabs
             if (ImGui.Checkbox("Allow Duplicates", ref Plugin.Configuration.AllowDuplicateRecords))
             {
                 Plugin.Configuration.Save();
+            }
+
+            ImGui.SameLine();
+            if (ImGui.Button("Clear Records"))
+            {
+                Plugin.Storage.GetRecords().DeleteAll();
             }
 
             using (var table = ImRaii.Table("###race-records", 5, ImGuiTableFlags.Sortable))
@@ -116,7 +124,7 @@ namespace Racingway.Tabs
 
                     foreach (Record record in tempRecords)
                     {
-                        if (Plugin.DisplayedRecord == record)
+                        if (Plugin.DisplayedRecord == record.Id)
                         {
                             ImGui.PushStyleColor(ImGuiCol.Text, 0xFFF58742);
                         } else
@@ -145,7 +153,7 @@ namespace Racingway.Tabs
 
                         if (selected)
                         {
-                            Plugin.DisplayedRecord = record;
+                            Plugin.DisplayedRecord = record.Id;
                         }
 
                         ImGui.PopStyleColor();
