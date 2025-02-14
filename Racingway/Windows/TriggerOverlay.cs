@@ -57,6 +57,14 @@ namespace Racingway.Windows
                         draw.DrawLine3d(raceLine[i - 1], raceLine[i], 0x55FFFFFF, 2.0f);
                     }
                 }
+
+                // Draw the selected Record's line
+                for (var i = 1; i < Plugin.DisplayedRecord.Line.Length; i++)
+                {
+                    if (Plugin.DisplayedRecord.Line[i - 1] == Vector3.Zero) continue;
+
+                    draw.DrawLine3d(Plugin.DisplayedRecord.Line[i - 1], Plugin.DisplayedRecord.Line[i], 0x55FFCCFF, 2.0f);
+                }
             }
 
             // Display Trigger debug UI.

@@ -51,6 +51,13 @@ namespace Racingway.Tabs
                     actor.raceLine.Clear();
                 }
             }
+
+            int quality = Plugin.Configuration.LineQuality;
+            if (ImGui.DragInt("Line Quality", ref quality, 0.05f, 0, 50))
+            {
+                Plugin.Configuration.LineQuality = quality;
+                Plugin.Configuration.Save();
+            }
         }
     }
 }

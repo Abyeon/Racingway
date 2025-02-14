@@ -45,8 +45,8 @@ public sealed class Plugin : IDalamudPlugin
     public TriggerOverlay TriggerOverlay { get; init; }
     private ConfigWindow ConfigWindow { get; init; }
     private MainWindow MainWindow { get; init; }
-
     public List<Record> RecordList { get; init; }
+    public Record DisplayedRecord { get; set; }
 
     public Plugin()
     {

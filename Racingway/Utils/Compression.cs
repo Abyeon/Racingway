@@ -4,12 +4,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Numerics;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Racingway.Utils
 {
-    public static unsafe class ImportExport
+    public static unsafe class Compression
     {
         public static unsafe string ToCompressedBase64<T>(T data)
         {

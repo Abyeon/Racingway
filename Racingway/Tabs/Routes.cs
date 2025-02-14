@@ -63,7 +63,7 @@ namespace Racingway.Tabs
                 try
                 {
                     string data = ImGui.GetClipboardText();
-                    var Json = ImportExport.FromCompressedBase64(data);
+                    var Json = Compression.FromCompressedBase64(data);
 
                     List<Trigger>? import = null;
 
@@ -89,7 +89,7 @@ namespace Racingway.Tabs
             ImGui.SameLine();
             if (ImGuiComponents.IconButton(Dalamud.Interface.FontAwesomeIcon.FileExport))
             {
-                string text = ImportExport.ToCompressedBase64(Plugin.Configuration.Triggers);
+                string text = Compression.ToCompressedBase64(Plugin.Configuration.Triggers);
                 ImGui.SetClipboardText(text);
             }
             if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))

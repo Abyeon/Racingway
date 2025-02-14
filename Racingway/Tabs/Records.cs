@@ -50,11 +50,11 @@ namespace Racingway.Tabs
             if (ImGui.Button("Copy CSV to clipboard"))
             {
                 StringBuilder sb = new StringBuilder();
-                sb.Append("Date,Name,World,Time\n");
+                sb.Append("Date,Name,World,Time,Distance\n");
 
                 foreach (Record record in tempRecords)
                 {
-                    sb.Append($"{record.Date.ToLocalTime().ToString("M/dd H:mm:ss")}, {record.Name}, {record.World}, {Time.PrettyFormatTimeSpan(record.Time)}\n");
+                    sb.Append(record.GetCSV());
                 }
 
                 ImGui.SetClipboardText(sb.ToString());
@@ -66,7 +66,7 @@ namespace Racingway.Tabs
                 Plugin.Configuration.Save();
             }
 
-            using (var table = ImRaii.Table("###race-records", 4, ImGuiTableFlags.Sortable))
+            using (var table = ImRaii.Table("###race-records", 5, ImGuiTableFlags.Sortable))
             {
                 if (table)
                 {
@@ -74,6 +74,7 @@ namespace Racingway.Tabs
                     ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthFixed, 100f);
                     ImGui.TableSetupColumn("World", ImGuiTableColumnFlags.WidthFixed, 100f);
                     ImGui.TableSetupColumn("Time", ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.DefaultSort | ImGuiTableColumnFlags.PreferSortAscending, 100f);
+                    ImGui.TableSetupColumn("Distance", ImGuiTableColumnFlags.WidthFixed, 100f);
 
                     ImGui.TableHeadersRow();
 
@@ -99,6 +100,9 @@ namespace Racingway.Tabs
                             case 3: // Time
                                 comparison = record1.Time.CompareTo(record2.Time);
                                 break;
+                            case 4: // Distance
+                                comparison = record1.Distance.CompareTo(record2.Distance);
+                                break;
                         }
 
                         if (comparison != 0)
@@ -112,14 +116,39 @@ namespace Racingway.Tabs
 
                     foreach (Record record in tempRecords)
                     {
+                        if (Plugin.DisplayedRecord == record)
+                        {
+                            ImGui.PushStyleColor(ImGuiCol.Text, 0xFFF58742);
+                        } else
+                        {
+                            ImGui.PushStyleColor(ImGuiCol.Text, 0xFFFFFFFF);
+                        }
+
+                        bool selected = false;
+
                         ImGui.TableNextColumn();
-                        ImGui.Text(record.Date.ToLocalTime().ToString("M/dd H:mm:ss"));
+                        ImGui.Selectable(record.Date.ToLocalTime().ToString("M/dd H:mm:ss"), ref selected, ImGuiSelectableFlags.SpanAllColumns);
+
+                        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                        {
+                            ImGui.SetTooltip("Click to display race line.");
+                        }
+
                         ImGui.TableNextColumn();
                         ImGui.Text(record.Name);
                         ImGui.TableNextColumn();
                         ImGui.Text(record.World);
                         ImGui.TableNextColumn();
                         ImGui.Text(Time.PrettyFormatTimeSpan(record.Time));
+                        ImGui.TableNextColumn();
+                        ImGui.Text(record.Distance.ToString());
+
+                        if (selected)
+                        {
+                            Plugin.DisplayedRecord = record;
+                        }
+
+                        ImGui.PopStyleColor();
                     }
                 }
             }

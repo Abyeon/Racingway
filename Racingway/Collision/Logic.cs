@@ -60,6 +60,7 @@ namespace Racingway.Collision
                     if (player.inParkour)
                     {
                         player.inParkour = false;
+                        player.AddPoint();
 
                         var elapsedTime = player.timer.ElapsedMilliseconds;
                         var t = TimeSpan.FromMilliseconds(elapsedTime);
@@ -73,13 +74,12 @@ namespace Racingway.Collision
 
                         try
                         {
-                            Plugin.RecordList.Add(new Record(now, actor.Name.ToString(), actor.HomeWorld.Value.Name.ToString(), t));
+                            Plugin.RecordList.Add(new Record(now, actor.Name.ToString(), actor.HomeWorld.Value.Name.ToString(), t, distance, player.raceLine.ToArray()));
                         }
                         catch (Exception ex)
                         {
                             Plugin.Log.Error(ex.ToString());
                         }
-
 
                         Plugin.ChatGui.Print($"{now.ToString("M/dd H:mm:ss")} {actor.Name} {actor.HomeWorld.Value.Name} just finished the parkour in {prettyPrint} and {distance} units.");
                     }

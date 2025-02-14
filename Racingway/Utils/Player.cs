@@ -39,15 +39,19 @@ namespace Racingway.Utils
 
             if (inParkour)
             {
-                if (delayRaceline >= 5)
+                if (delayRaceline >= Plugin.Configuration.LineQuality)
                 {
-                    raceLine.Enqueue(pos);
-
+                    AddPoint();
                     delayRaceline = 0;
                 }
             }
 
             Plugin.Logic.CheckCollision(this);
+        }
+
+        public void AddPoint()
+        {
+            raceLine.Enqueue(this.position);
         }
 
         public float GetDistanceTraveled()
