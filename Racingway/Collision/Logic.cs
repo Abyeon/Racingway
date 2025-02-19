@@ -1,4 +1,6 @@
 using Dalamud.Game.ClientState.Objects.SubKinds;
+using Dalamud.Game.Text.SeStringHandling;
+using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Racingway.Utils;
 using System;
 using System.Collections.Generic;
@@ -52,7 +54,7 @@ namespace Racingway.Collision
 
                     if (Plugin.Configuration.LogFails)
                     {
-                        Plugin.ChatGui.Print($"{actor.Name} {actor.HomeWorld.Value.Name} just failed the parkour.");
+                        PayloadedChat(actor, " just failed the parkour.");
                     }
 
                     player.timer.Reset();
@@ -90,7 +92,7 @@ namespace Racingway.Collision
 
                         if (Plugin.Configuration.LogFinish)
                         {
-                            Plugin.ChatGui.Print($"{actor.Name} {actor.HomeWorld.Value.Name} just finished the parkour in {prettyPrint} and {distance} units.");
+                            PayloadedChat(actor, $" just finished the parkour in {prettyPrint} and {distance} units.");
                         }
                     }
                     break;
@@ -109,6 +111,15 @@ namespace Racingway.Collision
                 player.timer.Reset();
                 player.timer.Start();
             }
+        }
+
+        public void PayloadedChat(IPlayerCharacter player, string message)
+        {
+            PlayerPayload payload = new PlayerPayload(player.Name.ToString(), player.HomeWorld.Value.RowId);
+            TextPayload text = new TextPayload(message);
+            SeString chat = new SeString(new Payload[] { payload, text });
+
+            Plugin.ChatGui.Print(chat);
         }
     }
 }
