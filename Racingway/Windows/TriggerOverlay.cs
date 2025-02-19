@@ -43,6 +43,20 @@ namespace Racingway.Windows
             Io = ImGui.GetIO();
             ImGui.SetWindowSize(Io.DisplaySize);
 
+            // Display Trigger debug UI.
+            if (Plugin.Configuration.DrawTriggers)
+            {
+                Plugin.Log.Debug("Displaying?");
+
+                foreach (var trigger in Plugin.Configuration.Triggers)
+                {
+                    if (trigger == null) continue;
+
+                    //draw.DrawCube(trigger.cube, trigger.color, 5.0f);
+                    draw.DrawCubeFilled(trigger.Cube, trigger.color, 5.0f);
+                }
+            }
+
             // Display player racing lines
             if (Plugin.Configuration.DrawRacingLines)
             {
@@ -60,27 +74,16 @@ namespace Racingway.Windows
             }
 
             // Draw the selected Record's line
-            Record displayedRecord = Plugin.Storage.GetRecords().FindOne(x => x.Id == Plugin.DisplayedRecord);
-            Vector3[] displayedRecordLine = displayedRecord.Line;
-
-            for (var i = 1; i < displayedRecordLine.Length; i++)
+            if (Plugin.DisplayedRecord != null)
             {
-                if (displayedRecordLine[i - 1] == Vector3.Zero) continue;
+                Record displayedRecord = Plugin.Storage.GetRecords().FindOne(x => x.Id == Plugin.DisplayedRecord);
+                Vector3[] displayedRecordLine = displayedRecord.Line;
 
-                draw.DrawLine3d(displayedRecordLine[i - 1], displayedRecordLine[i], 0x55FFCCFF, 2.0f);
-            }
-
-            // Display Trigger debug UI.
-            if (Plugin.Configuration.DrawTriggers)
-            {
-                Plugin.Log.Debug("Displaying?");
-
-                foreach (var trigger in Plugin.Configuration.Triggers)
+                for (var i = 1; i < displayedRecordLine.Length; i++)
                 {
-                    if (trigger == null) continue;
+                    if (displayedRecordLine[i - 1] == Vector3.Zero) continue;
 
-                    //draw.DrawCube(trigger.cube, trigger.color, 5.0f);
-                    draw.DrawCubeFilled(trigger.Cube, trigger.color, 5.0f);
+                    draw.DrawLine3d(displayedRecordLine[i - 1], displayedRecordLine[i], 0x55FFCCFF, 2.0f);
                 }
             }
         }

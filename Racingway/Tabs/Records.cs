@@ -153,6 +153,11 @@ namespace Racingway.Tabs
 
                         if (selected)
                         {
+                            if (Plugin.DisplayedRecord == record.Id)
+                            {
+                                Plugin.DisplayedRecord = null;
+                            }
+
                             Plugin.DisplayedRecord = record.Id;
                         }
 
