@@ -45,9 +45,15 @@ namespace Racingway.Tabs
 
         public void Draw()
         {
-            ImGui.Text("THESE ARE TEMPORARY RECORDS.\nIF YOU QUIT THE GAME OR RELOAD THE PLUGIN, THESE WILL DISAPPEAR!");
-
             List<Record> tempRecords = GetRecords();
+
+            if (!Plugin.Configuration.AllowDuplicateRecords)
+            {
+                // Remove duplicates by sort magic
+                tempRecords = tempRecords.GroupBy(x => x.Name)
+                    .Select(g => g.OrderByDescending(x => x.Time).Last())
+                    .ToList();
+            }
 
             if (ImGui.Button("Copy CSV to clipboard"))
             {
@@ -157,8 +163,12 @@ namespace Racingway.Tabs
                             {
                                 Plugin.DisplayedRecord = null;
                             }
+                            else
+                            {
+                                Plugin.DisplayedRecord = record.Id;
+                            }
 
-                            Plugin.DisplayedRecord = record.Id;
+                            Plugin.ShowHideOverlay();
                         }
 
                         ImGui.PopStyleColor();

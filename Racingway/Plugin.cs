@@ -98,10 +98,24 @@ public sealed class Plugin : IDalamudPlugin
 
         // Adds another button that is doing the same but for the main ui of the plugin
         PluginInterface.UiBuilder.OpenMainUi += ToggleMainUI;
+
+        // Enable overlay if config calls for it
+        ShowHideOverlay();
     }
 
     public Dictionary<uint, Player> trackedPlayers = new();
     public IGameObject[] trackedNPCs;
+
+    public void ShowHideOverlay()
+    {
+        if (Configuration.DrawRacingLines || Configuration.DrawTriggers || DisplayedRecord != null)
+        {
+            TriggerOverlay.IsOpen = true;
+        } else
+        {
+            TriggerOverlay.IsOpen = false;
+        }
+    }
 
     public void SubscribeToTriggers()
     {
@@ -111,6 +125,15 @@ public sealed class Plugin : IDalamudPlugin
             trigger.Left -= Logic.OnLeft;
             trigger.Entered += Logic.OnEntered;
             trigger.Left += Logic.OnLeft;
+        }
+    }
+
+    public void UnsubscribeFromTriggers()
+    {
+        foreach (Trigger trigger in Configuration.Triggers)
+        {
+            trigger.Entered -= Logic.OnEntered;
+            trigger.Left -= Logic.OnLeft;
         }
     }
 
@@ -171,6 +194,8 @@ public sealed class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
+        UnsubscribeFromTriggers();
+
         WindowSystem.RemoveAllWindows();
 
         ConfigWindow.Dispose();
@@ -178,7 +203,6 @@ public sealed class Plugin : IDalamudPlugin
         TriggerOverlay.Dispose();
 
         Storage.Dispose();
-
         Configuration.Save();
 
         CommandManager.RemoveHandler(CommandName);
