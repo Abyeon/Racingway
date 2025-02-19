@@ -27,7 +27,7 @@ namespace Racingway.Utils
             979 // Empyreum
         };
 
-        public async Task<long> GetLocationID(ushort territory)
+        public async void GetLocationID(ushort territory)
         {
             try
             {
@@ -37,49 +37,54 @@ namespace Racingway.Utils
 
                 if (isInside)
                 {
-                    long id = GetHouseId();
-                    while (id == -1)
+                    //long id = GetHouseId();
+                    
+                    // Funny way to wait for a value to change by polling
+                    Plugin.polls.Add((() =>
                     {
-                        if (timer.ElapsedMilliseconds > 3000)
+                        long id = GetHouseId();
+                        if (id != -1)
                         {
-                            break;
+                            Plugin.CurrentTerritory = id;
+                            Plugin.AddressChanged(Compression.ToCompressedString(id.ToString()));
+                            return true;
                         }
 
-                        id = GetHouseId();
-                        Plugin.Log.Debug("Searching for house id");
-                        await Task.Delay(25);
-                    }
+                        return false;
+                    }, timer));
 
-                    idToReturn = id;
-                } else if (HousingTerritories.Contains(territory)) // Currently is the same as if it didnt exist. Potentially will change this to include current ward etc
+                    return;
+                } else if (HousingTerritories.Contains(territory))
                 {
-                    byte division = 0;
-                    while (division == 0)
+                    Plugin.polls.Add((() =>
                     {
-                        if (timer.ElapsedMilliseconds > 3000)
+                        long division = GetDivision();
+                        if (division != 0)
                         {
-                            break;
+                            Plugin.CurrentTerritory = division;
+                            Plugin.AddressChanged(Compression.ToCompressedString(territory.ToString() + " " + GetWard().ToString() + " " + division.ToString()));
+                            return true;
                         }
 
-                        division = GetDivision();
-                        Plugin.Log.Debug("Searching for division");
-                        await Task.Delay(25);
-                    }
-
-                    idToReturn = territory;
+                        return false;
+                    }, timer));
                 } else
                 {
-                    idToReturn = territory;
+                    Plugin.CurrentTerritory = territory;
+                    Plugin.AddressChanged(Compression.ToCompressedString(territory.ToString()));
                 }
 
                 //Plugin.ChatGui.Print($"Inside: {IsInside().ToString()}, Division: {GetDivision().ToString()}, Ward: {GetWard().ToString()}, Plot: {GetPlot().ToString()}, HouseID: {GetHouseId().ToString()}, Room: {GetRoomId().ToString()}");
-                return idToReturn;
             }
             catch (Exception e)
             {
                 Plugin.Log.Warning("Couldnt get housing state on territory change. " + e.Message);
             }
-            return 0;
+        }
+
+        private string UpdateAddress(string input)
+        {
+            return Compression.ToCompressedBase64(input);
         }
 
         private unsafe HousingTerritoryType GetTerritoryType()

@@ -1,3 +1,5 @@
+using LiteDB;
+using Racingway.Collision;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,11 +15,18 @@ namespace Racingway.Utils
 
     public class Route
     {
-        public long Territory { get; init; }
+        [BsonId]
+        public ObjectId Id { get; set; }
+        public string Name { get; set; }
+        public string Address { get; set; }
+        public List<Trigger> Triggers { get; set; }
 
 
-        public Route() 
+        public Route(string Name, string address, List<Trigger> triggers) 
         {
+            this.Name = Name;
+            this.Address = address;
+            this.Triggers = triggers;
         }
     }
 }

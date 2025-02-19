@@ -25,6 +25,8 @@ using FFXIVClientStructs.FFXIV.Client.Graphics.Render;
 using static FFXIVClientStructs.FFXIV.Client.UI.AddonJobHudRDM0.BalanceGauge;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
+using System.Threading;
+using System.Diagnostics;
 
 namespace Racingway;
 
@@ -35,7 +37,7 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static ICommandManager CommandManager { get; private set; } = null!;
     [PluginService] internal static IObjectTable ObjectTable { get; private set; } = null!;
     [PluginService] internal static IPluginLog Log { get; private set; } = null!;
-    [PluginService] internal static IFramework Framework {  get; private set; } = null!;
+    [PluginService] internal static IFramework Framework { get; private set; } = null!;
     [PluginService] internal static IGameNetwork GameNetwork { get; private set; } = null!;
     [PluginService] internal static IClientState ClientState { get; private set; } = null!;
     [PluginService] internal static IChatGui ChatGui { get; private set; } = null!;
@@ -56,10 +58,11 @@ public sealed class Plugin : IDalamudPlugin
     public List<Record> RecordList { get; init; }
     public ObjectId DisplayedRecord { get; set; }
     public long CurrentTerritory = 0;
+    public string CurrentAddress = "";
 
     public Plugin()
     {
-        try 
+        try
         {
             Storage = new(this, $"{PluginInterface.GetPluginConfigDirectory()}\\data.db");
         }
@@ -72,7 +75,7 @@ public sealed class Plugin : IDalamudPlugin
 
         Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
 
-        foreach(Trigger trigger in Configuration.Triggers)
+        foreach (Trigger trigger in Configuration.Triggers)
         {
             Log.Debug(trigger.selectedType.ToString());
         }
@@ -145,8 +148,38 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
+    public List<(Func<bool>, Stopwatch)> polls = new();
+
     private void OnFrameworkTick(IFramework framework)
     {
+        List<(Func<bool>, Stopwatch)> toRemove = new();
+
+        // Loop through requested polling tasks
+        foreach (var poll in polls)
+        {
+            try
+            {
+                bool result = poll.Item1.Invoke();
+
+                if (result == true || poll.Item2.ElapsedMilliseconds > 1000) toRemove.Add(poll);
+            } catch (Exception ex)
+            {
+                Log.Error(ex.Message);
+            }
+        }
+
+        // Delete polling tasks that have completed
+        foreach (var poll in toRemove)
+        {
+            try
+            {
+                polls.Remove(poll);
+            } catch (Exception ex)
+            {
+                Log.Error(ex.Message);
+            }
+        }
+
         // Check if player does not exist anymore
         foreach (var player in trackedPlayers)
         {
@@ -162,7 +195,7 @@ public sealed class Plugin : IDalamudPlugin
 
         // Check for people
         IGameObject[] players = GetPlayers(ObjectTable);
-        foreach (var player in players) 
+        foreach (var player in players)
         {
             uint id = player.EntityId;
 
@@ -181,17 +214,17 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
-    private async void OnTerritoryChange(ushort territory)
+
+    private void OnTerritoryChange(ushort territory)
     {
-        // Honestly, this is not safe. A crash will happen if somebody.. quits their game within 3 seconds.
-        // Obviously that's a little silly, but its not cool to see a crash pop up.
-        Log.Debug(territory.ToString());
-        Task task = new Task(async () =>
-        {
-            CurrentTerritory = await territoryHelper.GetLocationID(territory);
-            Plugin.ChatGui.Print(CurrentTerritory.ToString());
-        });
-        task.Start();
+        Parallel.Invoke(() => territoryHelper.GetLocationID(territory));
+    }
+
+    public void AddressChanged(string compressedAddress)
+    {
+        ChatGui.Print(compressedAddress);
+
+        CurrentAddress = compressedAddress;
     }
 
     public IGameObject[] GetPlayers(IEnumerable<IGameObject> gameObjects)
@@ -225,7 +258,7 @@ public sealed class Plugin : IDalamudPlugin
         // in response to the slash command, just toggle the display status of our main ui
         ToggleMainUI();
 
-        await territoryHelper.GetLocationID(0);
+        //await territoryHelper.GetLocationID(0);
         //Log.Debug(Storage.GetRecords().FindOne(x => x.Id == DisplayedRecord).Line.Length.ToString());
 
     }

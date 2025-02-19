@@ -1,4 +1,5 @@
 using Dalamud.Interface.Components;
+using Dalamud.Interface.Utility.Raii;
 using ImGuiNET;
 using Newtonsoft.Json;
 using Racingway.Collision;
@@ -43,9 +44,38 @@ namespace Racingway.Tabs
 
         }
 
+        private string routeName = string.Empty;
         public void Draw()
         {
             ImGui.Text($"Current position: {Plugin.ClientState.LocalPlayer.Position.ToString()}");
+
+            using (var tree = ImRaii.TreeNode("Routes"))
+            {
+                if (tree.Success)
+                {
+                    foreach (String route in Plugin.Configuration.CompressedRoutes)
+                    {
+                        if (ImGui.Selectable(route))
+                        {
+                            var Json = Compression.FromCompressedBase64(route);
+
+                            Route? import = null;
+                            import = JsonConvert.DeserializeObject<Route>(Json);
+                            routeName = import.Name;
+                            Plugin.Configuration.Triggers = import.Triggers;
+                            Plugin.Configuration.Save();
+
+                            Plugin.SubscribeToTriggers();
+                        }
+                    }
+                }
+            }
+
+            if (ImGui.InputText("Name", ref routeName, 32, ImGuiInputTextFlags.EnterReturnsTrue))
+            {
+                // Something
+                Plugin.ChatGui.Print(routeName);
+            }
 
             if (ImGui.Button("Add Trigger"))
             {
@@ -96,6 +126,18 @@ namespace Racingway.Tabs
             if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
             {
                 ImGui.SetTooltip("Export config to clipboard.");
+            }
+
+            ImGui.SameLine();
+            if (ImGuiComponents.IconButton(Dalamud.Interface.FontAwesomeIcon.Save))
+            {
+                string text = Compression.ToCompressedBase64(new Route(routeName, Plugin.CurrentAddress, Plugin.Configuration.Triggers));
+                Plugin.Configuration.CompressedRoutes.Add(text);
+                Plugin.Configuration.Save();
+            }
+            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            {
+                ImGui.SetTooltip("Save route to config.");
             }
 
             int id = 0;

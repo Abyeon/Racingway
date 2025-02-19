@@ -20,6 +20,7 @@ public class Configuration : IPluginConfiguration
     public bool LogFinish { get; set; } = true;
     public int LineQuality { get; set; } = 10;
     public List<Trigger> Triggers { get; set; } = new List<Trigger>();
+    public List<string> CompressedRoutes { get; set; } = new List<string>();
 
     // the below exist just to make saving less cumbersome
     public void Save()
