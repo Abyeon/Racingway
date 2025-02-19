@@ -195,7 +195,7 @@ public sealed class Plugin : IDalamudPlugin
         var isInside = manager->IsInside();
 
         Log.Debug(currentIndoorHouseId.ToString());
-        Log.Debug(Storage.GetRecords().FindOne(x => x.Id == DisplayedRecord).Line.Length.ToString());
+        //Log.Debug(Storage.GetRecords().FindOne(x => x.Id == DisplayedRecord).Line.Length.ToString());
 
     }
 

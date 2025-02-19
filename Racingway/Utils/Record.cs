@@ -17,7 +17,7 @@ namespace Racingway.Utils
         public string World {  get; set; }
         public TimeSpan Time { get; set; }
         public float Distance { get; set; }
-        public byte[][] Line {  get; set; }
+        public Vector3[] Line { get; set; }
 
 
         public Record(DateTime date, string name, string world, TimeSpan time, float distance, Vector3[] line)
@@ -29,27 +29,7 @@ namespace Racingway.Utils
             this.World = world;
             this.Time = time;
             this.Distance = distance;
-
-            byte[][] bytes = new byte[line.Length][];
-
-            for (int i = 0; i < line.Length; i++)
-            {
-                bytes[i] = Compression.Vector3ToByteArray(line[i]);
-            }
-
-            this.Line = bytes;
-        }
-
-        public Vector3[] GetLine()
-        {
-            Vector3[] temp = new Vector3[Line.Length];
-
-            for (int i = 0; i < Line.Length; i++)
-            {
-                temp[i] = Compression.Vector3FromByteArray(Line[i]);
-            }
-
-            return temp;
+            this.Line = line;
         }
 
         public string GetCSV()
