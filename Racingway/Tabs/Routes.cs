@@ -72,6 +72,7 @@ namespace Racingway.Tabs
                     if (import != null)
                     {
                         Plugin.Configuration.Triggers = import;
+                        Plugin.SubscribeToTriggers();
                         Plugin.Configuration.Save();
                     }
                 }

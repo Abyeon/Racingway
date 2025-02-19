@@ -51,5 +51,26 @@ namespace Racingway.Utils
                 return string.Empty;
             }
         }
+
+        public static byte[] Vector3ToByteArray(Vector3 vector)
+        {
+            byte[] buff = new byte[sizeof(float) * 3];
+            Buffer.BlockCopy(BitConverter.GetBytes(vector.X), 0, buff, 0*sizeof(float), sizeof(float));
+            Buffer.BlockCopy(BitConverter.GetBytes(vector.Y), 0, buff, 1*sizeof(float), sizeof(float));
+            Buffer.BlockCopy(BitConverter.GetBytes(vector.Z), 0, buff, 2*sizeof(float), sizeof(float));
+
+            return buff;
+        }
+
+        public static Vector3 Vector3FromByteArray(byte[] data)
+        {
+            byte[] buff = data;
+            Vector3 vector = new Vector3();
+            vector.X = BitConverter.ToSingle(buff, 0*sizeof(float));
+            vector.Y = BitConverter.ToSingle(buff, 1*sizeof(float));
+            vector.Z = BitConverter.ToSingle(buff, 2*sizeof(float));
+
+            return vector;
+        }
     }
 }

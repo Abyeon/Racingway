@@ -43,6 +43,20 @@ namespace Racingway.Windows
             Io = ImGui.GetIO();
             ImGui.SetWindowSize(Io.DisplaySize);
 
+            // Display Trigger debug UI.
+            if (Plugin.Configuration.DrawTriggers)
+            {
+                Plugin.Log.Debug("Displaying?");
+
+                foreach (var trigger in Plugin.Configuration.Triggers)
+                {
+                    if (trigger == null) continue;
+
+                    //draw.DrawCube(trigger.cube, trigger.color, 5.0f);
+                    draw.DrawCubeFilled(trigger.Cube, trigger.color, 5.0f);
+                }
+            }
+
             // Display player racing lines
             if (Plugin.Configuration.DrawRacingLines)
             {
@@ -57,25 +71,19 @@ namespace Racingway.Windows
                         draw.DrawLine3d(raceLine[i - 1], raceLine[i], 0x55FFFFFF, 2.0f);
                     }
                 }
-
-                // Draw the selected Record's line
-                for (var i = 1; i < Plugin.DisplayedRecord.Line.Length; i++)
-                {
-                    if (Plugin.DisplayedRecord.Line[i - 1] == Vector3.Zero) continue;
-
-                    draw.DrawLine3d(Plugin.DisplayedRecord.Line[i - 1], Plugin.DisplayedRecord.Line[i], 0x55FFCCFF, 2.0f);
-                }
             }
 
-            // Display Trigger debug UI.
-            if (Plugin.Configuration.DrawTriggers)
+            // Draw the selected Record's line
+            if (Plugin.DisplayedRecord != null)
             {
-                foreach (var trigger in Plugin.Configuration.Triggers)
-                {
-                    if (trigger == null) continue;
+                Record displayedRecord = Plugin.Storage.GetRecords().FindOne(x => x.Id == Plugin.DisplayedRecord);
+                Vector3[] displayedRecordLine = displayedRecord.Line;
 
-                    //draw.DrawCube(trigger.cube, trigger.color, 5.0f);
-                    draw.DrawCubeFilled(trigger.Cube, trigger.color, 5.0f);
+                for (var i = 1; i < displayedRecordLine.Length; i++)
+                {
+                    if (displayedRecordLine[i - 1] == Vector3.Zero) continue;
+
+                    draw.DrawLine3d(displayedRecordLine[i - 1], displayedRecordLine[i], 0x55FFCCFF, 2.0f);
                 }
             }
         }

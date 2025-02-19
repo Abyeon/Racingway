@@ -20,6 +20,7 @@ using Lumina.Excel;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.Interop.Generated;
 using Racingway.Collision;
+using LiteDB;
 
 namespace Racingway;
 
@@ -37,6 +38,8 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IGameGui GameGui { get; private set; } = null!;
     [PluginService] internal static IDataManager DataManager { get; private set; } = null!;
 
+    internal LocalDatabase Storage { get; init; }
+
     private const string CommandName = "/race";
 
     public Configuration Configuration { get; init; }
@@ -46,10 +49,19 @@ public sealed class Plugin : IDalamudPlugin
     private ConfigWindow ConfigWindow { get; init; }
     private MainWindow MainWindow { get; init; }
     public List<Record> RecordList { get; init; }
-    public Record DisplayedRecord { get; set; }
+    public ObjectId DisplayedRecord { get; set; }
 
     public Plugin()
     {
+        try 
+        {
+            Storage = new(this, $"{PluginInterface.GetPluginConfigDirectory()}\\data.db");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex.Message);
+        }
+
         Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
 
         foreach(Trigger trigger in Configuration.Triggers)
@@ -86,10 +98,24 @@ public sealed class Plugin : IDalamudPlugin
 
         // Adds another button that is doing the same but for the main ui of the plugin
         PluginInterface.UiBuilder.OpenMainUi += ToggleMainUI;
+
+        // Enable overlay if config calls for it
+        ShowHideOverlay();
     }
 
     public Dictionary<uint, Player> trackedPlayers = new();
     public IGameObject[] trackedNPCs;
+
+    public void ShowHideOverlay()
+    {
+        if (Configuration.DrawRacingLines || Configuration.DrawTriggers || DisplayedRecord != null)
+        {
+            TriggerOverlay.IsOpen = true;
+        } else
+        {
+            TriggerOverlay.IsOpen = false;
+        }
+    }
 
     public void SubscribeToTriggers()
     {
@@ -99,6 +125,15 @@ public sealed class Plugin : IDalamudPlugin
             trigger.Left -= Logic.OnLeft;
             trigger.Entered += Logic.OnEntered;
             trigger.Left += Logic.OnLeft;
+        }
+    }
+
+    public void UnsubscribeFromTriggers()
+    {
+        foreach (Trigger trigger in Configuration.Triggers)
+        {
+            trigger.Entered -= Logic.OnEntered;
+            trigger.Left -= Logic.OnLeft;
         }
     }
 
@@ -159,11 +194,16 @@ public sealed class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
+        UnsubscribeFromTriggers();
+
         WindowSystem.RemoveAllWindows();
 
         ConfigWindow.Dispose();
         MainWindow.Dispose();
         TriggerOverlay.Dispose();
+
+        Storage.Dispose();
+        Configuration.Save();
 
         CommandManager.RemoveHandler(CommandName);
     }
@@ -179,6 +219,7 @@ public sealed class Plugin : IDalamudPlugin
         var isInside = manager->IsInside();
 
         Log.Debug(currentIndoorHouseId.ToString());
+        //Log.Debug(Storage.GetRecords().FindOne(x => x.Id == DisplayedRecord).Line.Length.ToString());
 
     }
 

@@ -28,24 +28,32 @@ namespace Racingway.Tabs
 
         private List<Record> GetRecords()
         {
-            List<Record> records = Plugin.RecordList;
+            //List<Record> records = Plugin.RecordList;
 
-            if (!Plugin.Configuration.AllowDuplicateRecords)
-            {
-                // Remove duplicates by sort magic
-                records = records.GroupBy(x => x.Name)
-                    .Select(g => g.OrderByDescending(x => x.Time).Last())
-                    .ToList();
-            }
+            //if (!Plugin.Configuration.AllowDuplicateRecords)
+            //{
+            //    // Remove duplicates by sort magic
+            //    records = records.GroupBy(x => x.Name)
+            //        .Select(g => g.OrderByDescending(x => x.Time).Last())
+            //        .ToList();
+            //}
+
+            List<Record> records = Plugin.Storage.GetRecords().Query().ToList();
 
             return records;
         }
 
         public void Draw()
         {
-            ImGui.Text("THESE ARE TEMPORARY RECORDS.\nIF YOU QUIT THE GAME OR RELOAD THE PLUGIN, THESE WILL DISAPPEAR!");
-
             List<Record> tempRecords = GetRecords();
+
+            if (!Plugin.Configuration.AllowDuplicateRecords)
+            {
+                // Remove duplicates by sort magic
+                tempRecords = tempRecords.GroupBy(x => x.Name)
+                    .Select(g => g.OrderByDescending(x => x.Time).Last())
+                    .ToList();
+            }
 
             if (ImGui.Button("Copy CSV to clipboard"))
             {
@@ -64,6 +72,12 @@ namespace Racingway.Tabs
             if (ImGui.Checkbox("Allow Duplicates", ref Plugin.Configuration.AllowDuplicateRecords))
             {
                 Plugin.Configuration.Save();
+            }
+
+            ImGui.SameLine();
+            if (ImGui.Button("Clear Records"))
+            {
+                Plugin.Storage.GetRecords().DeleteAll();
             }
 
             using (var table = ImRaii.Table("###race-records", 5, ImGuiTableFlags.Sortable))
@@ -116,7 +130,7 @@ namespace Racingway.Tabs
 
                     foreach (Record record in tempRecords)
                     {
-                        if (Plugin.DisplayedRecord == record)
+                        if (Plugin.DisplayedRecord == record.Id)
                         {
                             ImGui.PushStyleColor(ImGuiCol.Text, 0xFFF58742);
                         } else
@@ -145,7 +159,16 @@ namespace Racingway.Tabs
 
                         if (selected)
                         {
-                            Plugin.DisplayedRecord = record;
+                            if (Plugin.DisplayedRecord == record.Id)
+                            {
+                                Plugin.DisplayedRecord = null;
+                            }
+                            else
+                            {
+                                Plugin.DisplayedRecord = record.Id;
+                            }
+
+                            Plugin.ShowHideOverlay();
                         }
 
                         ImGui.PopStyleColor();

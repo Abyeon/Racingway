@@ -49,7 +49,12 @@ namespace Racingway.Collision
                     // Player failed parkour
                     player.raceLine.Clear();
                     player.inParkour = false;
-                    Plugin.ChatGui.Print($"{now.ToString("M/dd H:mm:ss")} {actor.Name} {actor.HomeWorld.Value.Name} just failed the parkour.");
+
+                    if (Plugin.Configuration.LogFails)
+                    {
+                        Plugin.ChatGui.Print($"{actor.Name} {actor.HomeWorld.Value.Name} just failed the parkour.");
+                    }
+
                     player.timer.Reset();
                     break;
                 case TriggerType.Checkpoint:
@@ -74,14 +79,19 @@ namespace Racingway.Collision
 
                         try
                         {
-                            Plugin.RecordList.Add(new Record(now, actor.Name.ToString(), actor.HomeWorld.Value.Name.ToString(), t, distance, player.raceLine.ToArray()));
+                            Record record = new Record(now, actor.Name.ToString(), actor.HomeWorld.Value.Name.ToString(), t, distance, player.raceLine.ToArray());
+                            Plugin.RecordList.Add(record);
+                            Plugin.Storage.AddRecord(record);
                         }
                         catch (Exception ex)
                         {
                             Plugin.Log.Error(ex.ToString());
                         }
 
-                        Plugin.ChatGui.Print($"{now.ToString("M/dd H:mm:ss")} {actor.Name} {actor.HomeWorld.Value.Name} just finished the parkour in {prettyPrint} and {distance} units.");
+                        if (Plugin.Configuration.LogFinish)
+                        {
+                            Plugin.ChatGui.Print($"{actor.Name} {actor.HomeWorld.Value.Name} just finished the parkour in {prettyPrint} and {distance} units.");
+                        }
                     }
                     break;
             }

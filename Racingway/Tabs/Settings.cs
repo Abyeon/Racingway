@@ -25,21 +25,23 @@ namespace Racingway.Tabs
 
         public void Draw()
         {
-            if (ImGui.Button($"{(Plugin.TriggerOverlay.IsOpen ? "Hide" : "Show" )} Overlay"))
-            {
-                Plugin.ToggleTriggerUI();
-            }
+            //if (ImGui.Button($"{(Plugin.TriggerOverlay.IsOpen ? "Hide" : "Show" )} Overlay"))
+            //{
+            //    Plugin.ToggleTriggerUI();
+            //}
 
             if (ImGui.Button($"{(Plugin.Configuration.DrawTriggers ? "Disable" : "Enable")} Triggers Display"))
             {
                 Plugin.Configuration.DrawTriggers = !Plugin.Configuration.DrawTriggers;
                 Plugin.Configuration.Save();
+                Plugin.ShowHideOverlay();
             }
 
             if (ImGui.Button($"{(Plugin.Configuration.DrawRacingLines ? "Disable" : "Enable")} Racing Lines Display"))
             {
                 Plugin.Configuration.DrawRacingLines = !Plugin.Configuration.DrawRacingLines;
                 Plugin.Configuration.Save();
+                Plugin.ShowHideOverlay();
             }
 
             if (ImGui.Button("Clear racing lines"))
@@ -48,6 +50,20 @@ namespace Racingway.Tabs
                 {
                     actor.raceLine.Clear();
                 }
+            }
+
+            bool logFails = Plugin.Configuration.LogFails;
+            if (ImGui.Checkbox("Log Fails In Chat", ref logFails))
+            {
+                Plugin.Configuration.LogFails = logFails;
+                Plugin.Configuration.Save();
+            }
+
+            bool logFinish = Plugin.Configuration.LogFinish;
+            if (ImGui.Checkbox("Log Finishes In Chat", ref logFinish))
+            {
+                Plugin.Configuration.LogFinish = logFinish;
+                Plugin.Configuration.Save();
             }
 
             int quality = Plugin.Configuration.LineQuality;
