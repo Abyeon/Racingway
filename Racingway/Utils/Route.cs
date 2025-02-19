@@ -13,10 +13,7 @@ namespace Racingway.Utils
 
     public class Route
     {
-        public uint Territory { get; init; }
-        public uint? Ward { get; init; }
-        public uint? Plot { get; init; }
-        public uint? World { get; init; }
+        public long Territory { get; init; }
 
 
         public Route() 

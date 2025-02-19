@@ -21,6 +21,10 @@ using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.Interop.Generated;
 using Racingway.Collision;
 using LiteDB;
+using FFXIVClientStructs.FFXIV.Client.Graphics.Render;
+using static FFXIVClientStructs.FFXIV.Client.UI.AddonJobHudRDM0.BalanceGauge;
+using System.Threading.Tasks;
+using System.Collections.Concurrent;
 
 namespace Racingway;
 
@@ -39,6 +43,7 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IDataManager DataManager { get; private set; } = null!;
 
     internal LocalDatabase Storage { get; init; }
+    internal TerritoryHelper territoryHelper { get; set; }
 
     private const string CommandName = "/race";
 
@@ -50,6 +55,7 @@ public sealed class Plugin : IDalamudPlugin
     private MainWindow MainWindow { get; init; }
     public List<Record> RecordList { get; init; }
     public ObjectId DisplayedRecord { get; set; }
+    public long CurrentTerritory = 0;
 
     public Plugin()
     {
@@ -61,6 +67,8 @@ public sealed class Plugin : IDalamudPlugin
         {
             Log.Error(ex.Message);
         }
+
+        territoryHelper = new TerritoryHelper(this);
 
         Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
 
@@ -173,13 +181,17 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
-    private unsafe void OnTerritoryChange(ushort territory)
+    private async void OnTerritoryChange(ushort territory)
     {
-        var manager = HousingManager.Instance();
-        var ward = manager->GetCurrentWard();
-        var currentPlot = manager->GetCurrentPlot();
-        var currentIndoorHouseId = manager->GetCurrentIndoorHouseId();
-        var isInside = manager->IsInside();
+        // Honestly, this is not safe. A crash will happen if somebody.. quits their game within 3 seconds.
+        // Obviously that's a little silly, but its not cool to see a crash pop up.
+        Log.Debug(territory.ToString());
+        Task task = new Task(async () =>
+        {
+            CurrentTerritory = await territoryHelper.GetLocationID(territory);
+            Plugin.ChatGui.Print(CurrentTerritory.ToString());
+        });
+        task.Start();
     }
 
     public IGameObject[] GetPlayers(IEnumerable<IGameObject> gameObjects)
@@ -208,17 +220,12 @@ public sealed class Plugin : IDalamudPlugin
         CommandManager.RemoveHandler(CommandName);
     }
 
-    private unsafe void OnCommand(string command, string args)
+    private async void OnCommand(string command, string args)
     {
         // in response to the slash command, just toggle the display status of our main ui
         ToggleMainUI();
-        var manager = HousingManager.Instance();
-        var ward = manager->GetCurrentWard();
-        var currentPlot = manager->GetCurrentPlot();
-        var currentIndoorHouseId = manager->GetCurrentIndoorHouseId();
-        var isInside = manager->IsInside();
 
-        Log.Debug(currentIndoorHouseId.ToString());
+        await territoryHelper.GetLocationID(0);
         //Log.Debug(Storage.GetRecords().FindOne(x => x.Id == DisplayedRecord).Line.Length.ToString());
 
     }
