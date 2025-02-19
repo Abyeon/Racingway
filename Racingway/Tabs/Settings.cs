@@ -36,14 +36,12 @@ namespace Racingway.Tabs
                 Plugin.Configuration.Save();
             }
 
-            //ImGui.SameLine();
             if (ImGui.Button($"{(Plugin.Configuration.DrawRacingLines ? "Disable" : "Enable")} Racing Lines Display"))
             {
                 Plugin.Configuration.DrawRacingLines = !Plugin.Configuration.DrawRacingLines;
                 Plugin.Configuration.Save();
             }
 
-            //ImGui.SameLine();
             if (ImGui.Button("Clear racing lines"))
             {
                 foreach (var actor in Plugin.trackedPlayers.Values)
