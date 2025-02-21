@@ -27,10 +27,11 @@ namespace Racingway.Utils
             979 // Empyreum
         };
 
-        public async void GetLocationID(ushort territory)
+        public async void GetLocationID()
         {
             try
             {
+                ushort territory = Plugin.ClientState.TerritoryType;
                 bool isInside = IsInside();
                 long idToReturn = 0;
                 Stopwatch timer = Stopwatch.StartNew();
@@ -45,8 +46,8 @@ namespace Racingway.Utils
                         long id = GetHouseId();
                         if (id != -1)
                         {
-                            Plugin.CurrentTerritory = id;
-                            Plugin.AddressChanged(Compression.ToCompressedString(id.ToString()));
+                            //Plugin.CurrentTerritory = id;
+                            Plugin.AddressChanged(id.ToString());
                             return true;
                         }
 
@@ -61,8 +62,8 @@ namespace Racingway.Utils
                         long division = GetDivision();
                         if (division != 0)
                         {
-                            Plugin.CurrentTerritory = division;
-                            Plugin.AddressChanged(Compression.ToCompressedString(territory.ToString() + " " + GetWard().ToString() + " " + division.ToString()));
+                            //Plugin.CurrentTerritory = division;
+                            Plugin.AddressChanged(territory.ToString() + " " + GetWard().ToString() + " " + division.ToString());
                             return true;
                         }
 
@@ -70,11 +71,9 @@ namespace Racingway.Utils
                     }, timer));
                 } else
                 {
-                    Plugin.CurrentTerritory = territory;
-                    Plugin.AddressChanged(Compression.ToCompressedString(territory.ToString()));
+                    //Plugin.CurrentTerritory = territory;
+                    Plugin.AddressChanged(territory.ToString());
                 }
-
-                //Plugin.ChatGui.Print($"Inside: {IsInside().ToString()}, Division: {GetDivision().ToString()}, Ward: {GetWard().ToString()}, Plot: {GetPlot().ToString()}, HouseID: {GetHouseId().ToString()}, Room: {GetRoomId().ToString()}");
             }
             catch (Exception e)
             {

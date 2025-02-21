@@ -1,11 +1,11 @@
 using Dalamud.Game.ClientState.Objects.Types;
-using Racingway.Collision;
+using Racingway.Race.Collision;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 
-namespace Racingway.Utils
+namespace Racingway.Race
 {
     public class Player
     {
@@ -25,15 +25,15 @@ namespace Racingway.Utils
         {
             this.id = id;
             this.actor = actor;
-            this.Plugin = plugin;
-            this.lastSeen = 0;
+            Plugin = plugin;
+            lastSeen = 0;
         }
 
         private int delayRaceline = 0;
 
         public void Moved(Vector3 pos)
         {
-            this.position = pos;
+            position = pos;
 
             delayRaceline++;
 
@@ -46,20 +46,20 @@ namespace Racingway.Utils
                 }
             }
 
-            Plugin.Logic.CheckCollision(this);
+            Plugin.CheckCollision(this);
         }
 
         public void AddPoint()
         {
-            raceLine.Enqueue(this.position);
+            raceLine.Enqueue(position);
         }
 
         public float GetDistanceTraveled()
         {
-            Vector3[] arrayLine = raceLine.ToArray();
+            var arrayLine = raceLine.ToArray();
             float distance = 0;
 
-            for (int i = 1; i < raceLine.Count; i++)
+            for (var i = 1; i < raceLine.Count; i++)
             {
                 if (arrayLine[i - 1] == Vector3.Zero) continue;
 

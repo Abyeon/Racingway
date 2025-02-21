@@ -27,8 +27,9 @@ namespace Racingway.Utils
 
                 return Convert.ToBase64String(compressedStream.ToArray());
             }
-            catch
+            catch (Exception ex)
             {
+                Plugin.Log.Error(ex.ToString());
                 return string.Empty;
             }
         }

@@ -19,7 +19,6 @@ using Lumina.Excel.Sheets;
 using Lumina.Excel;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.Interop.Generated;
-using Racingway.Collision;
 using LiteDB;
 using FFXIVClientStructs.FFXIV.Client.Graphics.Render;
 using static FFXIVClientStructs.FFXIV.Client.UI.AddonJobHudRDM0.BalanceGauge;
@@ -27,6 +26,11 @@ using System.Threading.Tasks;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Diagnostics;
+using Racingway.Race;
+using Racingway.Race.Collision;
+using Racingway.Race.Collision.Triggers;
+using Dalamud.Game.Text.SeStringHandling.Payloads;
+using Dalamud.Game.Text.SeStringHandling;
 
 namespace Racingway;
 
@@ -51,67 +55,72 @@ public sealed class Plugin : IDalamudPlugin
 
     public Configuration Configuration { get; init; }
     public readonly WindowSystem WindowSystem = new("Racingway");
-    public Logic Logic { get; init; }
+
     public TriggerOverlay TriggerOverlay { get; init; }
     private ConfigWindow ConfigWindow { get; init; }
     private MainWindow MainWindow { get; init; }
-    public List<Record> RecordList { get; init; }
+
+    public List<Record> RecordList { get; init; } = new();
+    public List<Route> LoadedRoutes { get; set; } = new();
+
     public ObjectId DisplayedRecord { get; set; }
-    public long CurrentTerritory = 0;
+    public ObjectId? SelectedRoute { get; set; }
+
+
     public string CurrentAddress = "";
 
     public Plugin()
     {
         try
         {
-            Storage = new(this, $"{PluginInterface.GetPluginConfigDirectory()}\\data.db");
-        }
-        catch (Exception ex)
+            try
+            {
+                Storage = new(this, $"{PluginInterface.GetPluginConfigDirectory()}\\data.db");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex.ToString());
+            }
+
+            territoryHelper = new TerritoryHelper(this);
+
+            Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+
+            ConfigWindow = new ConfigWindow(this);
+            MainWindow = new MainWindow(this);
+            TriggerOverlay = new TriggerOverlay(this);
+
+            WindowSystem.AddWindow(ConfigWindow);
+            WindowSystem.AddWindow(MainWindow);
+            WindowSystem.AddWindow(TriggerOverlay);
+
+            RecordList = new List<Record>();
+            LoadedRoutes = new List<Route>();
+
+            CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
+            {
+                HelpMessage = "Setup your race!"
+            });
+
+            Framework.Update += OnFrameworkTick;
+            ClientState.TerritoryChanged += OnTerritoryChange;
+
+            PluginInterface.UiBuilder.Draw += DrawUI;
+
+            // This adds a button to the plugin installer entry of this plugin which allows
+            // to toggle the display status of the configuration ui
+            PluginInterface.UiBuilder.OpenConfigUi += ToggleConfigUI;
+
+            // Adds another button that is doing the same but for the main ui of the plugin
+            PluginInterface.UiBuilder.OpenMainUi += ToggleMainUI;
+
+            // Enable overlay if config calls for it
+            ShowHideOverlay();
+        } catch (Exception ex)
         {
-            Log.Error(ex.Message);
+            Log.Error(ex.ToString());
         }
-
-        territoryHelper = new TerritoryHelper(this);
-
-        Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
-
-        foreach (Trigger trigger in Configuration.Triggers)
-        {
-            Log.Debug(trigger.selectedType.ToString());
-        }
-
-        Logic = new Logic(this); // Initiate collision logic
-        SubscribeToTriggers();
-
-        ConfigWindow = new ConfigWindow(this);
-        MainWindow = new MainWindow(this);
-        TriggerOverlay = new TriggerOverlay(this);
-
-        WindowSystem.AddWindow(ConfigWindow);
-        WindowSystem.AddWindow(MainWindow);
-        WindowSystem.AddWindow(TriggerOverlay);
-
-        RecordList = new List<Record>();
-
-        CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
-        {
-            HelpMessage = "Setup your race!"
-        });
-
-        Framework.Update += OnFrameworkTick;
-        ClientState.TerritoryChanged += OnTerritoryChange;
-
-        PluginInterface.UiBuilder.Draw += DrawUI;
-
-        // This adds a button to the plugin installer entry of this plugin which allows
-        // to toggle the display status of the configuration ui
-        PluginInterface.UiBuilder.OpenConfigUi += ToggleConfigUI;
-
-        // Adds another button that is doing the same but for the main ui of the plugin
-        PluginInterface.UiBuilder.OpenMainUi += ToggleMainUI;
-
-        // Enable overlay if config calls for it
-        ShowHideOverlay();
+        
     }
 
     public Dictionary<uint, Player> trackedPlayers = new();
@@ -128,57 +137,54 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
-    public void SubscribeToTriggers()
-    {
-        foreach (Trigger trigger in Configuration.Triggers)
-        {
-            trigger.Entered -= Logic.OnEntered;
-            trigger.Left -= Logic.OnLeft;
-            trigger.Entered += Logic.OnEntered;
-            trigger.Left += Logic.OnLeft;
-        }
-    }
-
-    public void UnsubscribeFromTriggers()
-    {
-        foreach (Trigger trigger in Configuration.Triggers)
-        {
-            trigger.Entered -= Logic.OnEntered;
-            trigger.Left -= Logic.OnLeft;
-        }
-    }
-
     public List<(Func<bool>, Stopwatch)> polls = new();
+
+    public void CheckCollision(Player player)
+    {
+        if (LoadedRoutes == null || LoadedRoutes.Count == 0) return;
+
+        foreach(Route route in LoadedRoutes)
+        {
+            route.CheckCollision(player);
+        }
+    }
 
     private void OnFrameworkTick(IFramework framework)
     {
-        List<(Func<bool>, Stopwatch)> toRemove = new();
+        if (!ClientState.IsLoggedIn) return;
 
-        // Loop through requested polling tasks
-        foreach (var poll in polls)
+        if (polls != null || polls.Count > 0)
         {
-            try
-            {
-                bool result = poll.Item1.Invoke();
+            List<(Func<bool>, Stopwatch)> toRemove = new();
 
-                if (result == true || poll.Item2.ElapsedMilliseconds > 1000) toRemove.Add(poll);
-            } catch (Exception ex)
+            // Loop through requested polling tasks
+            foreach (var poll in polls)
             {
-                Log.Error(ex.Message);
-            }
-        }
+                try
+                {
+                    bool result = poll.Item1.Invoke();
 
-        // Delete polling tasks that have completed
-        foreach (var poll in toRemove)
-        {
-            try
-            {
-                polls.Remove(poll);
-            } catch (Exception ex)
-            {
-                Log.Error(ex.Message);
+                    if (result == true || poll.Item2.ElapsedMilliseconds > 1000) toRemove.Add(poll);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex.ToString());
+                }
             }
-        }
+
+            // Delete polling tasks that have completed
+            foreach (var poll in toRemove)
+            {
+                try
+                {
+                    polls.Remove(poll);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex.ToString());
+                }
+            }
+        }        
 
         // Check if player does not exist anymore
         foreach (var player in trackedPlayers)
@@ -214,17 +220,73 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
-
     private void OnTerritoryChange(ushort territory)
     {
-        Parallel.Invoke(() => territoryHelper.GetLocationID(territory));
+        Parallel.Invoke(() => territoryHelper.GetLocationID());
     }
 
-    public void AddressChanged(string compressedAddress)
+    public void AddressChanged(string address)
     {
-        ChatGui.Print(compressedAddress);
+        CurrentAddress = address;
 
-        CurrentAddress = compressedAddress;
+        try
+        {
+            List<Route> addressRoutes = Storage.GetRoutes().Query().Where(r => r.Address == address).ToList();
+            LoadedRoutes = addressRoutes;
+
+            ChatGui.Print($"[RACE] Loaded {addressRoutes.Count()} routes in this area.");
+
+            if (LoadedRoutes.Count > 0)
+                SelectedRoute = LoadedRoutes.First().Id;
+            else
+            {
+                Route newRoute = new Route(string.Empty, address, new());
+                LoadedRoutes.Add(newRoute);
+                SelectedRoute = newRoute.Id;
+            }
+        } catch (Exception ex)
+        {
+            Log.Error(ex.ToString());
+        }
+        
+
+        SubscribeToRouteEvents();
+    }
+
+    public void SubscribeToRouteEvents()
+    {
+        foreach (var route in LoadedRoutes)
+        {
+            route.OnFinished -= OnFinish;
+            route.OnFailed -= OnFailed;
+            route.OnFinished += OnFinish;
+            route.OnFailed += OnFailed;
+        }
+    }
+
+    private void OnFinish(object? sender, (Player, Record) e)
+    {
+        var prettyPrint = Time.PrettyFormatTimeSpan(e.Item2.Time);
+        PayloadedChat((IPlayerCharacter)e.Item1.actor, $" just finished the race in {prettyPrint} and {e.Item2.Distance} units.");
+        RecordList.Add(e.Item2 as Record);
+
+        Plugin.Log.Debug(RecordList.Count.ToString());
+
+        Storage.AddRecord(e.Item2 as Record);
+    }
+
+    private void OnFailed(object? sender, Player e)
+    {
+        PayloadedChat((IPlayerCharacter)e.actor, " just failed the parkour.");
+    }
+
+    public void PayloadedChat(IPlayerCharacter player, string message)
+    {
+        PlayerPayload payload = new PlayerPayload(player.Name.ToString(), player.HomeWorld.Value.RowId);
+        TextPayload text = new TextPayload(message);
+        SeString chat = new SeString(new Payload[] { payload, text });
+
+        Plugin.ChatGui.Print(chat);
     }
 
     public IGameObject[] GetPlayers(IEnumerable<IGameObject> gameObjects)
@@ -239,8 +301,6 @@ public sealed class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
-        UnsubscribeFromTriggers();
-
         WindowSystem.RemoveAllWindows();
 
         ConfigWindow.Dispose();

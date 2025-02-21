@@ -6,15 +6,15 @@ using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Racingway.Utils
+namespace Racingway.Race
 {
     public class Record
     {
         [BsonId]
         public ObjectId Id { get; set; }
-        public DateTime Date {  get; set; }
+        public DateTime Date { get; set; }
         public string Name { get; set; }
-        public string World {  get; set; }
+        public string World { get; set; }
         public TimeSpan Time { get; set; }
         public float Distance { get; set; }
         public Vector3[] Line { get; set; }
@@ -24,12 +24,12 @@ namespace Racingway.Utils
         {
             Id = new();
 
-            this.Date = date;
-            this.Name = name;
-            this.World = world;
-            this.Time = time;
-            this.Distance = distance;
-            this.Line = line;
+            Date = date;
+            Name = name;
+            World = world;
+            Time = time;
+            Distance = distance;
+            Line = line;
         }
 
         public string GetCSV()
