@@ -34,6 +34,25 @@ namespace Racingway.Utils
             }
         }
 
+        public static unsafe string ToCompressedBase64(string data) {
+            try
+            {
+                var bytes = Encoding.UTF8.GetBytes(data);
+                using var compressedStream = new MemoryStream();
+                using (var zipStream = new GZipStream(compressedStream, CompressionMode.Compress))
+                {
+                    zipStream.Write(bytes, 0, bytes.Length);
+                }
+
+                return Convert.ToBase64String(compressedStream.ToArray());
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.Error(ex.ToString());
+                return string.Empty;
+            }
+        }
+
         public static string FromCompressedBase64(string compressedBase64)
         {
             try

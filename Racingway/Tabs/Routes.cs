@@ -1,7 +1,8 @@
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
 using ImGuiNET;
-using Newtonsoft.Json;
+using LiteDB;
+//using Newtonsoft.Json;
 using Racingway.Race;
 using Racingway.Race.Collision;
 using Racingway.Race.Collision.Triggers;
@@ -39,28 +40,34 @@ namespace Racingway.Tabs
         {
             ImGui.Text($"Current position: {Plugin.ClientState.LocalPlayer.Position.ToString()}");
 
+            int id = 0;
+
             using (var tree = ImRaii.TreeNode("Routes"))
             {
                 if (tree.Success)
                 {
                     foreach (Route route in Plugin.Storage.GetRoutes().Query().Where(x => x.Address == Plugin.CurrentAddress).ToList())
                     {
-                        if (ImGui.Selectable(route.Name))
+                        id++;
+                        if (ImGui.Selectable($"{route.Name}##{id}", route.Id == Plugin.SelectedRoute))
                         {
+                            if (route.Id == Plugin.SelectedRoute) return;
                             Plugin.SelectedRoute = route.Id;
+                        }
+                        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                        {
+                            ImGui.SetTooltip(route.Id.ToString());
                         }
                     }
                 }
             }
 
-            Route selectedRoute = new Route(string.Empty, Plugin.CurrentAddress, new List<ITrigger>());
-            try
+            Route? selectedRoute = Plugin.LoadedRoutes.FirstOrDefault(x => x.Id == Plugin.SelectedRoute, new Route(string.Empty, Plugin.CurrentAddress, new List<ITrigger>()));
+
+            if (ImGui.Button("Create New Route"))
             {
-                int index = Plugin.LoadedRoutes.FindIndex(x => x.Id == selectedRoute.Id);
-                if (index != -1) selectedRoute = Plugin.LoadedRoutes[index];
-            } catch (Exception ex)
-            {
-                Plugin.Log.Error(ex.ToString());
+                selectedRoute = new Route(string.Empty, Plugin.CurrentAddress, new List<ITrigger>());
+                updateRoute(selectedRoute);
             }
 
             ImGui.SameLine();
@@ -70,24 +77,22 @@ namespace Racingway.Tabs
                 {
                     string data = ImGui.GetClipboardText();
                     var Json = Compression.FromCompressedBase64(data);
-                    Plugin.Log.Debug(Json);
 
-                    Object? import = null;
-                    import = JsonConvert.DeserializeObject(Json);
-                    Plugin.Log.Debug(import.ToString());
+                    BsonValue bson = JsonSerializer.Deserialize(Json);
+                    Route route = BsonMapper.Global.Deserialize<Route>(bson);
 
-                    //if (import != null)
-                    //{
-                    //    //Plugin.Configuration.Triggers = import;
-                    //    //Route newRoute = new Route(import.Name, )
-                    //    Plugin.LoadedRoutes.Add(import);
-                    //    Plugin.SelectedRoute = import.Id;
-                    //    selectedRoute = import;
+                    Plugin.Storage.AddRoute(route);
 
-                    //    updateRoute(selectedRoute);
-                    //}
+                    // Only load route if its in our zone
+                    if (!Plugin.LoadedRoutes.Contains(route) && Plugin.CurrentAddress == route.Address)
+                    {
+                        Plugin.LoadedRoutes.Add(route);
+                        Plugin.SelectedRoute = route.Id;
+                    }
+
+                    Plugin.ChatGui.Print($"[RACE] Added {route.Name} to routes.");
                 }
-                catch (JsonReaderException ex)
+                catch (Exception ex)
                 {
                     Plugin.ChatGui.PrintError($"[RACE] Failed to import setup. {ex.Message}");
                     Plugin.Log.Error(ex, "Failed to import setup");
@@ -103,9 +108,18 @@ namespace Racingway.Tabs
             {
                 //string text = Compression.ToCompressedBase64(Plugin.Configuration.Triggers);
                 //Plugin.Log.Debug(selectedRoute.JsonFriendly().ToString());
-                string text = Compression.ToCompressedBase64(selectedRoute.GetSerialized());
-                Plugin.Log.Debug(text);
-                ImGui.SetClipboardText(text);
+                //string input = selectedRoute.GetSerialized().AsDocument.ToString();
+                string input = JsonSerializer.Serialize(selectedRoute.GetSerialized());
+                Plugin.Log.Debug(input);
+                string text = Compression.ToCompressedBase64(input);
+                if (text != string.Empty)
+                {
+                    Plugin.Log.Debug(text);
+                    ImGui.SetClipboardText(text);
+                } else
+                {
+                    Plugin.ChatGui.PrintError("[RACE] No route selected.");
+                }
             }
             if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
             {
@@ -142,9 +156,10 @@ namespace Racingway.Tabs
             ImGui.SameLine();
             if (ImGuiComponents.IconButton(Dalamud.Interface.FontAwesomeIcon.Trash))
             {
+                Plugin.LoadedRoutes.Remove(selectedRoute);
                 Plugin.Storage.GetRoutes().Delete(selectedRoute.Id);
-                Plugin.SelectedRoute = null;
-                selectedRoute = null;
+                Plugin.SelectedRoute = Plugin.LoadedRoutes.Count == 0 ? null : Plugin.LoadedRoutes[0].Id;
+                selectedRoute = Plugin.LoadedRoutes.Count == 0 ? null : Plugin.LoadedRoutes[0];
             }
             if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
             {
@@ -164,7 +179,7 @@ namespace Racingway.Tabs
             }
 
             string name = selectedRoute.Name;
-            if (ImGui.InputText("Name", ref name, 64))
+            if (ImGui.InputText("Name", ref name, 64, ImGuiInputTextFlags.EnterReturnsTrue))
             {
                 // Something
                 if (name == string.Empty) return;
@@ -181,10 +196,8 @@ namespace Racingway.Tabs
                 selectedRoute.Triggers.Add(newTrigger);
                 updateRoute(selectedRoute);
 
-                Plugin.Log.Debug(Plugin.LoadedRoutes.Count.ToString());
+                //Plugin.Log.Debug(Plugin.LoadedRoutes.Count.ToString());
             }
-
-            int id = 0;
 
             for (int i = 0; i < selectedRoute.Triggers.Count; i++)
             {
@@ -318,7 +331,11 @@ namespace Racingway.Tabs
                 Plugin.LoadedRoutes.Add(route);
             }
 
+            Plugin.SelectedRoute = route.Id;
+            Plugin.Log.Debug(Plugin.SelectedRoute.ToString() + " " + route.Id.ToString());
+
             Plugin.SubscribeToRouteEvents();
+            updateStartFinishBools();
 
             Plugin.Storage.AddRoute(route);
         }
@@ -331,15 +348,20 @@ namespace Racingway.Tabs
 
                 Route selectedRoute = Plugin.LoadedRoutes.First(x => x.Id == Plugin.SelectedRoute);
 
+                hasStart = false;
+                hasFinish = false;
+
                 foreach (ITrigger trigger in selectedRoute.Triggers)
                 {
                     if (trigger is Start)
                     {
                         hasStart = true;
+                        Plugin.Log.Debug("Trigger is start!");
                     }
                     if (trigger is Finish)
                     {
                         hasFinish = true;
+                        Plugin.Log.Debug("Trigger is finish!");
                     }
                 }
             } catch (Exception e)

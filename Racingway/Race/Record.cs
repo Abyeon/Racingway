@@ -18,9 +18,13 @@ namespace Racingway.Race
         public TimeSpan Time { get; set; }
         public float Distance { get; set; }
         public Vector3[] Line { get; set; }
+        public string RouteId { get; set; }
+        public string RouteName { get; set; }
+        public string RouteAddress { get; set; }
+        public string RouteHash { get; set; }
 
 
-        public Record(DateTime date, string name, string world, TimeSpan time, float distance, Vector3[] line)
+        public Record(DateTime date, string name, string world, TimeSpan time, float distance, Vector3[] line, Route route)
         {
             Id = new();
 
@@ -30,6 +34,10 @@ namespace Racingway.Race
             Time = time;
             Distance = distance;
             Line = line;
+            RouteId = route.Id.ToString();
+            RouteName = route.Name;
+            RouteAddress = route.Address;
+            RouteHash = route.GetHash();
         }
 
         public string GetCSV()
@@ -37,7 +45,7 @@ namespace Racingway.Race
             // TODO: Research line simplification algos, or some other way to compress player lines... They BIG!
             //string compressedLine = Compression.ToCompressedBase64(Line);
 
-            return $"{Date.ToLocalTime().ToString("M/dd H:mm:ss")},{Name},{World},{Utils.Time.PrettyFormatTimeSpan(Time)},{Distance.ToString()}\n";
+            return $"{Date.ToString("M/dd H:mm:ss")},{Name},{World},{Utils.Time.PrettyFormatTimeSpan(Time)},{Distance.ToString()},{RouteName}\n";
         }
     }
 }

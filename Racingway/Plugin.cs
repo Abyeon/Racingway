@@ -82,6 +82,8 @@ public sealed class Plugin : IDalamudPlugin
                 Log.Error(ex.ToString());
             }
 
+            Storage.GetRecords().DeleteAll();
+
             territoryHelper = new TerritoryHelper(this);
 
             Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
@@ -116,6 +118,9 @@ public sealed class Plugin : IDalamudPlugin
 
             // Enable overlay if config calls for it
             ShowHideOverlay();
+
+            // Update our address when plugin first loads
+            Parallel.Invoke(() => territoryHelper.GetLocationID());
         } catch (Exception ex)
         {
             Log.Error(ex.ToString());
@@ -231,8 +236,16 @@ public sealed class Plugin : IDalamudPlugin
 
         try
         {
+            LoadedRoutes.Clear();
             List<Route> addressRoutes = Storage.GetRoutes().Query().Where(r => r.Address == address).ToList();
             LoadedRoutes = addressRoutes;
+
+            // Kick everyone from parkour when you change zones
+            foreach (var player in trackedPlayers)
+            {
+                player.Value.inParkour = false;
+                player.Value.raceLine.Clear();
+            }
 
             ChatGui.Print($"[RACE] Loaded {addressRoutes.Count()} routes in this area.");
 
@@ -264,10 +277,28 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
+    public void UnsubscribeFromRouteEvents()
+    {
+        foreach (var route in LoadedRoutes)
+        {
+            route.OnFinished -= OnFinish;
+            route.OnFailed -= OnFailed;
+        }
+    }
+
     private void OnFinish(object? sender, (Player, Record) e)
     {
         var prettyPrint = Time.PrettyFormatTimeSpan(e.Item2.Time);
-        PayloadedChat((IPlayerCharacter)e.Item1.actor, $" just finished the race in {prettyPrint} and {e.Item2.Distance} units.");
+
+        Route? route = sender as Route;
+
+        if (route == null)
+        {
+            Plugin.ChatGui.PrintError("[RACE] Route is null.");
+            return;
+        }
+
+        PayloadedChat((IPlayerCharacter)e.Item1.actor, $" just finished {route.Name} in {prettyPrint} and {e.Item2.Distance} units.");
         RecordList.Add(e.Item2 as Record);
 
         Plugin.Log.Debug(RecordList.Count.ToString());
@@ -302,6 +333,10 @@ public sealed class Plugin : IDalamudPlugin
     public void Dispose()
     {
         WindowSystem.RemoveAllWindows();
+
+        UnsubscribeFromRouteEvents();
+        LoadedRoutes.Clear();
+        RecordList.Clear();
 
         ConfigWindow.Dispose();
         MainWindow.Dispose();

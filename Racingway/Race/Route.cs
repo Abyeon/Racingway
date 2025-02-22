@@ -1,9 +1,12 @@
+using ImGuiNET;
 using LiteDB;
 using Racingway.Race.Collision;
 using Racingway.Race.Collision.Triggers;
+using Racingway.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -30,7 +33,7 @@ namespace Racingway.Race
 
         public Route(string Name, string address, List<ITrigger> triggers)
         {
-            this.Id = new();
+            this.Id = ObjectId.NewObjectId();
 
             this.Name = Name;
             this.Address = address;
@@ -52,6 +55,25 @@ namespace Racingway.Race
 
             doc["triggers"] = serializedTriggers;
             return doc;
+        }
+
+        public string GetHash()
+        {
+            string input = JsonSerializer.Serialize(this.GetSerialized());
+            string text = Compression.ToCompressedBase64(input);
+            byte[] bytes = Encoding.UTF8.GetBytes(text);
+            
+            SHA256 sha256 = SHA256.Create();
+            byte[] data = sha256.ComputeHash(bytes);
+
+            var sb = new StringBuilder();
+
+            for (int i = 0; i < data.Length; i++)
+            {
+                sb.Append(data[i].ToString("x2"));
+            }
+
+            return sb.ToString();
         }
 
         public void CheckCollision(Player player)
