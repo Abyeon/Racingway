@@ -1,3 +1,5 @@
+using LiteDB;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -5,14 +7,13 @@ using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Racingway.Collision
+namespace Racingway.Race.Collision
 {
     public class Cube
     {
         public Vector3 Position;
         public Vector3 Scale;
         public Vector3 Rotation;
-
         public Vector3[] Vertices { get; internal set; }
 
         public Cube(Vector3 position, Vector3 scale, Vector3 rotation)

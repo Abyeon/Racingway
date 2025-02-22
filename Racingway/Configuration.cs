@@ -1,6 +1,7 @@
 using Dalamud.Configuration;
 using Dalamud.Plugin;
-using Racingway.Collision;
+using Racingway.Race;
+using Racingway.Race.Collision;
 using System;
 using System.Collections.Generic;
 
@@ -19,7 +20,6 @@ public class Configuration : IPluginConfiguration
     public bool LogFails { get; set; } = false;
     public bool LogFinish { get; set; } = true;
     public int LineQuality { get; set; } = 10;
-    public List<Trigger> Triggers { get; set; } = new List<Trigger>();
 
     // the below exist just to make saving less cumbersome
     public void Save()

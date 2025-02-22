@@ -11,6 +11,9 @@ using Racingway.Utils;
 using Serilog;
 using Dalamud.Game.ClientState.Objects.Types;
 using ImGuizmoNET;
+using Racingway.Race;
+using LiteDB;
+using Racingway.Race.Collision.Triggers;
 
 
 namespace Racingway.Windows
@@ -43,17 +46,16 @@ namespace Racingway.Windows
             Io = ImGui.GetIO();
             ImGui.SetWindowSize(Io.DisplaySize);
 
-            // Display Trigger debug UI.
+            // Display Trigger debug UI
             if (Plugin.Configuration.DrawTriggers)
             {
-                Plugin.Log.Debug("Displaying?");
+                List<ITrigger> triggers = Plugin.LoadedRoutes.SelectMany(x => x.Triggers).ToList();
 
-                foreach (var trigger in Plugin.Configuration.Triggers)
+                foreach (var trigger in triggers)
                 {
                     if (trigger == null) continue;
 
-                    //draw.DrawCube(trigger.cube, trigger.color, 5.0f);
-                    draw.DrawCubeFilled(trigger.Cube, trigger.color, 5.0f);
+                    draw.DrawCubeFilled(trigger.Cube, trigger.Color, 5.0f);
                 }
             }
 

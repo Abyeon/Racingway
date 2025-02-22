@@ -1,5 +1,6 @@
 using Dalamud.Interface.Utility.Raii;
 using ImGuiNET;
+using Racingway.Race;
 using Racingway.Utils;
 using System;
 using System.Collections.Generic;
@@ -45,7 +46,32 @@ namespace Racingway.Tabs
 
         public void Draw()
         {
-            List<Record> tempRecords = GetRecords();
+            int id = 0;
+
+            using (var tree = ImRaii.TreeNode("Routes"))
+            {
+                if (tree.Success)
+                {
+                    foreach (Route route in Plugin.Storage.GetRoutes().Query().Where(x => x.Address == Plugin.CurrentAddress).ToList())
+                    {
+                        id++;
+                        if (ImGui.Selectable($"{route.Name}##{id}", route.Id == Plugin.SelectedRoute))
+                        {
+                            if (route.Id == Plugin.SelectedRoute) return;
+                            Plugin.SelectedRoute = route.Id;
+                        }
+                        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                        {
+                            ImGui.SetTooltip(route.Id.ToString());
+                        }
+                    }
+                }
+            }
+
+            List<Record> tempRecords = new List<Record>();
+            
+            if (Plugin.SelectedRoute != null)
+                tempRecords = GetRecords().Where(x => x.RouteId == Plugin.SelectedRoute.ToString()).ToList();
 
             if (!Plugin.Configuration.AllowDuplicateRecords)
             {
@@ -78,6 +104,7 @@ namespace Racingway.Tabs
             if (ImGui.Button("Clear Records"))
             {
                 Plugin.Storage.GetRecords().DeleteAll();
+                Plugin.DisplayedRecord = null;
             }
 
             using (var table = ImRaii.Table("###race-records", 5, ImGuiTableFlags.Sortable))
