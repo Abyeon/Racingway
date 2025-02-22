@@ -82,8 +82,6 @@ public sealed class Plugin : IDalamudPlugin
                 Log.Error(ex.ToString());
             }
 
-            Storage.GetRecords().DeleteAll();
-
             territoryHelper = new TerritoryHelper(this);
 
             Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
@@ -298,17 +296,21 @@ public sealed class Plugin : IDalamudPlugin
             return;
         }
 
-        PayloadedChat((IPlayerCharacter)e.Item1.actor, $" just finished {route.Name} in {prettyPrint} and {e.Item2.Distance} units.");
+        if (Configuration.LogFinish)
+        {
+            PayloadedChat((IPlayerCharacter)e.Item1.actor, $" just finished {route.Name} in {prettyPrint} and {e.Item2.Distance} units.");
+        }
+
         RecordList.Add(e.Item2 as Record);
-
-        Plugin.Log.Debug(RecordList.Count.ToString());
-
         Storage.AddRecord(e.Item2 as Record);
     }
 
     private void OnFailed(object? sender, Player e)
     {
-        PayloadedChat((IPlayerCharacter)e.actor, " just failed the parkour.");
+        if (Configuration.LogFails)
+        {
+            PayloadedChat((IPlayerCharacter)e.actor, " just failed the parkour.");
+        }
     }
 
     public void PayloadedChat(IPlayerCharacter player, string message)

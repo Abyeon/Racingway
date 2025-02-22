@@ -23,7 +23,6 @@ namespace Racingway.Race
         public string RouteAddress { get; set; }
         public string RouteHash { get; set; }
 
-
         public Record(DateTime date, string name, string world, TimeSpan time, float distance, Vector3[] line, Route route)
         {
             Id = new();
@@ -38,6 +37,22 @@ namespace Racingway.Race
             RouteName = route.Name;
             RouteAddress = route.Address;
             RouteHash = route.GetHash();
+        }
+
+        public Record(DateTime date, string name, string world, TimeSpan time, float distance, Vector3[] line, string routeId, string routeName, string routeAddress, string routeHash)
+        {
+            Id = new();
+
+            Date = date;
+            Name = name;
+            World = world;
+            Time = time;
+            Distance = distance;
+            Line = line;
+            RouteId = routeId;
+            RouteName = routeName;
+            RouteAddress = routeAddress;
+            RouteHash = routeHash;
         }
 
         public string GetCSV()
