@@ -1,5 +1,6 @@
 using Dalamud.Interface.Utility.Raii;
 using ImGuiNET;
+using LiteDB;
 using Racingway.Race;
 using Racingway.Utils;
 using System;
@@ -27,22 +28,7 @@ namespace Racingway.Tabs
 
         }
 
-        private List<Record> GetRecords()
-        {
-            //List<Record> records = Plugin.RecordList;
-
-            //if (!Plugin.Configuration.AllowDuplicateRecords)
-            //{
-            //    // Remove duplicates by sort magic
-            //    records = records.GroupBy(x => x.Name)
-            //        .Select(g => g.OrderByDescending(x => x.Time).Last())
-            //        .ToList();
-            //}
-
-            List<Record> records = Plugin.Storage.GetRecords().Query().ToList();
-
-            return records;
-        }
+        private List<Record> cachedRecords = new List<Record>();
 
         public void Draw()
         {
@@ -68,15 +54,15 @@ namespace Racingway.Tabs
                 }
             }
 
-            List<Record> tempRecords = new List<Record>();
-            
-            if (Plugin.SelectedRoute != null)
-                tempRecords = GetRecords().Where(x => x.RouteId == Plugin.SelectedRoute.ToString()).ToList();
+            cachedRecords = Plugin.RecordList.Where(x => x.RouteId == Plugin.SelectedRoute.ToString()).ToList();
+
+            //if (Plugin.SelectedRoute != null)
+            //    cachedRecords = GetRecords().Where(x => x.RouteId == Plugin.SelectedRoute.ToString()).ToList();
 
             if (!Plugin.Configuration.AllowDuplicateRecords)
             {
                 // Remove duplicates by sort magic
-                tempRecords = tempRecords.GroupBy(x => x.Name)
+                cachedRecords = cachedRecords.GroupBy(x => x.Name)
                     .Select(g => g.OrderByDescending(x => x.Time).Last())
                     .ToList();
             }
@@ -86,7 +72,7 @@ namespace Racingway.Tabs
                 StringBuilder sb = new StringBuilder();
                 sb.Append("Date,Name,World,Time,Distance\n");
 
-                foreach (Record record in tempRecords)
+                foreach (Record record in cachedRecords)
                 {
                     sb.Append(record.GetCSV());
                 }
@@ -103,7 +89,14 @@ namespace Racingway.Tabs
             ImGui.SameLine();
             if (ImGui.Button("Clear Records"))
             {
-                Plugin.Storage.GetRecords().DeleteAll();
+                foreach (Record record in cachedRecords)
+                {
+                    Plugin.Storage.GetRecords().Delete(record.Id);
+                    Plugin.RecordList.Remove(record);
+                }
+
+                cachedRecords.Clear();
+
                 Plugin.DisplayedRecord = null;
             }
 
@@ -122,7 +115,7 @@ namespace Racingway.Tabs
                     ImGuiTableSortSpecsPtr sortSpecs = ImGui.TableGetSortSpecs();
 
                     // Sort records by ImGui sortspecs.
-                    tempRecords.Sort((record1, record2) =>
+                    cachedRecords.Sort((record1, record2) =>
                     {
                         short index = sortSpecs.Specs.ColumnIndex; // Sorting column
                         int comparison = 0;
@@ -155,7 +148,7 @@ namespace Racingway.Tabs
                         return comparison;
                     });
 
-                    foreach (Record record in tempRecords)
+                    foreach (Record record in cachedRecords)
                     {
                         if (Plugin.DisplayedRecord == record.Id)
                         {

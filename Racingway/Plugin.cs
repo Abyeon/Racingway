@@ -35,6 +35,7 @@ using static Dalamud.Interface.Utility.Raii.ImRaii;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Client.System.String;
 using FFXIVClientStructs.FFXIV.Client.UI;
+using FFXIVClientStructs.FFXIV.Client.Game.Character;
 
 namespace Racingway;
 
@@ -64,10 +65,10 @@ public sealed class Plugin : IDalamudPlugin
     private ConfigWindow ConfigWindow { get; init; }
     private MainWindow MainWindow { get; init; }
 
-    public List<Record> RecordList { get; init; } = new();
+    public List<Record> RecordList { get; set; } = new();
     public List<Route> LoadedRoutes { get; set; } = new();
 
-    public ObjectId DisplayedRecord { get; set; }
+    public ObjectId? DisplayedRecord { get; set; }
     public ObjectId? SelectedRoute { get; set; }
     public Stopwatch LocalTimer { get; set; }
 
@@ -157,6 +158,14 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
+    public unsafe bool isGrounded(IGameObject player)
+    {
+        var manager = CharacterManager.Instance();
+        Character* character = (Character*)manager->LookupBattleCharaByEntityId(player.EntityId);
+
+        return !character->IsJumping();
+    }
+
     private void OnFrameworkTick(IFramework framework)
     {
         if (!ClientState.IsLoggedIn) return;
@@ -224,7 +233,7 @@ public sealed class Plugin : IDalamudPlugin
                     }
                     else
                     {
-                        if (player.Position != trackedPlayers[id].position)
+                        if (player.Position != trackedPlayers[id].position || isGrounded(player) != trackedPlayers[id].isGrounded)
                         {
                             trackedPlayers[id].Moved(player.Position);
                         }
@@ -246,7 +255,7 @@ public sealed class Plugin : IDalamudPlugin
                     }
                     else
                     {
-                        if (player.Position != trackedPlayers[id].position)
+                        if (player.Position != trackedPlayers[id].position || isGrounded(player) != trackedPlayers[id].isGrounded)
                         {
                             trackedPlayers[id].Moved(player.Position);
                         }
@@ -278,6 +287,9 @@ public sealed class Plugin : IDalamudPlugin
             LoadedRoutes.Clear();
             List<Route> addressRoutes = Storage.GetRoutes().Query().Where(r => r.Address == address.Location).ToList();
             LoadedRoutes = addressRoutes;
+
+            RecordList = Storage.GetRecords().Query().Where(r => r.RouteAddress == CurrentAddress).ToList();
+            DisplayedRecord = null;
 
             // Kick everyone from parkour when you change zones
             foreach (var player in trackedPlayers)
@@ -331,7 +343,6 @@ public sealed class Plugin : IDalamudPlugin
     {
         if (e.id == ClientState.LocalPlayer.EntityId)
         {
-            Plugin.Log.Debug("Got here!");
             LocalTimer.Reset();
             LocalTimer.Start();
         }

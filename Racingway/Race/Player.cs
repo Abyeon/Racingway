@@ -42,13 +42,13 @@ namespace Racingway.Race
             var manager = CharacterManager.Instance();
             Character* character = (Character*)manager->LookupBattleCharaByEntityId(actor.EntityId);
 
-            isGrounded = !character->IsJumping();
-            inMount = character->IsMounted();
+            this.isGrounded = !character->IsJumping();
+            this.inMount = character->IsMounted();
         }
 
         public void Moved(Vector3 pos)
         {
-            position = pos;
+            this.position = pos;
 
             delayRaceline++;
 
@@ -61,20 +61,13 @@ namespace Racingway.Race
                 }
             }
 
-            try
-            {
-                UpdateState();
-            } catch (Exception e)
-            {
-                Plugin.Log.Error(e.ToString());
-            }
-
+            UpdateState();
             Plugin.CheckCollision(this);
         }
 
         public void AddPoint()
         {
-            raceLine.Enqueue(new TimedVector3(position, timer.ElapsedMilliseconds));
+            raceLine.Enqueue(new TimedVector3(this.position, timer.ElapsedMilliseconds));
         }
 
         public float GetDistanceTraveled()

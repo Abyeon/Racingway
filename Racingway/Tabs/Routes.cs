@@ -127,11 +127,9 @@ namespace Racingway.Tabs
                 //Plugin.Log.Debug(selectedRoute.JsonFriendly().ToString());
                 //string input = selectedRoute.GetSerialized().AsDocument.ToString();
                 string input = JsonSerializer.Serialize(selectedRoute.GetSerialized());
-                Plugin.Log.Debug(input);
                 string text = Compression.ToCompressedBase64(input);
                 if (text != string.Empty)
                 {
-                    Plugin.Log.Debug(text);
                     ImGui.SetClipboardText(text);
                 } else
                 {
@@ -349,7 +347,6 @@ namespace Racingway.Tabs
             }
 
             Plugin.SelectedRoute = route.Id;
-            Plugin.Log.Debug(Plugin.SelectedRoute.ToString() + " " + route.Id.ToString());
 
             Plugin.SubscribeToRouteEvents();
             updateStartFinishBools();
@@ -373,12 +370,10 @@ namespace Racingway.Tabs
                     if (trigger is Start)
                     {
                         hasStart = true;
-                        Plugin.Log.Debug("Trigger is start!");
                     }
                     if (trigger is Finish)
                     {
                         hasFinish = true;
-                        Plugin.Log.Debug("Trigger is finish!");
                     }
                 }
             } catch (Exception e)
