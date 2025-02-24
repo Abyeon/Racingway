@@ -1,5 +1,6 @@
 using ImGuiNET;
 using Racingway.Race.Collision;
+using Racingway.Race.Collision.Triggers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -38,6 +39,18 @@ namespace Racingway.Utils
             {
                 drawList.AddLine(screenPos1, screenPos2, color, thickness);
             }
+        }
+
+        public void DrawPath3d(Vector3[] path, uint color, float thickness)
+        {
+            for (int i = 0; i < path.Length; i++)
+            {
+                Vector2 screenPos = new Vector2();
+
+                Plugin.GameGui.WorldToScreen(path[i], out screenPos);
+                drawList.PathLineTo(screenPos);
+            }
+            drawList.PathStroke(color, ImDrawFlags.None, thickness);
         }
 
         public void DrawQuadFilled3d(Vector3 p1, Vector3 p2, Vector3 p3, Vector3 p4, uint color)

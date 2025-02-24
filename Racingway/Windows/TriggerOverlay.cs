@@ -64,13 +64,13 @@ namespace Racingway.Windows
             {
                 foreach (var actor in Plugin.trackedPlayers.Values)
                 {
-                    Vector3[] raceLine = actor.raceLine.ToArray();
+                    TimedVector3[] raceLine = actor.raceLine.ToArray();
 
                     for (var i = 1; i < raceLine.Length; i++)
                     {
-                        if (raceLine[i - 1] == Vector3.Zero) continue;
+                        if (raceLine[i - 1].asVector() == Vector3.Zero) continue;
 
-                        draw.DrawLine3d(raceLine[i - 1], raceLine[i], 0x55FFFFFF, 2.0f);
+                        draw.DrawLine3d(raceLine[i - 1].asVector(), raceLine[i].asVector(), 0x55FFFFFF, 2.0f);
                     }
                 }
             }
@@ -79,13 +79,18 @@ namespace Racingway.Windows
             if (Plugin.DisplayedRecord != null)
             {
                 Record displayedRecord = Plugin.Storage.GetRecords().FindOne(x => x.Id == Plugin.DisplayedRecord);
-                Vector3[] displayedRecordLine = displayedRecord.Line;
+                TimedVector3[] displayedRecordLine = displayedRecord.Line;
 
                 for (var i = 1; i < displayedRecordLine.Length; i++)
                 {
-                    if (displayedRecordLine[i - 1] == Vector3.Zero) continue;
+                    if (displayedRecordLine[i - 1].asVector() == Vector3.Zero) continue;
 
-                    draw.DrawLine3d(displayedRecordLine[i - 1], displayedRecordLine[i], 0x55FFCCFF, 2.0f);
+                    // This allows for realtime ghost playback of player records
+                    if (!Plugin.LocalTimer.IsRunning || Plugin.LocalTimer.ElapsedMilliseconds >= displayedRecordLine[i].Offset)
+                    {
+                        //Plugin.Log.Debug(Plugin.LocalTimer.ElapsedMilliseconds.ToString());
+                        draw.DrawLine3d(displayedRecordLine[i - 1].asVector(), displayedRecordLine[i].asVector(), 0x55FFCCFF, 2.0f);
+                    }
                 }
             }
         }

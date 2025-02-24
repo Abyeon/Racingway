@@ -1,5 +1,8 @@
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
+using FFXIVClientStructs.FFXIV.Client.System.String;
+using FFXIVClientStructs.FFXIV.Client.UI.Agent;
+using Racingway.Race;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -47,8 +50,16 @@ namespace Racingway.Utils
                         if (id != -1)
                         {
                             //Plugin.CurrentTerritory = id;
-                            Plugin.AddressChanged(id.ToString());
-                            return true;
+                            try
+                            {
+                                Address address = new Address(GetTerritoryId(), GetMapId(), id.ToString());
+
+                                Plugin.AddressChanged(address);
+                                return true;
+                            } catch (Exception e)
+                            {
+                                Plugin.Log.Error(e.ToString());
+                            }
                         }
 
                         return false;
@@ -62,17 +73,33 @@ namespace Racingway.Utils
                         long division = GetDivision();
                         if (division != 0)
                         {
-                            //Plugin.CurrentTerritory = division;
-                            Plugin.AddressChanged(territory.ToString() + " " + GetWard().ToString() + " " + division.ToString());
-                            return true;
+                            try
+                            {
+                                Address address = new Address(GetTerritoryId(), GetMapId(), territory.ToString() + " " + GetWard().ToString() + " " + division.ToString());
+
+                                //Plugin.CurrentTerritory = division;
+                                Plugin.AddressChanged(address);
+                                return true;
+                            } catch (Exception e)
+                            {
+                                Plugin.Log.Error(e.ToString());
+                            }
                         }
 
                         return false;
                     }, timer));
                 } else
                 {
-                    //Plugin.CurrentTerritory = territory;
-                    Plugin.AddressChanged(territory.ToString());
+                    try
+                    {
+                        Address address = new Address(GetTerritoryId(), GetMapId(), territory.ToString());
+
+                        //Plugin.CurrentTerritory = territory;
+                        Plugin.AddressChanged(address);
+                    } catch (Exception e)
+                    {
+                        Plugin.Log.Error(e.ToString());
+                    }
                 }
             }
             catch (Exception e)
@@ -84,6 +111,18 @@ namespace Racingway.Utils
         private string UpdateAddress(string input)
         {
             return Compression.ToCompressedBase64(input);
+        }
+
+        private unsafe uint GetMapId()
+        {
+            var agent = AgentMap.Instance();
+            return agent->CurrentMapId;
+        }
+
+        private unsafe uint GetTerritoryId()
+        {
+            var agent = AgentMap.Instance();
+            return agent->CurrentTerritoryId;
         }
 
         private unsafe HousingTerritoryType GetTerritoryType()

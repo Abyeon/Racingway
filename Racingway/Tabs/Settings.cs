@@ -66,6 +66,13 @@ namespace Racingway.Tabs
                 Plugin.Configuration.Save();
             }
 
+            bool trackOthers = Plugin.Configuration.TrackOthers;
+            if (ImGui.Checkbox("Track Other Players", ref trackOthers))
+            {
+                Plugin.Configuration.TrackOthers = trackOthers;
+                Plugin.Configuration.Save();
+            }
+
             int quality = Plugin.Configuration.LineQuality;
             if (ImGui.DragInt("Line Quality", ref quality, 0.05f, 0, 50))
             {

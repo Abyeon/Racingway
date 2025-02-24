@@ -6,6 +6,7 @@ using System.Text;
 using Newtonsoft.Json;
 using System.Threading.Tasks;
 using LiteDB;
+using System.Diagnostics;
 
 namespace Racingway.Race.Collision.Triggers
 {
@@ -35,15 +36,36 @@ namespace Racingway.Race.Collision.Triggers
             this.Cube = cube;
         }
 
+        public void CheckCollision(Player player)
+        {
+            var inTrigger = Cube.PointInCube(player.position);
+
+            if (inTrigger && !Touchers.Contains(player.id) && player.isGrounded)
+            {
+                Touchers.Add(player.id);
+                OnEntered(player);
+            }
+            else if ((!inTrigger && Touchers.Contains(player.id)) || (!player.isGrounded && Touchers.Contains(player.id)))
+            {
+                Touchers.Remove(player.id);
+                OnLeft(player);
+            }
+        }
+
         public void OnEntered(Player player)
         {
-            Color = ActiveColor;
-            if (!Route.PlayersInParkour.Contains(player)) return;
+            if (player.isGrounded)
+            {
+                Color = ActiveColor;
+                int index = Route.PlayersInParkour.FindIndex(x => x.Item1 == player);
 
-            player.inParkour = false;
-            Route.PlayersInParkour.Remove(player);
-            player.raceLine.Clear();
-            player.timer.Reset();
+                if (index == -1) return;
+
+                player.inParkour = false;
+                Route.PlayersInParkour.RemoveAt(index);
+                player.raceLine.Clear();
+                player.timer.Reset();
+            }
         }
 
         public void OnLeft(Player player)
@@ -57,7 +79,9 @@ namespace Racingway.Race.Collision.Triggers
             player.inParkour = true;
             player.AddPoint();
 
-            Route.PlayersInParkour.Add(player);
+            Route.PlayersInParkour.Add((player, Stopwatch.StartNew()));
+            Route.Started(player);
+
             player.raceLine.Clear();
         }
 

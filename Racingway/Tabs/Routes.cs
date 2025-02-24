@@ -1,5 +1,6 @@
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
+using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using ImGuiNET;
 using LiteDB;
 //using Newtonsoft.Json;
@@ -36,6 +37,17 @@ namespace Racingway.Tabs
 
         }
 
+        public unsafe void SetFlagMarkerPosition(Vector3 position)
+        {
+            var agent = AgentMap.Instance();
+
+            var territoryId = agent->CurrentTerritoryId;
+            var mapId = agent->CurrentMapId;
+
+            agent->SetFlagMapMarker(territoryId, mapId, position);
+            agent->OpenMap(mapId);
+        }
+
         public void Draw()
         {
             ImGui.Text($"Current position: {Plugin.ClientState.LocalPlayer.Position.ToString()}");
@@ -68,6 +80,11 @@ namespace Racingway.Tabs
             {
                 selectedRoute = new Route(string.Empty, Plugin.CurrentAddress, new List<ITrigger>());
                 updateRoute(selectedRoute);
+            }
+
+            if (ImGui.Button("Set Flag For Start"))
+            {
+                SetFlagMarkerPosition(selectedRoute.Triggers[0].Cube.Position);
             }
 
             ImGui.SameLine();
@@ -110,11 +127,9 @@ namespace Racingway.Tabs
                 //Plugin.Log.Debug(selectedRoute.JsonFriendly().ToString());
                 //string input = selectedRoute.GetSerialized().AsDocument.ToString();
                 string input = JsonSerializer.Serialize(selectedRoute.GetSerialized());
-                Plugin.Log.Debug(input);
                 string text = Compression.ToCompressedBase64(input);
                 if (text != string.Empty)
                 {
-                    Plugin.Log.Debug(text);
                     ImGui.SetClipboardText(text);
                 } else
                 {
@@ -332,7 +347,6 @@ namespace Racingway.Tabs
             }
 
             Plugin.SelectedRoute = route.Id;
-            Plugin.Log.Debug(Plugin.SelectedRoute.ToString() + " " + route.Id.ToString());
 
             Plugin.SubscribeToRouteEvents();
             updateStartFinishBools();
@@ -356,12 +370,10 @@ namespace Racingway.Tabs
                     if (trigger is Start)
                     {
                         hasStart = true;
-                        Plugin.Log.Debug("Trigger is start!");
                     }
                     if (trigger is Finish)
                     {
                         hasFinish = true;
-                        Plugin.Log.Debug("Trigger is finish!");
                     }
                 }
             } catch (Exception e)

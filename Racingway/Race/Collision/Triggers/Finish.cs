@@ -37,21 +37,40 @@ namespace Racingway.Race.Collision.Triggers
             this.Cube = cube;
         }
 
+        public void CheckCollision(Player player)
+        {
+            var inTrigger = Cube.PointInCube(player.position);
+
+            if (inTrigger && !Touchers.Contains(player.id) && player.isGrounded)
+            {
+                Touchers.Add(player.id);
+                OnEntered(player);
+            }
+            else if ((!inTrigger && Touchers.Contains(player.id)) || (!player.isGrounded && Touchers.Contains(player.id)))
+            {
+                Touchers.Remove(player.id);
+                OnLeft(player);
+            }
+        }
+
         public void OnEntered(Player player)
         {
             Color = ActiveColor;
             DateTime now = DateTime.UtcNow;
+            int index = Route.PlayersInParkour.FindIndex(x => x.Item1 == player);
 
-            if (Route.PlayersInParkour.Contains(player))
+            if (index != -1)
             {
                 player.AddPoint();
                 player.inParkour = false;
-                Route.PlayersInParkour.Remove(player);
+
                 Touchers.Remove(player.id);
                 OnLeft(player);
 
-                var elapsedTime = player.timer.ElapsedMilliseconds;
+                var elapsedTime = Route.PlayersInParkour[index].Item2.ElapsedMilliseconds;
                 var t = TimeSpan.FromMilliseconds(elapsedTime);
+
+                Route.PlayersInParkour.RemoveAt(index);
 
                 var distance = player.GetDistanceTraveled();
 

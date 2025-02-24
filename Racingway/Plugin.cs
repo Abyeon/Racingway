@@ -31,6 +31,11 @@ using Racingway.Race.Collision;
 using Racingway.Race.Collision.Triggers;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Game.Text.SeStringHandling;
+using static Dalamud.Interface.Utility.Raii.ImRaii;
+using FFXIVClientStructs.FFXIV.Client.UI.Agent;
+using FFXIVClientStructs.FFXIV.Client.System.String;
+using FFXIVClientStructs.FFXIV.Client.UI;
+using FFXIVClientStructs.FFXIV.Client.Game.Character;
 
 namespace Racingway;
 
@@ -60,12 +65,12 @@ public sealed class Plugin : IDalamudPlugin
     private ConfigWindow ConfigWindow { get; init; }
     private MainWindow MainWindow { get; init; }
 
-    public List<Record> RecordList { get; init; } = new();
+    public List<Record> RecordList { get; set; } = new();
     public List<Route> LoadedRoutes { get; set; } = new();
 
-    public ObjectId DisplayedRecord { get; set; }
+    public ObjectId? DisplayedRecord { get; set; }
     public ObjectId? SelectedRoute { get; set; }
-
+    public Stopwatch LocalTimer { get; set; }
 
     public string CurrentAddress = "";
 
@@ -82,6 +87,7 @@ public sealed class Plugin : IDalamudPlugin
                 Log.Error(ex.ToString());
             }
 
+            LocalTimer = new Stopwatch();
             territoryHelper = new TerritoryHelper(this);
 
             Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
@@ -152,6 +158,14 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
+    public unsafe bool isGrounded(IGameObject player)
+    {
+        var manager = CharacterManager.Instance();
+        Character* character = (Character*)manager->LookupBattleCharaByEntityId(player.EntityId);
+
+        return !character->IsJumping();
+    }
+
     private void OnFrameworkTick(IFramework framework)
     {
         if (!ClientState.IsLoggedIn) return;
@@ -187,56 +201,95 @@ public sealed class Plugin : IDalamudPlugin
                     Log.Error(ex.ToString());
                 }
             }
-        }        
-
-        // Check if player does not exist anymore
-        foreach (var player in trackedPlayers)
-        {
-            player.Value.lastSeen++;
-
-            // Player no longer exists
-            if (player.Value.lastSeen > 120)
-            {
-                trackedPlayers.Remove(player.Key);
-                break;
-            }
         }
-
-        // Check for people
-        IGameObject[] players = GetPlayers(ObjectTable);
-        foreach (var player in players)
+        
+        // If we even have routes loaded, then we can track players
+        if (LoadedRoutes.Count > 0) 
         {
-            uint id = player.EntityId;
-
-            if (!trackedPlayers.ContainsKey(id))
+            // Check if player does not exist anymore
+            foreach (var player in trackedPlayers)
             {
-                trackedPlayers.Add(id, new Player(id, player, this));
+                player.Value.lastSeen++;
+
+                // Player no longer exists
+                if (player.Value.lastSeen > 120)
+                {
+                    trackedPlayers.Remove(player.Key);
+                    break;
+                }
+            }
+
+            if (Configuration.TrackOthers)
+            {
+                // Check for people
+                IGameObject[] players = GetPlayers(ObjectTable);
+                foreach (var player in players)
+                {
+                    uint id = player.EntityId;
+
+                    if (!trackedPlayers.ContainsKey(id))
+                    {
+                        trackedPlayers.Add(id, new Player(id, player, this));
+                    }
+                    else
+                    {
+                        if (player.Position != trackedPlayers[id].position || isGrounded(player) != trackedPlayers[id].isGrounded)
+                        {
+                            trackedPlayers[id].Moved(player.Position);
+                        }
+
+                        trackedPlayers[id].lastSeen = 0;
+                    }
+                }
             } else
             {
-                if (player.Position != trackedPlayers[id].position)
+                // Check for people
+                IGameObject player = GetPlayers(ObjectTable).FirstOrDefault(x => x.EntityId == ClientState.LocalPlayer.EntityId, null);
+                if (player != null)
                 {
-                    trackedPlayers[id].Moved(player.Position);
-                }
+                    uint id = player.EntityId;
 
-                trackedPlayers[id].lastSeen = 0;
+                    if (!trackedPlayers.ContainsKey(id))
+                    {
+                        trackedPlayers.Add(id, new Player(id, player, this));
+                    }
+                    else
+                    {
+                        if (player.Position != trackedPlayers[id].position || isGrounded(player) != trackedPlayers[id].isGrounded)
+                        {
+                            trackedPlayers[id].Moved(player.Position);
+                        }
+
+                        trackedPlayers[id].lastSeen = 0;
+                    }
+                }
             }
         }
     }
 
     private void OnTerritoryChange(ushort territory)
     {
-        Parallel.Invoke(() => territoryHelper.GetLocationID());
+        try
+        {
+            Parallel.Invoke(() => territoryHelper.GetLocationID());
+        } catch (Exception e)
+        {
+            Plugin.Log.Error(e.ToString());
+        }
     }
 
-    public void AddressChanged(string address)
+    public void AddressChanged(Address address)
     {
-        CurrentAddress = address;
+        CurrentAddress = address.Location;
 
         try
         {
             LoadedRoutes.Clear();
-            List<Route> addressRoutes = Storage.GetRoutes().Query().Where(r => r.Address == address).ToList();
+            List<Route> addressRoutes = Storage.GetRoutes().Query().Where(r => r.Address == address.Location).ToList();
             LoadedRoutes = addressRoutes;
+
+            RecordList = Storage.GetRecords().Query().Where(r => r.RouteAddress == CurrentAddress).ToList();
+            DisplayedRecord = null;
 
             // Kick everyone from parkour when you change zones
             foreach (var player in trackedPlayers)
@@ -251,7 +304,7 @@ public sealed class Plugin : IDalamudPlugin
                 SelectedRoute = LoadedRoutes.First().Id;
             else
             {
-                Route newRoute = new Route(string.Empty, address, new());
+                Route newRoute = new Route(string.Empty, address.Location, new());
                 LoadedRoutes.Add(newRoute);
                 SelectedRoute = newRoute.Id;
             }
@@ -268,8 +321,10 @@ public sealed class Plugin : IDalamudPlugin
     {
         foreach (var route in LoadedRoutes)
         {
+            route.OnStarted -= OnStart;
             route.OnFinished -= OnFinish;
             route.OnFailed -= OnFailed;
+            route.OnStarted += OnStart;
             route.OnFinished += OnFinish;
             route.OnFailed += OnFailed;
         }
@@ -284,8 +339,22 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
+    private void OnStart(object? sender, Player e)
+    {
+        if (e.id == ClientState.LocalPlayer.EntityId)
+        {
+            LocalTimer.Reset();
+            LocalTimer.Start();
+        }
+    }
+
     private void OnFinish(object? sender, (Player, Record) e)
     {
+        if (e.Item1.actor.EntityId == ClientState.LocalPlayer.EntityId)
+        {
+            LocalTimer.Stop();
+        }
+
         var prettyPrint = Time.PrettyFormatTimeSpan(e.Item2.Time);
 
         Route? route = sender as Route;
@@ -307,6 +376,11 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnFailed(object? sender, Player e)
     {
+        if (e.actor.EntityId == ClientState.LocalPlayer.EntityId)
+        {
+            LocalTimer.Reset();
+        }
+
         if (Configuration.LogFails)
         {
             PayloadedChat((IPlayerCharacter)e.actor, " just failed the parkour.");
@@ -340,6 +414,8 @@ public sealed class Plugin : IDalamudPlugin
         LoadedRoutes.Clear();
         RecordList.Clear();
 
+        LocalTimer.Stop();
+
         ConfigWindow.Dispose();
         MainWindow.Dispose();
         TriggerOverlay.Dispose();
@@ -353,6 +429,7 @@ public sealed class Plugin : IDalamudPlugin
     private async void OnCommand(string command, string args)
     {
         // in response to the slash command, just toggle the display status of our main ui
+
         ToggleMainUI();
 
         //await territoryHelper.GetLocationID(0);
