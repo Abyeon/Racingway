@@ -40,13 +40,14 @@ namespace Racingway.Race.Collision.Triggers
         {
             Color = ActiveColor;
 
-            if (!Route.PlayersInParkour.Contains(player)) return;
+            int index = Route.PlayersInParkour.FindIndex(x => x.Item1 == player);
+            if (index == -1) return;
 
             Route.Failed(player);
             player.inParkour = false;
 
             player.raceLine.Clear();
-            Route.PlayersInParkour.Remove(player);
+            Route.PlayersInParkour.RemoveAt(index);
             Touchers.Remove(player.id);
             OnLeft(player);
         }

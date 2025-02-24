@@ -5,6 +5,7 @@ using Racingway.Race.Collision.Triggers;
 using Racingway.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -23,21 +24,39 @@ namespace Racingway.Race
         public ObjectId Id { get; set; }
         public string Name { get; set; }
         public string Address { get; set; }
+        public Address Location { get; set; }
+        public bool AllowMounts {  get; set; }
+        public bool Enabled { get; set; }
         public List<ITrigger> Triggers { get; set; }
 
-        [BsonIgnore] public List<Player> PlayersInParkour = new();
+        [BsonIgnore] public List<(Player, Stopwatch)> PlayersInParkour = new();
 
+        [BsonIgnore] public event EventHandler<Player> OnStarted;
         [BsonIgnore] public event EventHandler<(Player, Record)> OnFinished;
         [BsonIgnore] public event EventHandler<Player> OnFailed;
 
 
-        public Route(string Name, string address, List<ITrigger> triggers)
+        public Route(string Name, string address, List<ITrigger> triggers, bool allowMounts = false, bool enabled = true)
         {
             this.Id = ObjectId.NewObjectId();
 
             this.Name = Name;
             this.Address = address;
             this.Triggers = triggers;
+            this.AllowMounts = allowMounts;
+            this.Enabled = enabled;
+        }
+
+        public Route(string Name, Address address, List<ITrigger> triggers, bool allowMounts = false, bool enabled = true)
+        {
+            this.Id = ObjectId.NewObjectId();
+
+            this.Name = Name;
+            this.Address = address.Location;
+            this.Location = address;
+            this.Triggers = triggers;
+            this.AllowMounts = allowMounts;
+            this.Enabled = enabled;
         }
 
         public BsonDocument GetSerialized()
@@ -46,6 +65,11 @@ namespace Racingway.Race
             doc["_id"] = Id;
             doc["name"] = Name;
             doc["address"] = Address;
+
+            if (Location != null)
+            {
+                doc["location"] = Location.GetSerialized();
+            }
 
             BsonArray serializedTriggers = new BsonArray();
             Triggers.ForEach(x =>
@@ -81,7 +105,20 @@ namespace Racingway.Race
             // If player is not in parkour, only check collision with start trigger
             if (Triggers.Count == 0) return;
 
-            if (!PlayersInParkour.Contains(player) && Triggers.Exists(x => x is Start))
+            int index = PlayersInParkour.FindIndex(x => x.Item1 == player);
+
+            if (!AllowMounts && player.inMount)
+            {
+                if (index != -1)
+                {
+                    PlayersInParkour.RemoveAt(index);
+                    Failed(player);
+                }
+
+                return;
+            }
+
+            if (index == -1 && Triggers.Exists(x => x is Start))
             { 
                 // There shouldnt be more than one start trigger.
                 ITrigger start = Triggers.First(x => x is Start);
@@ -94,6 +131,11 @@ namespace Racingway.Race
                     trigger.CheckCollision(player);
                 }
             }
+        }
+
+        public void Started(Player player)
+        {
+            OnStarted?.Invoke(this, player);
         }
 
         public void Finished(Player player, Record record)

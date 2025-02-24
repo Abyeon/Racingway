@@ -20,6 +20,7 @@ public class Configuration : IPluginConfiguration
     public bool LogFails { get; set; } = false;
     public bool LogFinish { get; set; } = true;
     public int LineQuality { get; set; } = 10;
+    public bool TrackOthers { get; set; } = true;
 
     // the below exist just to make saving less cumbersome
     public void Save()

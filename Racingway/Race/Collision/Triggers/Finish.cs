@@ -41,17 +41,20 @@ namespace Racingway.Race.Collision.Triggers
         {
             Color = ActiveColor;
             DateTime now = DateTime.UtcNow;
+            int index = Route.PlayersInParkour.FindIndex(x => x.Item1 == player);
 
-            if (Route.PlayersInParkour.Contains(player))
+            if (index != -1)
             {
                 player.AddPoint();
                 player.inParkour = false;
-                Route.PlayersInParkour.Remove(player);
+
                 Touchers.Remove(player.id);
                 OnLeft(player);
 
-                var elapsedTime = player.timer.ElapsedMilliseconds;
+                var elapsedTime = Route.PlayersInParkour[index].Item2.ElapsedMilliseconds;
                 var t = TimeSpan.FromMilliseconds(elapsedTime);
+
+                Route.PlayersInParkour.RemoveAt(index);
 
                 var distance = player.GetDistanceTraveled();
 

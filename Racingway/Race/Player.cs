@@ -1,5 +1,9 @@
 using Dalamud.Game.ClientState.Objects.Types;
+using FFXIVClientStructs.FFXIV.Client.Game.Character;
+using FFXIVClientStructs.FFXIV.Client.Graphics;
+using FFXIVClientStructs.FFXIV.Common.Component.BGCollision;
 using Racingway.Race.Collision;
+using Racingway.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -9,17 +13,19 @@ namespace Racingway.Race
 {
     public class Player
     {
-        private Plugin Plugin;
+        private Plugin? Plugin;
 
         public uint id;
         public IGameObject actor;
         public Vector3 position = Vector3.Zero;
-        public Queue<Vector3> raceLine = new Queue<Vector3>();
+        public Queue<TimedVector3> raceLine = new Queue<TimedVector3>();
         public Stopwatch timer = new Stopwatch();
 
         public int lastSeen;
 
         public bool inParkour = false;
+        public bool isGrounded = true;
+        public bool inMount = false;
 
         public Player(uint id, IGameObject actor, Plugin plugin)
         {
@@ -30,6 +36,15 @@ namespace Racingway.Race
         }
 
         private int delayRaceline = 0;
+
+        public unsafe void UpdateState()
+        {
+            var manager = CharacterManager.Instance();
+            Character* character = (Character*)manager->LookupBattleCharaByEntityId(actor.EntityId);
+
+            isGrounded = !character->IsJumping();
+            inMount = character->IsMounted();
+        }
 
         public void Moved(Vector3 pos)
         {
@@ -46,12 +61,20 @@ namespace Racingway.Race
                 }
             }
 
+            try
+            {
+                UpdateState();
+            } catch (Exception e)
+            {
+                Plugin.Log.Error(e.ToString());
+            }
+
             Plugin.CheckCollision(this);
         }
 
         public void AddPoint()
         {
-            raceLine.Enqueue(position);
+            raceLine.Enqueue(new TimedVector3(position, timer.ElapsedMilliseconds));
         }
 
         public float GetDistanceTraveled()
@@ -61,9 +84,9 @@ namespace Racingway.Race
 
             for (var i = 1; i < raceLine.Count; i++)
             {
-                if (arrayLine[i - 1] == Vector3.Zero) continue;
+                if (arrayLine[i - 1].asVector() == Vector3.Zero) continue;
 
-                distance += Vector3.Distance(arrayLine[i - 1], arrayLine[i]);
+                distance += Vector3.Distance(arrayLine[i - 1].asVector(), arrayLine[i].asVector());
             }
 
             return distance;

@@ -1,4 +1,5 @@
 using LiteDB;
+using Racingway.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,13 +18,13 @@ namespace Racingway.Race
         public string World { get; set; }
         public TimeSpan Time { get; set; }
         public float Distance { get; set; }
-        public Vector3[] Line { get; set; }
+        public TimedVector3[] Line { get; set; }
         public string RouteId { get; set; }
         public string RouteName { get; set; }
         public string RouteAddress { get; set; }
         public string RouteHash { get; set; }
 
-        public Record(DateTime date, string name, string world, TimeSpan time, float distance, Vector3[] line, Route route)
+        public Record(DateTime date, string name, string world, TimeSpan time, float distance, TimedVector3[] line, Route route)
         {
             Id = new();
 
@@ -39,7 +40,7 @@ namespace Racingway.Race
             RouteHash = route.GetHash();
         }
 
-        public Record(DateTime date, string name, string world, TimeSpan time, float distance, Vector3[] line, string routeId, string routeName, string routeAddress, string routeHash)
+        public Record(DateTime date, string name, string world, TimeSpan time, float distance, TimedVector3[] line, string routeId, string routeName, string routeAddress, string routeHash)
         {
             Id = new();
 

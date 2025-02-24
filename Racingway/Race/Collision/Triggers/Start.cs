@@ -6,6 +6,7 @@ using System.Text;
 using Newtonsoft.Json;
 using System.Threading.Tasks;
 using LiteDB;
+using System.Diagnostics;
 
 namespace Racingway.Race.Collision.Triggers
 {
@@ -38,10 +39,12 @@ namespace Racingway.Race.Collision.Triggers
         public void OnEntered(Player player)
         {
             Color = ActiveColor;
-            if (!Route.PlayersInParkour.Contains(player)) return;
+            int index = Route.PlayersInParkour.FindIndex(x => x.Item1 == player);
+
+            if (index == -1) return;
 
             player.inParkour = false;
-            Route.PlayersInParkour.Remove(player);
+            Route.PlayersInParkour.RemoveAt(index);
             player.raceLine.Clear();
             player.timer.Reset();
         }
@@ -57,7 +60,9 @@ namespace Racingway.Race.Collision.Triggers
             player.inParkour = true;
             player.AddPoint();
 
-            Route.PlayersInParkour.Add(player);
+            Route.PlayersInParkour.Add((player, Stopwatch.StartNew()));
+            Route.Started(player);
+
             player.raceLine.Clear();
         }
 
