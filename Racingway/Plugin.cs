@@ -158,17 +158,9 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
-    public unsafe bool isGrounded(IGameObject player)
-    {
-        var manager = CharacterManager.Instance();
-        Character* character = (Character*)manager->LookupBattleCharaByEntityId(player.EntityId);
-
-        return !character->IsJumping();
-    }
-
     private void OnFrameworkTick(IFramework framework)
     {
-        if (!ClientState.IsLoggedIn) return;
+        if (!ClientState.IsLoggedIn || ClientState.IsPvP) return;
 
         if (polls != null || polls.Count > 0)
         {
@@ -206,75 +198,84 @@ public sealed class Plugin : IDalamudPlugin
         // If we even have routes loaded, then we can track players
         if (LoadedRoutes.Count > 0) 
         {
-            // Check if player does not exist anymore
-            foreach (var player in trackedPlayers)
+            try
             {
-                player.Value.lastSeen++;
-
-                // Player no longer exists
-                if (player.Value.lastSeen > 120)
+                // Check if player does not exist anymore
+                foreach (var player in trackedPlayers)
                 {
-                    trackedPlayers.Remove(player.Key);
-                    break;
-                }
-            }
+                    player.Value.lastSeen++;
 
-            if (Configuration.TrackOthers)
-            {
-                // Check for people
-                IGameObject[] players = GetPlayers(ObjectTable);
-                foreach (var player in players)
-                {
-                    uint id = player.EntityId;
-
-                    if (!trackedPlayers.ContainsKey(id))
+                    // Player no longer exists
+                    if (player.Value.lastSeen > 120)
                     {
-                        trackedPlayers.Add(id, new Player(id, player, this));
+                        trackedPlayers.Remove(player.Key);
+                        break;
                     }
-                    else
-                    {
-                        bool lastGrounded = trackedPlayers[id].isGrounded;
-                        trackedPlayers[id].UpdateState();
+                }
 
-                        if (player.Position != trackedPlayers[id].position || lastGrounded != trackedPlayers[id].isGrounded)
+                if (Configuration.TrackOthers)
+                {
+                    // Check for people
+                    IGameObject[] players = GetPlayers(ObjectTable);
+                    foreach (var player in players)
+                    {
+                        uint id = player.EntityId;
+
+                        if (!trackedPlayers.ContainsKey(id))
                         {
-                            trackedPlayers[id].Moved(player.Position);
+                            trackedPlayers.Add(id, new Player(id, player, this));
                         }
-
-                        trackedPlayers[id].lastSeen = 0;
-                    }
-                }
-            } else
-            {
-                // Check for people
-                IGameObject player = GetPlayers(ObjectTable).FirstOrDefault(x => x.EntityId == ClientState.LocalPlayer.EntityId, null);
-                if (player != null)
-                {
-                    uint id = player.EntityId;
-
-                    if (!trackedPlayers.ContainsKey(id))
-                    {
-                        trackedPlayers.Add(id, new Player(id, player, this));
-                    }
-                    else
-                    {
-                        bool lastGrounded = trackedPlayers[id].isGrounded;
-                        trackedPlayers[id].UpdateState();
-
-                        if (player.Position != trackedPlayers[id].position || lastGrounded != trackedPlayers[id].isGrounded)
+                        else
                         {
-                            trackedPlayers[id].Moved(player.Position);
-                        }
+                            bool lastGrounded = trackedPlayers[id].isGrounded;
+                            trackedPlayers[id].UpdateState();
 
-                        trackedPlayers[id].lastSeen = 0;
+                            if (player.Position != trackedPlayers[id].position || lastGrounded != trackedPlayers[id].isGrounded)
+                            {
+                                trackedPlayers[id].Moved(player.Position);
+                            }
+
+                            trackedPlayers[id].lastSeen = 0;
+                        }
                     }
                 }
+                else
+                {
+                    // Check for people
+                    IGameObject player = GetPlayers(ObjectTable).FirstOrDefault(x => x.EntityId == ClientState.LocalPlayer.EntityId, null);
+                    if (player != null)
+                    {
+                        uint id = player.EntityId;
+
+                        if (!trackedPlayers.ContainsKey(id))
+                        {
+                            trackedPlayers.Add(id, new Player(id, player, this));
+                        }
+                        else
+                        {
+                            bool lastGrounded = trackedPlayers[id].isGrounded;
+                            trackedPlayers[id].UpdateState();
+
+                            if (player.Position != trackedPlayers[id].position || lastGrounded != trackedPlayers[id].isGrounded)
+                            {
+                                trackedPlayers[id].Moved(player.Position);
+                            }
+
+                            trackedPlayers[id].lastSeen = 0;
+                        }
+                    }
+                }
+            } catch (Exception e)
+            {
+                Log.Error(e.ToString());
             }
         }
     }
 
     private void OnTerritoryChange(ushort territory)
     {
+        trackedPlayers.Clear();
+
         try
         {
             Parallel.Invoke(() => territoryHelper.GetLocationID());

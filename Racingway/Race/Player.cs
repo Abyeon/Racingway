@@ -1,3 +1,4 @@
+using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.ClientState.Objects.Types;
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using FFXIVClientStructs.FFXIV.Client.Graphics;
@@ -41,8 +42,11 @@ namespace Racingway.Race
         {
             try
             {
-                var manager = CharacterManager.Instance();
-                Character* character = (Character*)manager->LookupBattleCharaByEntityId(actor.EntityId);
+                Character* character = (Character*)actor.Address;
+                if (character == null)
+                {
+                    throw new NullReferenceException("Character pointer is null");
+                }
 
                 this.isGrounded = !character->IsJumping();
                 this.inMount = character->IsMounted();
