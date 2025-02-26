@@ -39,11 +39,17 @@ namespace Racingway.Race
 
         public unsafe void UpdateState()
         {
-            var manager = CharacterManager.Instance();
-            Character* character = (Character*)manager->LookupBattleCharaByEntityId(actor.EntityId);
+            try
+            {
+                var manager = CharacterManager.Instance();
+                Character* character = (Character*)manager->LookupBattleCharaByEntityId(actor.EntityId);
 
-            this.isGrounded = !character->IsJumping();
-            this.inMount = character->IsMounted();
+                this.isGrounded = !character->IsJumping();
+                this.inMount = character->IsMounted();
+            } catch (Exception e)
+            {
+                Plugin.Log.Error("Error updating player states. " + e.ToString());
+            }
         }
 
         public void Moved(Vector3 pos)
