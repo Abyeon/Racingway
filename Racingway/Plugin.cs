@@ -233,7 +233,10 @@ public sealed class Plugin : IDalamudPlugin
                     }
                     else
                     {
-                        if (player.Position != trackedPlayers[id].position || isGrounded(player) != trackedPlayers[id].isGrounded)
+                        bool lastGrounded = trackedPlayers[id].isGrounded;
+                        trackedPlayers[id].UpdateState();
+
+                        if (player.Position != trackedPlayers[id].position || lastGrounded != trackedPlayers[id].isGrounded)
                         {
                             trackedPlayers[id].Moved(player.Position);
                         }
@@ -255,7 +258,10 @@ public sealed class Plugin : IDalamudPlugin
                     }
                     else
                     {
-                        if (player.Position != trackedPlayers[id].position || isGrounded(player) != trackedPlayers[id].isGrounded)
+                        bool lastGrounded = trackedPlayers[id].isGrounded;
+                        trackedPlayers[id].UpdateState();
+
+                        if (player.Position != trackedPlayers[id].position || lastGrounded != trackedPlayers[id].isGrounded)
                         {
                             trackedPlayers[id].Moved(player.Position);
                         }
@@ -298,7 +304,10 @@ public sealed class Plugin : IDalamudPlugin
                 player.Value.raceLine.Clear();
             }
 
-            ChatGui.Print($"[RACE] Loaded {addressRoutes.Count()} routes in this area.");
+            if (addressRoutes.Count() > 0)
+            {
+                ChatGui.Print($"[RACE] Loaded {addressRoutes.Count()} routes in this area.");
+            }
 
             if (LoadedRoutes.Count > 0)
                 SelectedRoute = LoadedRoutes.First().Id;
