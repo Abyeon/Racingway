@@ -194,9 +194,9 @@ public sealed class Plugin : IDalamudPlugin
                 }
             }
         }
-        
+
         // If we even have routes loaded, then we can track players
-        if (LoadedRoutes.Count > 0) 
+        if (LoadedRoutes.Count > 0)
         {
             try
             {
@@ -216,7 +216,7 @@ public sealed class Plugin : IDalamudPlugin
                 if (Configuration.TrackOthers)
                 {
                     // Check for people
-                    IGameObject[] players = GetPlayers(ObjectTable);
+                    ICharacter[] players = GetPlayers(ObjectTable);
                     foreach (var player in players)
                     {
                         uint id = player.EntityId;
@@ -227,6 +227,8 @@ public sealed class Plugin : IDalamudPlugin
                         }
                         else
                         {
+                            trackedPlayers[id].actor = player;
+
                             bool lastGrounded = trackedPlayers[id].isGrounded;
                             trackedPlayers[id].UpdateState();
 
@@ -242,7 +244,7 @@ public sealed class Plugin : IDalamudPlugin
                 else
                 {
                     // Check for people
-                    IGameObject player = GetPlayers(ObjectTable).FirstOrDefault(x => x.EntityId == ClientState.LocalPlayer.EntityId, null);
+                    ICharacter player = GetPlayers(ObjectTable).FirstOrDefault(x => x.EntityId == ClientState.LocalPlayer.EntityId, null);
                     if (player != null)
                     {
                         uint id = player.EntityId;
@@ -253,6 +255,8 @@ public sealed class Plugin : IDalamudPlugin
                         }
                         else
                         {
+                            trackedPlayers[id].actor = player;
+
                             bool lastGrounded = trackedPlayers[id].isGrounded;
                             trackedPlayers[id].UpdateState();
 
@@ -288,10 +292,11 @@ public sealed class Plugin : IDalamudPlugin
     public void AddressChanged(Address address)
     {
         CurrentAddress = address.Location;
+        LoadedRoutes.Clear();
+        RecordList.Clear();
 
         try
         {
-            LoadedRoutes.Clear();
             List<Route> addressRoutes = Storage.GetRoutes().Query().Where(r => r.Address == address.Location).ToList();
             LoadedRoutes = addressRoutes;
 
@@ -312,12 +317,7 @@ public sealed class Plugin : IDalamudPlugin
 
             if (LoadedRoutes.Count > 0)
                 SelectedRoute = LoadedRoutes.First().Id;
-            else
-            {
-                Route newRoute = new Route(string.Empty, address.Location, new());
-                LoadedRoutes.Add(newRoute);
-                SelectedRoute = newRoute.Id;
-            }
+
         } catch (Exception ex)
         {
             Log.Error(ex.ToString());
@@ -344,6 +344,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         foreach (var route in LoadedRoutes)
         {
+            route.OnStarted -= OnStart;
             route.OnFinished -= OnFinish;
             route.OnFailed -= OnFailed;
         }
@@ -406,14 +407,16 @@ public sealed class Plugin : IDalamudPlugin
         Plugin.ChatGui.Print(chat);
     }
 
-    public IGameObject[] GetPlayers(IEnumerable<IGameObject> gameObjects)
+    public ICharacter[] GetPlayers(IEnumerable<IGameObject> gameObjects)
     {
-        return gameObjects.Where(obj => obj is IPlayerCharacter).ToArray();
+        IGameObject[] objects = gameObjects.Where(obj => obj is ICharacter).ToArray();
+        ICharacter[] players = objects.Cast<ICharacter>().ToArray();
+        return players;
     }
 
-    public IGameObject GetPlayer(IEnumerable<IGameObject> gameObjects, uint actorId)
+    public IPlayerCharacter GetPlayer(IEnumerable<IGameObject> gameObjects, uint actorId)
     {
-        return gameObjects.Where(obj => obj is IPlayerCharacter && obj.EntityId == actorId).First();
+        return (IPlayerCharacter)gameObjects.Where(obj => obj is IPlayerCharacter && obj.EntityId == actorId).First();
     }
 
     public void Dispose()

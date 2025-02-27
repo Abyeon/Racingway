@@ -17,7 +17,7 @@ namespace Racingway.Race
         private Plugin? Plugin;
 
         public uint id;
-        public IGameObject actor;
+        public ICharacter actor;
         public Vector3 position = Vector3.Zero;
         public Queue<TimedVector3> raceLine = new Queue<TimedVector3>();
         public Stopwatch timer = new Stopwatch();
@@ -28,7 +28,7 @@ namespace Racingway.Race
         public bool isGrounded = true;
         public bool inMount = false;
 
-        public Player(uint id, IGameObject actor, Plugin plugin)
+        public Player(uint id, ICharacter actor, Plugin plugin)
         {
             this.id = id;
             this.actor = actor;
@@ -42,6 +42,16 @@ namespace Racingway.Race
         {
             try
             {
+                if (!actor.IsValid())
+                {
+                    throw new NullReferenceException("Actor is not valid in memory.");
+                }
+
+                if (actor == null)
+                {
+                    throw new NullReferenceException("Actor is null.");
+                }
+
                 Character* character = (Character*)actor.Address;
                 if (character == null)
                 {
@@ -50,9 +60,10 @@ namespace Racingway.Race
 
                 this.isGrounded = !character->IsJumping();
                 this.inMount = character->IsMounted();
-            } catch (Exception e)
+            } catch (NullReferenceException e)
             {
                 Plugin.Log.Error("Error updating player states. " + e.ToString());
+                Plugin.ChatGui.PrintError("Error updating player states. See /xllog");
             }
         }
 
