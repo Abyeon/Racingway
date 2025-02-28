@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Net.NetworkInformation;
 using System.Numerics;
+using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Internal;
 using Dalamud.Interface.Utility;
@@ -52,6 +53,13 @@ public class MainWindow : Window, IDisposable
     public override void Draw()
     {
         if (Plugin.ClientState == null) return;
+
+        using (_ = ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.DalamudYellow))
+        {
+            ImGui.TextWrapped("WARNING: It is likely that the way things are saved WILL change." +
+                " Meaning that your saved routes and records will be deleted in the future." +
+                " If you would like to import a route in the future, save the information via screenshots or otherwise!");
+        }
 
         using (var tabBar = ImRaii.TabBar("##race-tabs", ImGuiTabBarFlags.None))
         {

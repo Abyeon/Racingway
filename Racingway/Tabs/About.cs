@@ -6,6 +6,7 @@ using ImGuiNET;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -38,9 +39,12 @@ namespace Racingway.Tabs
 
                 if (Plugin.PluginInterface.Manifest.Changelog != null)
                 {
+                    ImGui.Dummy(new Vector2(0, 10));
                     ImGui.Text("Changelog: ");
                     ImGui.TextWrapped(Plugin.PluginInterface.Manifest.Changelog.ToString());
                 }
+
+                ImGui.Dummy(new Vector2(0, 10));
 
                 ImGui.Text("Triggers:");
 
@@ -66,6 +70,8 @@ namespace Racingway.Tabs
                     if (child.Success) ImGui.TextWrapped("The timer will end as soon as a player touches the ground inside this trigger." +
                         " Make sure to cover anywhere a player could feasibly land at the end of your route!");
                 }
+
+                ImGui.Dummy(new Vector2(0, 10));
 
                 if (ImGui.Button("GitHub"))
                 {

@@ -305,7 +305,7 @@ public sealed class Plugin : IDalamudPlugin
                 player.Value.raceLine.Clear();
             }
 
-            if (addressRoutes.Count() > 0)
+            if (addressRoutes.Count() > 0 && Configuration.AnnounceLoadedRoutes)
             {
                 ChatGui.Print($"[RACE] Loaded {addressRoutes.Count()} routes in this area.");
             }

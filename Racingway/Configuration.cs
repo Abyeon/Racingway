@@ -13,6 +13,7 @@ public class Configuration : IPluginConfiguration
     public int Version { get; set; } = 0;
 
     public bool AllowDuplicateRecords = true;
+    public bool AnnounceLoadedRoutes = true;
     public bool DrawTriggers { get; set; } = false;
     public bool DrawRacingLines { get; set; } = false;
     public bool LogFails { get; set; } = false;
