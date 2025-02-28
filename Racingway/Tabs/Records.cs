@@ -56,9 +56,6 @@ namespace Racingway.Tabs
 
             cachedRecords = Plugin.RecordList.Where(x => x.RouteId == Plugin.SelectedRoute.ToString()).ToList();
 
-            //if (Plugin.SelectedRoute != null)
-            //    cachedRecords = GetRecords().Where(x => x.RouteId == Plugin.SelectedRoute.ToString()).ToList();
-
             if (!Plugin.Configuration.AllowDuplicateRecords)
             {
                 // Remove duplicates by sort magic
