@@ -409,7 +409,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public ICharacter[] GetPlayers(IEnumerable<IGameObject> gameObjects)
     {
-        IGameObject[] objects = gameObjects.Where(obj => obj is ICharacter).ToArray();
+        IGameObject[] objects = gameObjects.Where(obj => obj is IPlayerCharacter).ToArray();
         ICharacter[] players = objects.Cast<ICharacter>().ToArray();
         return players;
     }
