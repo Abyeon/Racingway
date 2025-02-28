@@ -62,7 +62,6 @@ public sealed class Plugin : IDalamudPlugin
     public readonly WindowSystem WindowSystem = new("Racingway");
 
     public TriggerOverlay TriggerOverlay { get; init; }
-    private ConfigWindow ConfigWindow { get; init; }
     private MainWindow MainWindow { get; init; }
 
     public List<Record> RecordList { get; set; } = new();
@@ -92,11 +91,9 @@ public sealed class Plugin : IDalamudPlugin
 
             Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
 
-            ConfigWindow = new ConfigWindow(this);
             MainWindow = new MainWindow(this);
             TriggerOverlay = new TriggerOverlay(this);
 
-            WindowSystem.AddWindow(ConfigWindow);
             WindowSystem.AddWindow(MainWindow);
             WindowSystem.AddWindow(TriggerOverlay);
 
@@ -114,11 +111,9 @@ public sealed class Plugin : IDalamudPlugin
             PluginInterface.UiBuilder.Draw += DrawUI;
 
             // This adds a button to the plugin installer entry of this plugin which allows
-            // to toggle the display status of the configuration ui
-            PluginInterface.UiBuilder.OpenConfigUi += ToggleConfigUI;
-
-            // Adds another button that is doing the same but for the main ui of the plugin
+            // to toggle the display status of the main ui
             PluginInterface.UiBuilder.OpenMainUi += ToggleMainUI;
+            PluginInterface.UiBuilder.OpenConfigUi += ToggleConfigUI;
 
             // Enable overlay if config calls for it
             ShowHideOverlay();
@@ -310,7 +305,7 @@ public sealed class Plugin : IDalamudPlugin
                 player.Value.raceLine.Clear();
             }
 
-            if (addressRoutes.Count() > 0)
+            if (addressRoutes.Count() > 0 && Configuration.AnnounceLoadedRoutes)
             {
                 ChatGui.Print($"[RACE] Loaded {addressRoutes.Count()} routes in this area.");
             }
@@ -409,7 +404,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public ICharacter[] GetPlayers(IEnumerable<IGameObject> gameObjects)
     {
-        IGameObject[] objects = gameObjects.Where(obj => obj is ICharacter).ToArray();
+        IGameObject[] objects = gameObjects.Where(obj => obj is IPlayerCharacter).ToArray();
         ICharacter[] players = objects.Cast<ICharacter>().ToArray();
         return players;
     }
@@ -429,7 +424,6 @@ public sealed class Plugin : IDalamudPlugin
 
         LocalTimer.Stop();
 
-        ConfigWindow.Dispose();
         MainWindow.Dispose();
         TriggerOverlay.Dispose();
 
@@ -447,12 +441,11 @@ public sealed class Plugin : IDalamudPlugin
 
         //await territoryHelper.GetLocationID(0);
         //Log.Debug(Storage.GetRecords().FindOne(x => x.Id == DisplayedRecord).Line.Length.ToString());
-
     }
 
     private void DrawUI() => WindowSystem.Draw();
 
-    public void ToggleConfigUI() => ConfigWindow.Toggle();
     public void ToggleMainUI() => MainWindow.Toggle();
+    public void ToggleConfigUI() => MainWindow.Toggle();
     public void ToggleTriggerUI() => TriggerOverlay.Toggle();
 }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Net.NetworkInformation;
 using System.Numerics;
+using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Internal;
 using Dalamud.Interface.Utility;
@@ -33,9 +34,11 @@ public class MainWindow : Window, IDisposable
         this.Plugin = plugin;
 
         this.Tabs = [
+            //new Explore(this.Plugin),
             new Routes(this.Plugin),
             new Records(this.Plugin),
-            new Settings(this.Plugin)
+            new Settings(this.Plugin),
+            new About(this.Plugin)
         ];
     }
 
@@ -51,12 +54,21 @@ public class MainWindow : Window, IDisposable
     {
         if (Plugin.ClientState == null) return;
 
+        using (_ = ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.DalamudYellow))
+        {
+            ImGui.TextWrapped("WARNING: It is likely that the way things are saved WILL change." +
+                " Meaning that your saved routes and records will be deleted in the future." +
+                " If you would like to import a route in the future, save the information via screenshots or otherwise!");
+        }
+
         using (var tabBar = ImRaii.TabBar("##race-tabs", ImGuiTabBarFlags.None))
         {
             if (tabBar)
             {
-                foreach (var tab in Tabs)
+                for (var i = 0; i < Tabs.Count; i++)
                 {
+                    var tab = Tabs[i];
+
                     using (var child = ImRaii.TabItem(tab.Name))
                     {
                         if (!child.Success) continue;

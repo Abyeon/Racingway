@@ -25,11 +25,6 @@ namespace Racingway.Tabs
 
         public void Draw()
         {
-            //if (ImGui.Button($"{(Plugin.TriggerOverlay.IsOpen ? "Hide" : "Show" )} Overlay"))
-            //{
-            //    Plugin.ToggleTriggerUI();
-            //}
-
             if (ImGui.Button($"{(Plugin.Configuration.DrawTriggers ? "Disable" : "Enable")} Triggers Display"))
             {
                 Plugin.Configuration.DrawTriggers = !Plugin.Configuration.DrawTriggers;
@@ -50,6 +45,13 @@ namespace Racingway.Tabs
                 {
                     actor.raceLine.Clear();
                 }
+            }
+
+            bool announceRoutes = Plugin.Configuration.AnnounceLoadedRoutes;
+            if (ImGui.Checkbox("Announce Loaded Routes in Chat", ref announceRoutes))
+            {
+                Plugin.Configuration.AnnounceLoadedRoutes = announceRoutes;
+                Plugin.Configuration.Save();
             }
 
             bool logFails = Plugin.Configuration.LogFails;
