@@ -36,10 +36,11 @@ namespace Racingway.Race
             Line = line;
             RouteId = route.Id.ToString();
             RouteName = route.Name;
-            RouteAddress = route.Address;
+            RouteAddress = route.Address.LocationId;
             RouteHash = route.GetHash();
         }
 
+        [BsonCtor]
         public Record(DateTime date, string name, string world, TimeSpan time, float distance, TimedVector3[] line, string routeId, string routeName, string routeAddress, string routeHash)
         {
             Id = new();

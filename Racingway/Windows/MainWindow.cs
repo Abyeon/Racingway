@@ -34,7 +34,7 @@ public class MainWindow : Window, IDisposable
         this.Plugin = plugin;
 
         this.Tabs = [
-            //new Explore(this.Plugin),
+            new Explore(this.Plugin),
             new Routes(this.Plugin),
             new Records(this.Plugin),
             new Settings(this.Plugin),

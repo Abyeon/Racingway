@@ -23,11 +23,13 @@ namespace Racingway.Race
         [BsonId]
         public ObjectId Id { get; set; }
         public string Name { get; set; }
-        public string Address { get; set; }
-        public Address Location { get; set; }
+        public Address Address { get; set; }
+        public string Description { get; set; }
         public bool AllowMounts {  get; set; }
         public bool Enabled { get; set; }
         public List<ITrigger> Triggers { get; set; }
+
+        [BsonIgnore] public Record? BestRecord = null;
 
         [BsonIgnore] public List<(Player, Stopwatch)> PlayersInParkour = new();
 
@@ -35,25 +37,13 @@ namespace Racingway.Race
         [BsonIgnore] public event EventHandler<(Player, Record)> OnFinished;
         [BsonIgnore] public event EventHandler<Player> OnFailed;
 
-
-        public Route(string Name, string address, List<ITrigger> triggers, bool allowMounts = false, bool enabled = true)
+        public Route(string name, Address address, string description, List<ITrigger> triggers, bool allowMounts = false, bool enabled = true)
         {
             this.Id = ObjectId.NewObjectId();
 
-            this.Name = Name;
+            this.Name = name;
             this.Address = address;
-            this.Triggers = triggers;
-            this.AllowMounts = allowMounts;
-            this.Enabled = enabled;
-        }
-
-        public Route(string Name, Address address, List<ITrigger> triggers, bool allowMounts = false, bool enabled = true)
-        {
-            this.Id = ObjectId.NewObjectId();
-
-            this.Name = Name;
-            this.Address = address.Location;
-            this.Location = address;
+            this.Description = description;
             this.Triggers = triggers;
             this.AllowMounts = allowMounts;
             this.Enabled = enabled;
@@ -64,11 +54,14 @@ namespace Racingway.Race
             BsonDocument doc = new BsonDocument();
             doc["_id"] = Id;
             doc["name"] = Name;
-            doc["address"] = Address;
+            doc["description"] = Description;
 
-            if (Location != null)
+            try
             {
-                doc["location"] = Location.GetSerialized();
+                doc["address"] = Address.GetSerialized();
+            } catch (Exception ex)
+            {
+                Plugin.Log.Error(ex.ToString());
             }
 
             BsonArray serializedTriggers = new BsonArray();
@@ -78,6 +71,10 @@ namespace Racingway.Race
             });
 
             doc["triggers"] = serializedTriggers;
+
+            doc["allowMounts"] = AllowMounts;
+            doc["enabled"] = Enabled;
+
             return doc;
         }
 

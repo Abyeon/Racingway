@@ -71,25 +71,40 @@ public sealed class Plugin : IDalamudPlugin
     public ObjectId? SelectedRoute { get; set; }
     public Stopwatch LocalTimer { get; set; }
 
-    public string CurrentAddress = "";
+    public Address CurrentAddress { get; set; }
 
     public Plugin()
     {
         try
         {
+            LocalTimer = new Stopwatch();
+            territoryHelper = new TerritoryHelper(this);
+
+            Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+
             try
             {
                 Storage = new(this, $"{PluginInterface.GetPluginConfigDirectory()}\\data.db");
+
+                // Delete current user's database if they are still using a legacy version
+
+                if (Configuration.Version == 0)
+                {
+                    Storage.GetRecords().DeleteAll();
+                    Storage.GetRoutes().DeleteAll();
+
+                    Plugin.ChatGui.PrintError($"[RACE] Due to changes in the database, Racingway has wiped the current one.");
+
+                    Configuration.Version = 1;
+                    Configuration.Save();
+                }
+
+                Storage.UpdateRouteCache();
             }
             catch (Exception ex)
             {
                 Log.Error(ex.ToString());
             }
-
-            LocalTimer = new Stopwatch();
-            territoryHelper = new TerritoryHelper(this);
-
-            Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
 
             MainWindow = new MainWindow(this);
             TriggerOverlay = new TriggerOverlay(this);
@@ -157,7 +172,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         if (!ClientState.IsLoggedIn || ClientState.IsPvP) return;
 
-        if (polls != null || polls.Count > 0)
+        if (polls != null && polls.Count > 0)
         {
             List<(Func<bool>, Stopwatch)> toRemove = new();
 
@@ -238,6 +253,7 @@ public sealed class Plugin : IDalamudPlugin
                 }
                 else
                 {
+                    // Copied from above but modified to track just the client. A tad stupid.
                     // Check for people
                     ICharacter player = GetPlayers(ObjectTable).FirstOrDefault(x => x.EntityId == ClientState.LocalPlayer.EntityId, null);
                     if (player != null)
@@ -284,18 +300,31 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
+    // Triggered whenever TerritoryHelper learns the ID of the location we're at
     public void AddressChanged(Address address)
     {
-        CurrentAddress = address.Location;
+        ChatGui.Print(address.ReadableName);
+
+        CurrentAddress = address;
         LoadedRoutes.Clear();
         RecordList.Clear();
 
         try
         {
-            List<Route> addressRoutes = Storage.GetRoutes().Query().Where(r => r.Address == address.Location).ToList();
+            List<Route> addressRoutes = Storage.GetRoutes().Query().Where(r => r.Address.LocationId == address.LocationId).ToList();
             LoadedRoutes = addressRoutes;
 
-            RecordList = Storage.GetRecords().Query().Where(r => r.RouteAddress == CurrentAddress).ToList();
+            // Update route addresses to address legacy routes
+            foreach (Route route in addressRoutes)
+            {
+                if (route.Address == null || route.Address != address)
+                {
+                    route.Address = address;
+                    Storage.AddRoute(route);
+                }
+            }
+
+            RecordList = Storage.GetRecords().Query().Where(r => r.RouteAddress == CurrentAddress.LocationId).ToList();
             DisplayedRecord = null;
 
             // Kick everyone from parkour when you change zones
@@ -378,6 +407,13 @@ public sealed class Plugin : IDalamudPlugin
 
         RecordList.Add(e.Item2 as Record);
         Storage.AddRecord(e.Item2 as Record);
+
+        if (route.BestRecord == null || e.Item2.Time.TotalNanoseconds < route.BestRecord.Time.TotalNanoseconds)
+        {
+            route.BestRecord = e.Item2;
+        }
+
+        Storage.RouteCache[route.Id.ToString()] = route;
     }
 
     private void OnFailed(object? sender, Player e)

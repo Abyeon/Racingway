@@ -22,6 +22,8 @@ namespace Racingway.Utils
         private const string RecordTable = "record";
         private const string RouteTable = "route";
 
+        public Dictionary<string, Route> RouteCache = new Dictionary<string, Route>();
+
         internal LocalDatabase(Plugin plugin, string path)
         {
             this.Plugin = plugin;
@@ -35,7 +37,6 @@ namespace Racingway.Utils
             recordCollection.EnsureIndex(r => r.Distance);
             recordCollection.EnsureIndex(r => r.Line);
 
-            // Incoming Lamda Hell
             try
             {
                 BsonMapper.Global.RegisterType<Vector3[]>
@@ -60,47 +61,74 @@ namespace Racingway.Utils
 
             var routeCollection = GetRoutes();
             routeCollection.EnsureIndex(r => r.Name);
-            routeCollection.EnsureIndex(r => r.Address);
+            //routeCollection.EnsureIndex(r => r.LocationId);
             routeCollection.EnsureIndex(r => r.Triggers);
+            routeCollection.EnsureIndex(r => r.Address);
+
+            BsonMapper.Global.RegisterType<Address>(
+                serialize: (address) => address.GetSerialized(),
+                deserialize: (bson) =>
+                {
+                    Address newAddress = new Address(
+                        uint.Parse(bson["territoryId"]),
+                        uint.Parse(bson["mapId"]),
+                        bson["locationId"],
+                        bson["readableName"]);
+
+                    return newAddress;
+                }
+            );
 
             BsonMapper.Global.RegisterType<Route>
             (
                 serialize: (route) => route.GetSerialized(),
                 deserialize: (bson) =>
                 {
-                    Route newRoute = new Route(bson["name"], bson["address"], new());
-
-                    BsonArray arrayOfTriggers = (BsonArray)bson["triggers"];
-                    foreach (var trigger in arrayOfTriggers)
+                    try
                     {
-                        BsonArray cubeArray = (BsonArray)trigger["Cube"];
-                        string type = trigger["Type"];
-                        Cube cube = new Cube(
-                            new Vector3(float.Parse(cubeArray[0]), float.Parse(cubeArray[1]), float.Parse(cubeArray[2])),
-                            new Vector3(float.Parse(cubeArray[3]), float.Parse(cubeArray[4]), float.Parse(cubeArray[5])),
-                            new Vector3(float.Parse(cubeArray[6]), float.Parse(cubeArray[7]), float.Parse(cubeArray[8])));
+                        Address address = BsonMapper.Global.Deserialize<Address>(bson["address"]);
+                        Route newRoute = new Route(bson["name"], address, bson["description"], new());
 
-                        switch (type)
+                        newRoute.AllowMounts = bson["allowMounts"];
+                        newRoute.Enabled = bson["enabled"];
+
+                        BsonArray arrayOfTriggers = (BsonArray)bson["triggers"];
+                        foreach (var trigger in arrayOfTriggers)
                         {
-                            case "Start":
-                                newRoute.Triggers.Add(new Start(newRoute, cube));
-                                break;
-                            case "Checkpoint":
-                                newRoute.Triggers.Add(new Checkpoint(newRoute, cube));
-                                break;
-                            case "Fail":
-                                newRoute.Triggers.Add(new Fail(newRoute, cube));
-                                break;
-                            case "Finish":
-                                newRoute.Triggers.Add(new Finish(newRoute, cube));
-                                break;
-                            default:
-                                throw new Exception("Attempted to add a trigger type that does not exist!");
+                            BsonArray cubeArray = (BsonArray)trigger["Cube"];
+                            string type = trigger["Type"];
+                            Cube cube = new Cube(
+                                new Vector3(float.Parse(cubeArray[0]), float.Parse(cubeArray[1]), float.Parse(cubeArray[2])),
+                                new Vector3(float.Parse(cubeArray[3]), float.Parse(cubeArray[4]), float.Parse(cubeArray[5])),
+                                new Vector3(float.Parse(cubeArray[6]), float.Parse(cubeArray[7]), float.Parse(cubeArray[8])));
+
+                            switch (type)
+                            {
+                                case "Start":
+                                    newRoute.Triggers.Add(new Start(newRoute, cube));
+                                    break;
+                                case "Checkpoint":
+                                    newRoute.Triggers.Add(new Checkpoint(newRoute, cube));
+                                    break;
+                                case "Fail":
+                                    newRoute.Triggers.Add(new Fail(newRoute, cube));
+                                    break;
+                                case "Finish":
+                                    newRoute.Triggers.Add(new Finish(newRoute, cube));
+                                    break;
+                                default:
+                                    throw new Exception("Attempted to add a trigger type that does not exist!");
+                            }
                         }
+
+                        newRoute.Id = bson["_id"];
+                        return newRoute;
+                    } catch (Exception e)
+                    {
+                        Plugin.Log.Error(e.ToString());
                     }
 
-                    newRoute.Id = bson["_id"];
-                    return newRoute;
+                    return null;
                 }
             );
         }
@@ -108,6 +136,13 @@ namespace Racingway.Utils
         public void Dispose()
         {
             Database.Dispose();
+            RouteCache.Clear();
+        }
+
+        // Making this to save people's legacy routes.
+        internal void ExportRoutesToFile(string Path)
+        {
+            Database.Execute($"select $ into $file({Path}) from {RouteTable}");
         }
 
         internal ILiteCollection<Record> GetRecords()
@@ -125,11 +160,47 @@ namespace Racingway.Utils
             return Database.GetCollection<Route>(RouteTable);
         }
 
+        private Record? GetBestRecord(Route route)
+        {
+            List<Record> routeRecords = GetRecords().Query().Where(r => r.RouteId == route.Id.ToString()).ToList();
+
+            if (routeRecords.Count > 0)
+            {
+                return routeRecords.OrderBy(r => r.Time.TotalNanoseconds).First();
+            }
+
+            return null;
+        }
+
+        internal void UpdateRouteCache()
+        {
+            List<Route> routes = GetRoutes().Query().ToList();
+            foreach (Route route in routes)
+            {
+                // Get the best time for this record
+                Record record = GetBestRecord(route);
+                if (record != null) route.BestRecord = record;
+
+                if (RouteCache.ContainsKey(route.Id.ToString()))
+                {
+                    RouteCache[route.Id.ToString()] = route;
+                } else
+                {
+                    RouteCache.Add(route.Id.ToString(), route);
+                }
+            }
+            foreach (Route route in RouteCache.Values)
+            {
+                if (!routes.Contains(route)) RouteCache.Remove(route.Id.ToString());
+            }
+        }
+
         internal async Task AddRoute(Route route)
         {
             await WriteToDatabase(() => {
                 if (!GetRoutes().Update(route))
                 {
+                    UpdateRouteCache();
                     return GetRoutes().Insert(route);
                 } else
                 {

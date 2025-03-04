@@ -1,8 +1,11 @@
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
+using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using FFXIVClientStructs.FFXIV.Client.System.String;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
+using Lumina.Excel.Sheets;
 using Racingway.Race;
+using Racingway.Utils.Structs;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,6 +13,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using static Dalamud.Interface.Utility.Raii.ImRaii;
+
+using Sheet = Lumina.Excel.Sheets;
 
 namespace Racingway.Utils
 {
@@ -22,12 +27,35 @@ namespace Racingway.Utils
             Plugin = plugin;
         }
 
-        public static readonly ushort[] HousingTerritories = {
-            339, // Mist
-            340, // Lavender Beds
-            341, // Goblet
-            641, // Shirogane
-            979 // Empyreum
+        //private static readonly Dictionary<ushort, string> HousingMap = new Dictionary<ushort, string>
+        //{
+        //    // Small                Medium                  Large                   Chambers                Apartment
+        //    { 282, "Mist"},         { 283, "Mist"},         { 284, "Mist"},         { 384, "Mist"},         { 608, "Mist"},
+
+        //    { 342, "Lavender Beds"},{ 343, "Lavender Beds"},{ 344, "Lavender Beds"},{ 385, "Lavender Beds"},{ 609, "Lavender Beds"},
+
+        //    { 345, "Goblet"},       { 346, "Goblet"},       { 347, "Goblet"},       { 386, "Goblet"},       { 610, "Goblet"},
+
+        //    { 649, "Shirogane"},    { 650, "Shirogane"},    { 651, "Shirogane"},    { 652, "Shirogane"},    { 655, "Shirogane"},
+
+        //    { 980, "Empyreum"},     { 981, "Empyreum"},     { 982, "Empyreum"},     { 983, "Empyreum"},     { 999, "Empyreum"}
+        //};
+
+        //public static readonly ushort[] HousingTerritories = {
+        //    339, // Mist
+        //    340, // Lavender Beds
+        //    341, // Goblet
+        //    641, // Shirogane
+        //    979 // Empyreum
+        //};
+
+        public static readonly Dictionary<uint, string> HousingDistricts = new Dictionary<uint, string>
+        {
+            {502, "Mist"},
+            {505, "Goblet"},
+            {507, "Lavender Beds"},
+            {512, "Empyreum"},
+            {513, "Shirogane"}
         };
 
         public async void GetLocationID()
@@ -40,19 +68,16 @@ namespace Racingway.Utils
                 Stopwatch timer = Stopwatch.StartNew();
 
                 if (isInside)
-                {
-                    //long id = GetHouseId();
-                    
+                {                    
                     // Funny way to wait for a value to change by polling
                     Plugin.polls.Add((() =>
                     {
                         long id = GetHouseId();
                         if (id != -1)
                         {
-                            //Plugin.CurrentTerritory = id;
                             try
                             {
-                                Address address = new Address(GetTerritoryId(), GetMapId(), id.ToString());
+                                Address address = new Address(GetTerritoryId(), GetMapId(), id.ToString(), GetRoomAddress());
 
                                 Plugin.AddressChanged(address);
                                 return true;
@@ -66,7 +91,7 @@ namespace Racingway.Utils
                     }, timer));
 
                     return;
-                } else if (HousingTerritories.Contains(territory))
+                } /*else if (HousingTerritories.Contains(territory))
                 {
                     Plugin.polls.Add((() =>
                     {
@@ -75,7 +100,7 @@ namespace Racingway.Utils
                         {
                             try
                             {
-                                Address address = new Address(GetTerritoryId(), GetMapId(), territory.ToString() + " " + GetWard().ToString() + " " + division.ToString());
+                                Address address = new Address(GetTerritoryId(), GetMapId(), territory.ToString() + " " + GetWard().ToString() + " " + division.ToString(), string.Empty);
 
                                 //Plugin.CurrentTerritory = division;
                                 Plugin.AddressChanged(address);
@@ -88,13 +113,12 @@ namespace Racingway.Utils
 
                         return false;
                     }, timer));
-                } else
+                }*/ else
                 {
                     try
                     {
-                        Address address = new Address(GetTerritoryId(), GetMapId(), territory.ToString());
+                        Address address = new Address(GetTerritoryId(), GetMapId(), territory.ToString(), GetAreaName());
 
-                        //Plugin.CurrentTerritory = territory;
                         Plugin.AddressChanged(address);
                     } catch (Exception e)
                     {
@@ -106,11 +130,6 @@ namespace Racingway.Utils
             {
                 Plugin.Log.Warning("Couldnt get housing state on territory change. " + e.Message);
             }
-        }
-
-        private string UpdateAddress(string input)
-        {
-            return Compression.ToCompressedBase64(input);
         }
 
         private unsafe uint GetMapId()
@@ -125,10 +144,66 @@ namespace Racingway.Utils
             return agent->CurrentTerritoryId;
         }
 
-        private unsafe HousingTerritoryType GetTerritoryType()
+        private string GetAreaName()
+        {
+            uint correctedTerritory = CorrectedTerritoryTypeId();
+            return Plugin.DataManager.GetExcelSheet<Sheet.TerritoryType>().GetRow(correctedTerritory).PlaceName.Value.Name.ExtractText();
+        }
+
+        private unsafe string GetRoomAddress()
         {
             var manager = HousingManager.Instance();
-            return manager->CurrentTerritory->GetTerritoryType();
+            var territoryInfo = TerritoryInfo.Instance();
+
+            uint correctedTerritory = CorrectedTerritoryTypeId();
+            uint rowId = Plugin.DataManager.GetExcelSheet<Sheet.TerritoryType>()
+                .GetRow(correctedTerritory).PlaceNameZone.RowId;
+
+            string district = string.Empty;
+
+            if (HousingDistricts.ContainsKey(rowId))
+            {
+                district = HousingDistricts[rowId];
+            }
+
+            var ward = manager->GetCurrentWard();
+            var plot = manager->GetCurrentPlot();
+            var room = manager->GetCurrentRoom();
+
+            StringBuilder sb = new StringBuilder();
+            sb.Append(Plugin.ClientState.LocalPlayer.CurrentWorld.Value.Name.ExtractText());
+            sb.Append(" " + district);
+            sb.Append($" w{ward+1}");
+            sb.Append($" p{plot+1}");
+
+            if (room != 0)
+            {
+                sb.Append($" room {room}");
+            }
+
+            return sb.ToString().Trim();
+        }
+
+        //https://github.com/Critical-Impact/CriticalCommonLib/blob/bc358bd4acb1ce8110e51e9eaa495ff12a0300bc/Services/CharacterMonitor.cs#L899
+        private unsafe uint CorrectedTerritoryTypeId()
+        {
+            var manager = HousingManager.Instance();
+            if (manager == null)
+            {
+                return Plugin.ClientState.TerritoryType;
+            }
+
+            var character = Plugin.ClientState.LocalPlayer;
+            if (character != null && manager->CurrentTerritory != null)
+            {
+                var territoryType = manager->IndoorTerritory != null
+                    ? ((HousingTerritory2*)manager->CurrentTerritory)->TerritoryTypeId
+                    : Plugin.ClientState.TerritoryType;
+
+                return territoryType;
+            }
+
+            return Plugin.ClientState.TerritoryType;
         }
 
         private unsafe long GetHouseId()

@@ -38,7 +38,7 @@ namespace Racingway.Tabs
             {
                 if (tree.Success)
                 {
-                    foreach (Route route in Plugin.Storage.GetRoutes().Query().Where(x => x.Address == Plugin.CurrentAddress).ToList())
+                    foreach (Route route in Plugin.Storage.GetRoutes().Query().Where(x => x.Address.LocationId == Plugin.CurrentAddress.LocationId).ToList())
                     {
                         id++;
                         if (ImGui.Selectable($"{route.Name}##{id}", route.Id == Plugin.SelectedRoute))
@@ -158,7 +158,7 @@ namespace Racingway.Tabs
                         bool selected = false;
 
                         ImGui.TableNextColumn();
-                        ImGui.Selectable(record.Date.ToLocalTime().ToString("M/dd H:mm:ss"), ref selected, ImGuiSelectableFlags.SpanAllColumns);
+                        ImGui.Selectable(record.Date.ToLocalTime().ToString("M/dd/yyyy H:mm:ss"), ref selected, ImGuiSelectableFlags.SpanAllColumns);
 
                         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
                         {
