@@ -74,11 +74,11 @@ namespace Racingway.Tabs
                 }
             }
 
-            Route? selectedRoute = Plugin.LoadedRoutes.FirstOrDefault(x => x.Id == Plugin.SelectedRoute, new Route(string.Empty, Plugin.CurrentAddress, string.Empty, new List<ITrigger>()));
+            Route? selectedRoute = Plugin.LoadedRoutes.FirstOrDefault(x => x.Id == Plugin.SelectedRoute, new Route(string.Empty, Plugin.CurrentAddress, string.Empty, new List<ITrigger>(), new List<Record>()));
 
             if (ImGui.Button("Create New Route"))
             {
-                selectedRoute = new Route(string.Empty, Plugin.CurrentAddress, string.Empty, new List<ITrigger>());
+                selectedRoute = new Route(string.Empty, Plugin.CurrentAddress, string.Empty, new List<ITrigger>(), new List<Record>());
                 updateRoute(selectedRoute);
             }
 

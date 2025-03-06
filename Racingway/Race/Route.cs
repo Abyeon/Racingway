@@ -28,6 +28,7 @@ namespace Racingway.Race
         public bool AllowMounts {  get; set; }
         public bool Enabled { get; set; }
         public List<ITrigger> Triggers { get; set; }
+        public List<Record> Records { get; set; }
 
         [BsonIgnore] public Record? BestRecord = null;
 
@@ -37,7 +38,7 @@ namespace Racingway.Race
         [BsonIgnore] public event EventHandler<(Player, Record)> OnFinished;
         [BsonIgnore] public event EventHandler<Player> OnFailed;
 
-        public Route(string name, Address address, string description, List<ITrigger> triggers, bool allowMounts = false, bool enabled = true)
+        public Route(string name, Address address, string description, List<ITrigger> triggers, List<Record> records, bool allowMounts = false, bool enabled = true)
         {
             this.Id = ObjectId.NewObjectId();
 
@@ -71,6 +72,7 @@ namespace Racingway.Race
             });
 
             doc["triggers"] = serializedTriggers;
+            doc["records"] = BsonMapper.Global.Serialize<List<Record>>(Records);
 
             doc["allowMounts"] = AllowMounts;
             doc["enabled"] = Enabled;

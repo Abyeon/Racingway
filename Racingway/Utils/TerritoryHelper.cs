@@ -58,6 +58,12 @@ namespace Racingway.Utils
             {513, "Shirogane"}
         };
 
+        public static readonly Dictionary<sbyte, string> AptWings = new Dictionary<sbyte, string>
+        {
+            {-128, "wing 1" },
+            {-127, "wing 2" }
+        };
+
         public async void GetLocationID()
         {
             try
@@ -91,29 +97,7 @@ namespace Racingway.Utils
                     }, timer));
 
                     return;
-                } /*else if (HousingTerritories.Contains(territory))
-                {
-                    Plugin.polls.Add((() =>
-                    {
-                        long division = GetDivision();
-                        if (division != 0)
-                        {
-                            try
-                            {
-                                Address address = new Address(GetTerritoryId(), GetMapId(), territory.ToString() + " " + GetWard().ToString() + " " + division.ToString(), string.Empty);
-
-                                //Plugin.CurrentTerritory = division;
-                                Plugin.AddressChanged(address);
-                                return true;
-                            } catch (Exception e)
-                            {
-                                Plugin.Log.Error(e.ToString());
-                            }
-                        }
-
-                        return false;
-                    }, timer));
-                }*/ else
+                } else
                 {
                     try
                     {
@@ -172,9 +156,17 @@ namespace Racingway.Utils
 
             StringBuilder sb = new StringBuilder();
             sb.Append(Plugin.ClientState.LocalPlayer.CurrentWorld.Value.Name.ExtractText());
+
             sb.Append(" " + district);
             sb.Append($" w{ward+1}");
-            sb.Append($" p{plot+1}");
+
+            if (AptWings.ContainsKey(plot))
+            {
+                sb.Append(" " + AptWings[plot]);
+            } else
+            {
+                sb.Append($" p{plot + 1}");
+            }
 
             if (room != 0)
             {

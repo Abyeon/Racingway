@@ -87,7 +87,16 @@ namespace Racingway.Utils
                     try
                     {
                         Address address = BsonMapper.Global.Deserialize<Address>(bson["address"]);
-                        Route newRoute = new Route(bson["name"], address, bson["description"], new());
+                        Route newRoute = new Route(bson["name"], address, bson["description"], new(), new());
+
+                        try
+                        {
+                            List<Record> records = BsonMapper.Global.Deserialize<List<Record>>(bson["records"]);
+                            newRoute.Records = records;
+                        } catch (Exception e)
+                        {
+                            e.ToString();
+                        }
 
                         newRoute.AllowMounts = bson["allowMounts"];
                         newRoute.Enabled = bson["enabled"];

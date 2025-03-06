@@ -62,7 +62,7 @@ namespace Racingway.Race
             // TODO: Research line simplification algos, or some other way to compress player lines... They BIG!
             //string compressedLine = Compression.ToCompressedBase64(Line);
 
-            return $"{Date.ToString("M/dd H:mm:ss")},{Name},{World},{Utils.Time.PrettyFormatTimeSpan(Time)},{Distance.ToString()},{RouteName}\n";
+            return $"{Date.ToString("M/dd/yyyy H:mm:ss")},{Name},{World},{Utils.Time.PrettyFormatTimeSpan(Time)},{Distance.ToString()},{RouteName}\n";
         }
     }
 }

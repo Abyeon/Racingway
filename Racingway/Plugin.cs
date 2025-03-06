@@ -311,7 +311,9 @@ public sealed class Plugin : IDalamudPlugin
 
         try
         {
-            List<Route> addressRoutes = Storage.GetRoutes().Query().Where(r => r.Address.LocationId == address.LocationId).ToList();
+            Storage.UpdateRouteCache();
+            
+            List<Route> addressRoutes = Storage.RouteCache.Values.Where(r => r.Address.LocationId == address.LocationId).ToList();
             LoadedRoutes = addressRoutes;
 
             // Update route addresses to address legacy routes
@@ -374,6 +376,7 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
+    // Triggered when a player starts any loaded route
     private void OnStart(object? sender, Player e)
     {
         if (e.id == ClientState.LocalPlayer.EntityId)
@@ -383,6 +386,7 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
+    // Triggered whenever a player finished any loaded route
     private void OnFinish(object? sender, (Player, Record) e)
     {
         if (e.Item1.actor.EntityId == ClientState.LocalPlayer.EntityId)
@@ -405,8 +409,10 @@ public sealed class Plugin : IDalamudPlugin
             PayloadedChat((IPlayerCharacter)e.Item1.actor, $" just finished {route.Name} in {prettyPrint} and {e.Item2.Distance} units.");
         }
 
-        RecordList.Add(e.Item2 as Record);
-        Storage.AddRecord(e.Item2 as Record);
+        //RecordList.Add(e.Item2 as Record);
+        //Storage.AddRecord(e.Item2 as Record);
+
+        route.Records.Add(e.Item2 as Record);
 
         if (route.BestRecord == null || e.Item2.Time.TotalNanoseconds < route.BestRecord.Time.TotalNanoseconds)
         {
@@ -416,6 +422,7 @@ public sealed class Plugin : IDalamudPlugin
         Storage.RouteCache[route.Id.ToString()] = route;
     }
 
+    // Triggered when a player fails any loaded route
     private void OnFailed(object? sender, Player e)
     {
         if (e.actor.EntityId == ClientState.LocalPlayer.EntityId)

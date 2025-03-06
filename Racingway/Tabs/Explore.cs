@@ -1,5 +1,6 @@
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
+using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Utility.Numerics;
 using ImGuiNET;
@@ -86,35 +87,45 @@ namespace Racingway.Tabs
 
                     using (var table = ImRaii.Table("###race-exploreTable", 2, ImGuiTableFlags.BordersInnerH))
                     {
-                        ImGui.TableSetupColumn("Name and Address", ImGuiTableColumnFlags.None, 100f);
+                        ImGui.TableSetupColumn("Route", ImGuiTableColumnFlags.None, 100f);
                         ImGui.TableSetupColumn("Best Times", ImGuiTableColumnFlags.None, 75f);
+                        ImGui.TableHeadersRow();
 
                         for (int i = 0; i < routes.Count; i++)
                         {
                             Route route = routes[i];
                             if (!filter.PassFilter(route.Name) && !filter.PassFilter(route.Address.ReadableName)) continue;
 
-                            ImGui.PushID(i);
-
                             ImGui.TableNextColumn();
+                            var cursorPos = ImGui.GetCursorPos();
+
                             ImGui.Text(route.Name);
                             ImGui.TextColored(ImGuiColors.DalamudGrey, route.Address.ReadableName);
 
                             ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudGrey);
                             ImGui.TextWrapped(route.Description);
                             ImGui.PopStyleColor();
+                            var afterPos = ImGui.GetCursorPos();
 
-                            ImGui.PopID();
+                            using (_ = ImRaii.PushColor(ImGuiCol.HeaderHovered, new Vector4(1, 1, 1, 0.05f)))
+                            {
+                                using (_ = ImRaii.PushColor(ImGuiCol.HeaderActive, new Vector4(1, 1, 1, 0.07f)))
+                                {
+                                    ImGui.SetCursorPos(cursorPos);
+                                    ImGui.Selectable($"###{route.Name}{i}", false, ImGuiSelectableFlags.AllowItemOverlap, afterPos - cursorPos);
+                                    ImGui.SetCursorPos(afterPos);
+                                }
+                            }
 
-                            using (var popup = ImRaii.ContextPopup(i.ToString()))
+                            using (var popup = ImRaii.ContextPopupItem($"###{route.Name}{i}"))
                             {
                                 if (popup.Success)
                                 {
-                                    if (ImGui.Button("Copy Address"))
+                                    if (ImGui.Selectable("Copy Address"))
                                     {
                                         ImGui.SetClipboardText(route.Address.ReadableName);
                                     }
-                                    if (ImGui.Button("Export to Clipboard"))
+                                    if (ImGui.Selectable("Export to Clipboard"))
                                     {
                                         string input = JsonSerializer.Serialize(route.GetSerialized());
                                         string text = Compression.ToCompressedBase64(input);
@@ -128,26 +139,41 @@ namespace Racingway.Tabs
                                             Plugin.ChatGui.PrintError("[RACE] Error exporting route to clipboard.");
                                         }
                                     }
+                                    if (ImGui.Selectable("Display Records"))
+                                    {
+                                        Plugin.ChatGui.Print("[RACE] Not implemented yet.");
+                                    }
 
                                     if (Plugin.LoadedRoutes.Contains(route) && route.BestRecord != null)
                                     {
-                                        if (ImGui.Button("Display Best Time"))
+                                        if (ImGui.Selectable("Display Best Time"))
                                         {
                                             Plugin.DisplayedRecord = route.BestRecord.Id;
                                         }
                                     }
 
-                                    if (ImGui.Button("Delete"))
+                                    var ctrl = ImGui.GetIO().KeyCtrl;
+
+                                    // Disable delete button if not holding ctrl
+                                    using (_ = ImRaii.Disabled(!ctrl))
                                     {
-                                        Plugin.LoadedRoutes.Remove(route);
-
-                                        Plugin.Storage.GetRoutes().Delete(route.Id);
-                                        Plugin.Storage.UpdateRouteCache();
-
-                                        if (Plugin.SelectedRoute == route.Id)
+                                        if (ImGui.Selectable("Delete"))
                                         {
-                                            Plugin.SelectedRoute = Plugin.LoadedRoutes.Count == 0 ? null : Plugin.LoadedRoutes[0].Id;
+                                            Plugin.LoadedRoutes.Remove(route);
+
+                                            Plugin.Storage.GetRoutes().Delete(route.Id);
+                                            Plugin.Storage.UpdateRouteCache();
+
+                                            if (Plugin.SelectedRoute == route.Id)
+                                            {
+                                                Plugin.SelectedRoute = Plugin.LoadedRoutes.Count == 0 ? null : Plugin.LoadedRoutes[0].Id;
+                                            }
                                         }
+                                    }
+
+                                    if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                                    {
+                                        ImGui.SetTooltip("Hold ctrl to enable the delete button.");
                                     }
                                 }
                             }
@@ -161,7 +187,7 @@ namespace Racingway.Tabs
                             if (route.BestRecord != null)
                             {
                                 ImGui.TextColored(ImGuiColors.DalamudOrange, Time.PrettyFormatTimeSpan(route.BestRecord.Time));
-                                ImGui.TextColored(ImGuiColors.DalamudGrey, $"by {route.BestRecord.Name} {route.BestRecord.World}");
+                                ImGui.TextColored(ImGuiColors.DalamudGrey, $"{route.BestRecord.Name} {route.BestRecord.World}");
                             } else
                             {
                                 ImGui.TextColored(ImGuiColors.DalamudGrey, "No time recorded");
