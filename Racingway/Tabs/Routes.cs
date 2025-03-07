@@ -67,7 +67,7 @@ namespace Racingway.Tabs
 
             if (ImGui.Button("Create New Route"))
             {
-                selectedRoute = new Route(string.Empty, Plugin.CurrentAddress, string.Empty, new List<ITrigger>(), new List<Record>());
+                selectedRoute = new Route("New Route", Plugin.CurrentAddress, string.Empty, new List<ITrigger>(), new List<Record>());
                 updateRoute(selectedRoute);
             }
 

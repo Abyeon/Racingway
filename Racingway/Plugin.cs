@@ -428,6 +428,24 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
+    public void AddRoute(Route route)
+    {
+        bool containsRoute = Storage.RouteCache.ContainsKey(route.Id.ToString());
+
+        _ = Storage.AddRoute(route);
+        if (!containsRoute)
+        {
+            Storage.RouteCache.Add(route.Id.ToString(), route);
+        }
+
+        // Just reload all routes for the area when we import a new one
+        List<Route> addressRoutes = Storage.RouteCache.Values.Where(r => r.Address.LocationId == CurrentAddress.LocationId).ToList();
+        LoadedRoutes = addressRoutes;
+        DisplayedRecord = null;
+
+        SubscribeToRouteEvents();
+    }
+
     public void PayloadedChat(IPlayerCharacter player, string message)
     {
         PlayerPayload payload = new PlayerPayload(player.Name.ToString(), player.HomeWorld.Value.RowId);

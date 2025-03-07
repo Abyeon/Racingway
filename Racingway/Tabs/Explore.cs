@@ -6,6 +6,7 @@ using Dalamud.Utility.Numerics;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using ImGuiNET;
 using LiteDB;
+using Lumina.Extensions;
 using Racingway.Race;
 using Racingway.Race.Collision.Triggers;
 using Racingway.Utils;
@@ -74,6 +75,13 @@ namespace Racingway.Tabs
                 {
                     ImGui.Dummy(new Vector2(0, 2f));
 
+                    if (ImGui.Button("New Route"))
+                    {
+                        Route newRoute = new Route("New Route#" + Plugin.Storage.RouteCache.Count.ToString(), Plugin.CurrentAddress, string.Empty, new List<ITrigger>(), new List<Record>());
+                        Plugin.AddRoute(newRoute);
+                    }
+
+                    ImGui.SameLine();
                     if (ImGui.Button("Import Route"))
                     {
                         try
@@ -86,22 +94,17 @@ namespace Racingway.Tabs
 
                             route.Records = new List<Record>();
 
-                            bool containsRoute = Plugin.Storage.RouteCache.ContainsKey(route.Id.ToString());
+                            bool hasRoute = Plugin.Storage.RouteCache.ContainsKey(route.Id.ToString());
 
-                            _ = Plugin.Storage.AddRoute(route);
-                            if (!containsRoute)
+                            if (!hasRoute)
                             {
-                                Plugin.Storage.RouteCache.Add(route.Id.ToString(), route);
+                                Plugin.AddRoute(route);
+                                Plugin.ChatGui.Print($"[RACE] Added {route.Name} to routes.");
+                            } else
+                            {
+                                Plugin.ChatGui.PrintError("[RACE] Route already saved!");
                             }
 
-                            // Just reload all routes for the area when we import a new one
-                            List<Route> addressRoutes = Plugin.Storage.RouteCache.Values.Where(r => r.Address.LocationId == Plugin.CurrentAddress.LocationId).ToList();
-                            Plugin.LoadedRoutes = addressRoutes;
-                            Plugin.DisplayedRecord = null;
-
-                            Plugin.SubscribeToRouteEvents();
-
-                            Plugin.ChatGui.Print($"[RACE] Added {route.Name} to routes.");
                         }
                         catch (Exception ex)
                         {
@@ -198,7 +201,7 @@ namespace Racingway.Tabs
                                         Plugin.ChatGui.Print("[RACE] Not implemented yet.");
                                     }
 
-                                    if (Plugin.LoadedRoutes.Contains(route) && route.Records[0] != null)
+                                    if (Plugin.LoadedRoutes.Contains(route) && route.Records.Count > 0)
                                     {
                                         if (ImGui.Selectable("Display Best Time"))
                                         {
