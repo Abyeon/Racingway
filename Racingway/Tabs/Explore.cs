@@ -3,9 +3,11 @@ using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Utility.Numerics;
+using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using ImGuiNET;
 using LiteDB;
 using Racingway.Race;
+using Racingway.Race.Collision.Triggers;
 using Racingway.Utils;
 using System;
 using System.Collections.Generic;
@@ -71,6 +73,47 @@ namespace Racingway.Tabs
                 if (child.Success)
                 {
                     ImGui.Dummy(new Vector2(0, 2f));
+
+                    if (ImGui.Button("Import Route"))
+                    {
+                        try
+                        {
+                            string data = ImGui.GetClipboardText();
+                            var Json = Compression.FromCompressedBase64(data);
+
+                            BsonValue bson = JsonSerializer.Deserialize(Json);
+                            Route route = BsonMapper.Global.Deserialize<Route>(bson);
+
+                            route.Records = new List<Record>();
+
+                            bool containsRoute = Plugin.Storage.RouteCache.ContainsKey(route.Id.ToString());
+
+                            _ = Plugin.Storage.AddRoute(route);
+                            if (!containsRoute)
+                            {
+                                Plugin.Storage.RouteCache.Add(route.Id.ToString(), route);
+                            }
+
+                            // Just reload all routes for the area when we import a new one
+                            List<Route> addressRoutes = Plugin.Storage.RouteCache.Values.Where(r => r.Address.LocationId == Plugin.CurrentAddress.LocationId).ToList();
+                            Plugin.LoadedRoutes = addressRoutes;
+                            Plugin.DisplayedRecord = null;
+
+                            Plugin.SubscribeToRouteEvents();
+
+                            Plugin.ChatGui.Print($"[RACE] Added {route.Name} to routes.");
+                        }
+                        catch (Exception ex)
+                        {
+                            Plugin.ChatGui.PrintError($"[RACE] Failed to import setup. {ex.Message}");
+                            Plugin.Log.Error(ex, "Failed to import setup");
+                        }
+                    }
+                    if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                    {
+                        ImGui.SetTooltip("Import route from clipboard.");
+                    }
+
                     filter.Draw("Filter");
 
                     List<Route> routes = new List<Route>();
@@ -85,7 +128,7 @@ namespace Racingway.Tabs
                             break;
                     }
 
-                    using (var table = ImRaii.Table("###race-exploreTable", 2, ImGuiTableFlags.BordersInnerH))
+                    using (var table = ImRaii.Table("###race-exploreTable", 2, ImGuiTableFlags.BordersInnerH | ImGuiTableFlags.Resizable | ImGuiTableFlags.NoBordersInBody))
                     {
                         ImGui.TableSetupColumn("Route", ImGuiTableColumnFlags.None, 100f);
                         ImGui.TableSetupColumn("Best Times", ImGuiTableColumnFlags.None, 75f);
@@ -125,9 +168,20 @@ namespace Racingway.Tabs
                                     {
                                         ImGui.SetClipboardText(route.Address.ReadableName);
                                     }
+                                    if (ImGui.Selectable("Set Flag"))
+                                    {
+                                        var start = route.Triggers.FirstOrDefault(t => t.GetType() == typeof(Start), null);
+                                        if (start != null)
+                                        {
+                                            SetFlagMarkerPosition(start.Cube.Position, route.Address.TerritoryId, route.Address.MapId);
+                                        } else
+                                        {
+                                            Plugin.ChatGui.PrintError("[RACE] There appears to be no start trigger in this route.");
+                                        }
+                                    }
                                     if (ImGui.Selectable("Export to Clipboard"))
                                     {
-                                        string input = JsonSerializer.Serialize(route.GetSerialized());
+                                        string input = JsonSerializer.Serialize(route.GetEmptySerialized());
                                         string text = Compression.ToCompressedBase64(input);
 
                                         if (text != string.Empty)
@@ -144,11 +198,11 @@ namespace Racingway.Tabs
                                         Plugin.ChatGui.Print("[RACE] Not implemented yet.");
                                     }
 
-                                    if (Plugin.LoadedRoutes.Contains(route) && route.BestRecord != null)
+                                    if (Plugin.LoadedRoutes.Contains(route) && route.Records[0] != null)
                                     {
                                         if (ImGui.Selectable("Display Best Time"))
                                         {
-                                            Plugin.DisplayedRecord = route.BestRecord.Id;
+                                            Plugin.DisplayedRecord = route.Records[0];
                                         }
                                     }
 
@@ -159,7 +213,8 @@ namespace Racingway.Tabs
                                     {
                                         if (ImGui.Selectable("Delete"))
                                         {
-                                            Plugin.LoadedRoutes.Remove(route);
+                                            int index = Plugin.LoadedRoutes.FindIndex(r => r.Id == route.Id);
+                                            Plugin.LoadedRoutes.RemoveAt(index);
 
                                             Plugin.Storage.GetRoutes().Delete(route.Id);
                                             Plugin.Storage.UpdateRouteCache();
@@ -183,19 +238,41 @@ namespace Racingway.Tabs
                             }
 
                             ImGui.TableNextColumn();
-                            ImGui.Text("Best Time:");
-                            if (route.BestRecord != null)
+
+                            List<Record> records = route.Records.GroupBy(x => x.Name).Select(g => g.OrderByDescending(x => x.Time).Last()).ToList();
+
+                            if (records.ElementAtOrDefault(0) != null)
                             {
-                                ImGui.TextColored(ImGuiColors.DalamudOrange, Time.PrettyFormatTimeSpan(route.BestRecord.Time));
-                                ImGui.TextColored(ImGuiColors.DalamudGrey, $"{route.BestRecord.Name} {route.BestRecord.World}");
-                            } else
+                                ImGui.TextColored(new Vector4(1, 0.85f, 0, 1), Time.PrettyFormatTimeSpan(records[0].Time));
+                                ImGui.SameLine();
+                                ImGui.TextColored(ImGuiColors.DalamudGrey, records[0].Name);
+                            }
+
+                            if (records.ElementAtOrDefault(1) != null)
                             {
-                                ImGui.TextColored(ImGuiColors.DalamudGrey, "No time recorded");
+                                ImGui.TextColored(new Vector4(0.82f, 0.82f, 0.82f, 1), Time.PrettyFormatTimeSpan(records[1].Time));
+                                ImGui.SameLine();
+                                ImGui.TextColored(ImGuiColors.DalamudGrey, records[1].Name);
+                            }
+
+                            if (records.ElementAtOrDefault(2) != null)
+                            {
+                                ImGui.TextColored(new Vector4(0.84f, 0.49f, 0.078f, 1), Time.PrettyFormatTimeSpan(records[2].Time));
+                                ImGui.SameLine();
+                                ImGui.TextColored(ImGuiColors.DalamudGrey, records[2].Name);
                             }
                         }
                     }
                 }
             }
+        }
+
+        public unsafe void SetFlagMarkerPosition(Vector3 position, uint territoryId, uint mapId)
+        {
+            var agent = AgentMap.Instance();
+
+            agent->SetFlagMapMarker(territoryId, mapId, position);
+            agent->OpenMap(mapId);
         }
     }
 }

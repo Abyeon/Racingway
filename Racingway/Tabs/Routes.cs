@@ -37,17 +37,6 @@ namespace Racingway.Tabs
 
         }
 
-        public unsafe void SetFlagMarkerPosition(Vector3 position)
-        {
-            var agent = AgentMap.Instance();
-
-            var territoryId = agent->CurrentTerritoryId;
-            var mapId = agent->CurrentMapId;
-
-            agent->SetFlagMapMarker(territoryId, mapId, position);
-            agent->OpenMap(mapId);
-        }
-
         public void Draw()
         {
             ImGui.Text($"Current position: {Plugin.ClientState.LocalPlayer.Position.ToString()}");
@@ -80,11 +69,6 @@ namespace Racingway.Tabs
             {
                 selectedRoute = new Route(string.Empty, Plugin.CurrentAddress, string.Empty, new List<ITrigger>(), new List<Record>());
                 updateRoute(selectedRoute);
-            }
-
-            if (ImGui.Button("Set Flag For Start"))
-            {
-                SetFlagMarkerPosition(selectedRoute.Triggers[0].Cube.Position);
             }
 
             ImGui.SameLine();
@@ -197,7 +181,7 @@ namespace Racingway.Tabs
             }
 
             string name = selectedRoute.Name;
-            if (ImGui.InputText("Name", ref name, 64, ImGuiInputTextFlags.EnterReturnsTrue))
+            if (ImGui.InputText("Name", ref name, 64))
             {
                 // Something
                 if (name == string.Empty) return;
@@ -206,7 +190,7 @@ namespace Racingway.Tabs
             }
 
             string description = selectedRoute.Description;
-            if (ImGui.InputTextMultiline("Description", ref description, 256, new Vector2(100f, 100f)))
+            if (ImGui.InputText("Description", ref description, 256))
             {
                 selectedRoute.Description = description;
                 updateRoute(selectedRoute);

@@ -64,55 +64,47 @@ namespace Racingway.Utils
             {-127, "wing 2" }
         };
 
-        public async void GetLocationID()
+        public void GetLocationID()
         {
-            try
+            ushort territory = Plugin.ClientState.TerritoryType;
+            bool isInside = IsInside();
+
+            Stopwatch timer = Stopwatch.StartNew();
+
+            if (isInside)
             {
-                ushort territory = Plugin.ClientState.TerritoryType;
-                bool isInside = IsInside();
-                long idToReturn = 0;
-                Stopwatch timer = Stopwatch.StartNew();
-
-                if (isInside)
-                {                    
-                    // Funny way to wait for a value to change by polling
-                    Plugin.polls.Add((() =>
-                    {
-                        long id = GetHouseId();
-                        if (id != -1)
-                        {
-                            try
-                            {
-                                Address address = new Address(GetTerritoryId(), GetMapId(), id.ToString(), GetRoomAddress());
-
-                                Plugin.AddressChanged(address);
-                                return true;
-                            } catch (Exception e)
-                            {
-                                Plugin.Log.Error(e.ToString());
-                            }
-                        }
-
-                        return false;
-                    }, timer));
-
-                    return;
-                } else
+                // Funny way to wait for a value to change by polling
+                // This should be turned into good code at some point but.. This works for now :D
+                Plugin.polls.Add((() =>
                 {
-                    try
+                    long id = GetHouseId();
+                    if (id != -1 && Plugin.ClientState.LocalPlayer != null)
+                    {
+                        Address address = new Address(GetTerritoryId(), GetMapId(), id.ToString(), GetRoomAddress());
+                        Plugin.AddressChanged(address);
+
+                        return true;
+                    }
+
+                    return false;
+                }, timer));
+
+                return;
+            }
+            else
+            {
+                Plugin.polls.Add((() =>
+                {
+                    if (Plugin.ClientState.LocalPlayer != null)
                     {
                         Address address = new Address(GetTerritoryId(), GetMapId(), territory.ToString(), GetAreaName());
-
                         Plugin.AddressChanged(address);
-                    } catch (Exception e)
-                    {
-                        Plugin.Log.Error(e.ToString());
+
+                        return true;
                     }
-                }
-            }
-            catch (Exception e)
-            {
-                Plugin.Log.Warning("Couldnt get housing state on territory change. " + e.Message);
+
+                    return false;
+                }, timer));
             }
         }
 

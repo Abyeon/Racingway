@@ -64,10 +64,9 @@ public sealed class Plugin : IDalamudPlugin
     public TriggerOverlay TriggerOverlay { get; init; }
     private MainWindow MainWindow { get; init; }
 
-    public List<Record> RecordList { get; set; } = new();
     public List<Route> LoadedRoutes { get; set; } = new();
 
-    public ObjectId? DisplayedRecord { get; set; }
+    public Record DisplayedRecord { get; set; }
     public ObjectId? SelectedRoute { get; set; }
     public Stopwatch LocalTimer { get; set; }
 
@@ -86,14 +85,14 @@ public sealed class Plugin : IDalamudPlugin
             {
                 Storage = new(this, $"{PluginInterface.GetPluginConfigDirectory()}\\data.db");
 
+                //Configuration.Version = 0;
                 // Delete current user's database if they are still using a legacy version
-
                 if (Configuration.Version == 0)
                 {
                     Storage.GetRecords().DeleteAll();
                     Storage.GetRoutes().DeleteAll();
 
-                    Plugin.ChatGui.PrintError($"[RACE] Due to changes in the database, Racingway has wiped the current one.");
+                    Plugin.ChatGui.PrintError($"[RACE] Due to changes in the database, Racingway has wiped your previous data.. Apologies for this!");
 
                     Configuration.Version = 1;
                     Configuration.Save();
@@ -112,7 +111,6 @@ public sealed class Plugin : IDalamudPlugin
             WindowSystem.AddWindow(MainWindow);
             WindowSystem.AddWindow(TriggerOverlay);
 
-            RecordList = new List<Record>();
             LoadedRoutes = new List<Route>();
 
             CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
@@ -255,7 +253,7 @@ public sealed class Plugin : IDalamudPlugin
                 {
                     // Copied from above but modified to track just the client. A tad stupid.
                     // Check for people
-                    ICharacter player = GetPlayers(ObjectTable).FirstOrDefault(x => x.EntityId == ClientState.LocalPlayer.EntityId, null);
+                    ICharacter player = ClientState.LocalPlayer;
                     if (player != null)
                     {
                         uint id = player.EntityId;
@@ -303,11 +301,10 @@ public sealed class Plugin : IDalamudPlugin
     // Triggered whenever TerritoryHelper learns the ID of the location we're at
     public void AddressChanged(Address address)
     {
-        ChatGui.Print(address.ReadableName);
+        Log.Debug("Detected area change: " + address.ReadableName);
 
         CurrentAddress = address;
         LoadedRoutes.Clear();
-        RecordList.Clear();
 
         try
         {
@@ -317,16 +314,15 @@ public sealed class Plugin : IDalamudPlugin
             LoadedRoutes = addressRoutes;
 
             // Update route addresses to address legacy routes
-            foreach (Route route in addressRoutes)
-            {
-                if (route.Address == null || route.Address != address)
-                {
-                    route.Address = address;
-                    Storage.AddRoute(route);
-                }
-            }
+            //foreach (Route route in addressRoutes)
+            //{
+            //    if (route.Address == null || route.Address != address)
+            //    {
+            //        route.Address = address;
+            //        Storage.AddRoute(route);
+            //    }
+            //}
 
-            RecordList = Storage.GetRecords().Query().Where(r => r.RouteAddress == CurrentAddress.LocationId).ToList();
             DisplayedRecord = null;
 
             // Kick everyone from parkour when you change zones
@@ -338,12 +334,11 @@ public sealed class Plugin : IDalamudPlugin
 
             if (addressRoutes.Count() > 0 && Configuration.AnnounceLoadedRoutes)
             {
-                ChatGui.Print($"[RACE] Loaded {addressRoutes.Count()} routes in this area.");
+                ChatGui.Print($"[RACE] Loaded {addressRoutes.Count()} route(s) in this area.");
             }
 
             if (LoadedRoutes.Count > 0)
                 SelectedRoute = LoadedRoutes.First().Id;
-
         } catch (Exception ex)
         {
             Log.Error(ex.ToString());
@@ -413,13 +408,10 @@ public sealed class Plugin : IDalamudPlugin
         //Storage.AddRecord(e.Item2 as Record);
 
         route.Records.Add(e.Item2 as Record);
-
-        if (route.BestRecord == null || e.Item2.Time.TotalNanoseconds < route.BestRecord.Time.TotalNanoseconds)
-        {
-            route.BestRecord = e.Item2;
-        }
+        route.Records = route.Records.OrderBy(r => r.Time.TotalNanoseconds).ToList();
 
         Storage.RouteCache[route.Id.ToString()] = route;
+        Storage.AddRoute(route); // Update the entry for this route
     }
 
     // Triggered when a player fails any loaded route
@@ -463,7 +455,6 @@ public sealed class Plugin : IDalamudPlugin
 
         UnsubscribeFromRouteEvents();
         LoadedRoutes.Clear();
-        RecordList.Clear();
 
         LocalTimer.Stop();
 

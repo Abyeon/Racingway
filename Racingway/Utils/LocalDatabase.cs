@@ -93,7 +93,9 @@ namespace Racingway.Utils
                         {
                             List<Record> records = BsonMapper.Global.Deserialize<List<Record>>(bson["records"]);
                             newRoute.Records = records;
-                        } catch (Exception e)
+                            newRoute.Records.Sort((a, b) => a.Time.CompareTo(b.Time));
+                        }
+                        catch (Exception e)
                         {
                             e.ToString();
                         }
@@ -131,6 +133,7 @@ namespace Racingway.Utils
                         }
 
                         newRoute.Id = bson["_id"];
+
                         return newRoute;
                     } catch (Exception e)
                     {
@@ -184,6 +187,12 @@ namespace Racingway.Utils
         internal void UpdateRouteCache()
         {
             List<Route> routes = GetRoutes().Query().ToList();
+
+            foreach (Route route in RouteCache.Values)
+            {
+                if (!routes.Contains(route)) RouteCache.Remove(route.Id.ToString());
+            }
+
             foreach (Route route in routes)
             {
                 // Get the best time for this record
@@ -198,10 +207,6 @@ namespace Racingway.Utils
                     RouteCache.Add(route.Id.ToString(), route);
                 }
             }
-            foreach (Route route in RouteCache.Values)
-            {
-                if (!routes.Contains(route)) RouteCache.Remove(route.Id.ToString());
-            }
         }
 
         internal async Task AddRoute(Route route)
@@ -213,6 +218,7 @@ namespace Racingway.Utils
                     return GetRoutes().Insert(route);
                 } else
                 {
+                    UpdateRouteCache();
                     return true;
                 }
             });

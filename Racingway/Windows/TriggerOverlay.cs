@@ -78,7 +78,7 @@ namespace Racingway.Windows
             // Draw the selected Record's line
             if (Plugin.DisplayedRecord != null)
             {
-                Record displayedRecord = Plugin.Storage.GetRecords().FindOne(x => x.Id == Plugin.DisplayedRecord);
+                Record displayedRecord = Plugin.DisplayedRecord;
                 TimedVector3[] displayedRecordLine = displayedRecord.Line;
 
                 for (var i = 1; i < displayedRecordLine.Length; i++)

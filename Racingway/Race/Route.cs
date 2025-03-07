@@ -46,6 +46,7 @@ namespace Racingway.Race
             this.Address = address;
             this.Description = description;
             this.Triggers = triggers;
+            this.Records = records;
             this.AllowMounts = allowMounts;
             this.Enabled = enabled;
         }
@@ -73,6 +74,37 @@ namespace Racingway.Race
 
             doc["triggers"] = serializedTriggers;
             doc["records"] = BsonMapper.Global.Serialize<List<Record>>(Records);
+
+            doc["allowMounts"] = AllowMounts;
+            doc["enabled"] = Enabled;
+
+            return doc;
+        }
+
+        public BsonDocument GetEmptySerialized()
+        {
+            BsonDocument doc = new BsonDocument();
+            doc["_id"] = Id;
+            doc["name"] = Name;
+            doc["description"] = Description;
+
+            try
+            {
+                doc["address"] = Address.GetSerialized();
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.Error(ex.ToString());
+            }
+
+            BsonArray serializedTriggers = new BsonArray();
+            Triggers.ForEach(x =>
+            {
+                serializedTriggers.Add(x.GetSerialized());
+            });
+
+            doc["triggers"] = serializedTriggers;
+            doc["records"] = null;
 
             doc["allowMounts"] = AllowMounts;
             doc["enabled"] = Enabled;
