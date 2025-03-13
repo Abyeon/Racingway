@@ -61,6 +61,8 @@ namespace Racingway.Race.Collision.Triggers
 
                 if (index == -1) return;
 
+                if (player.inParkour) Route.Failed(player);
+
                 player.inParkour = false;
                 Route.PlayersInParkour.RemoveAt(index);
                 player.raceLine.Clear();

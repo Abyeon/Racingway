@@ -18,11 +18,13 @@ namespace Racingway.Race
         public string World { get; set; }
         public TimeSpan Time { get; set; }
         public float Distance { get; set; }
+        public double[]? Splits { get; set; } = null;
         public TimedVector3[] Line { get; set; }
         public string RouteId { get; set; }
         public string RouteName { get; set; }
         public string RouteAddress { get; set; }
         public string RouteHash { get; set; }
+        public bool IsClient { get; set; }
 
         public Record(DateTime date, string name, string world, TimeSpan time, float distance, TimedVector3[] line, Route route)
         {
@@ -41,7 +43,7 @@ namespace Racingway.Race
         }
 
         [BsonCtor]
-        public Record(DateTime date, string name, string world, TimeSpan time, float distance, TimedVector3[] line, string routeId, string routeName, string routeAddress, string routeHash)
+        public Record(DateTime date, string name, string world, TimeSpan time, float distance, double[] splits, TimedVector3[] line, string routeId, string routeName, string routeAddress, string routeHash, bool isClient)
         {
             Id = new();
 
@@ -55,6 +57,7 @@ namespace Racingway.Race
             RouteName = routeName;
             RouteAddress = routeAddress;
             RouteHash = routeHash;
+            IsClient = isClient;
         }
 
         public string GetCSV()

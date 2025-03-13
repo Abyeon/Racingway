@@ -36,6 +36,7 @@ using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Client.System.String;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
+using Racingway.Tabs;
 
 namespace Racingway;
 
@@ -120,6 +121,7 @@ public sealed class Plugin : IDalamudPlugin
 
             Framework.Update += OnFrameworkTick;
             ClientState.TerritoryChanged += OnTerritoryChange;
+            ClientState.Logout += OnLogout;
 
             PluginInterface.UiBuilder.Draw += DrawUI;
 
@@ -298,6 +300,12 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
+    private void OnLogout(int type, int code)
+    {
+        Log.Debug(type + " " + code);
+        LoadedRoutes.Clear();
+    }
+
     // Triggered whenever TerritoryHelper learns the ID of the location we're at
     public void AddressChanged(Address address)
     {
@@ -410,6 +418,12 @@ public sealed class Plugin : IDalamudPlugin
         route.Records.Add(e.Item2 as Record);
         route.Records = route.Records.OrderBy(r => r.Time.TotalNanoseconds).ToList();
 
+        if (e.Item1.actor.EntityId == ClientState.LocalPlayer.EntityId)
+        {
+            route.ClientFinishes++;
+        }
+
+
         Storage.RouteCache[route.Id.ToString()] = route;
         Storage.AddRoute(route); // Update the entry for this route
     }
@@ -419,6 +433,15 @@ public sealed class Plugin : IDalamudPlugin
     {
         if (e.actor.EntityId == ClientState.LocalPlayer.EntityId)
         {
+            Route? route = sender as Route;
+            if (route != null)
+            {
+                route.ClientFails++;
+
+                Storage.RouteCache[route.Id.ToString()].ClientFails = route.ClientFails;
+                Storage.AddRoute(route);
+            }
+
             LocalTimer.Reset();
         }
 

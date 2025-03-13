@@ -217,14 +217,17 @@ namespace Racingway.Tabs
                                         if (ImGui.Selectable("Delete"))
                                         {
                                             int index = Plugin.LoadedRoutes.FindIndex(r => r.Id == route.Id);
-                                            Plugin.LoadedRoutes.RemoveAt(index);
-
-                                            Plugin.Storage.GetRoutes().Delete(route.Id);
-                                            Plugin.Storage.UpdateRouteCache();
-
-                                            if (Plugin.SelectedRoute == route.Id)
+                                            if (index != -1)
                                             {
-                                                Plugin.SelectedRoute = Plugin.LoadedRoutes.Count == 0 ? null : Plugin.LoadedRoutes[0].Id;
+                                                Plugin.LoadedRoutes.RemoveAt(index);
+
+                                                Plugin.Storage.GetRoutes().Delete(route.Id);
+                                                Plugin.Storage.UpdateRouteCache();
+
+                                                if (Plugin.SelectedRoute == route.Id)
+                                                {
+                                                    Plugin.SelectedRoute = Plugin.LoadedRoutes.Count == 0 ? null : Plugin.LoadedRoutes[0].Id;
+                                                }
                                             }
                                         }
                                     }
@@ -263,6 +266,22 @@ namespace Racingway.Tabs
                                 ImGui.TextColored(new Vector4(0.84f, 0.49f, 0.078f, 1), Time.PrettyFormatTimeSpan(records[2].Time));
                                 ImGui.SameLine();
                                 ImGui.TextColored(ImGuiColors.DalamudGrey, records[2].Name);
+                            }
+
+                            if (route.ClientFails > 0)
+                            {
+                                ImGui.TextColored(ImGuiColors.DalamudGrey, "Your Fails:");
+                                ImGui.SameLine();
+                                ImGui.TextColored(ImGuiColors.DalamudRed, route.ClientFails.ToString());
+                            }
+
+                            if (route.ClientFinishes > 0)
+                            {
+                                if (route.ClientFails > 0) ImGui.SameLine();
+
+                                ImGui.TextColored(ImGuiColors.DalamudGrey, "Your Finishes:");
+                                ImGui.SameLine();
+                                ImGui.TextColored(ImGuiColors.HealerGreen, route.ClientFinishes.ToString());
                             }
                         }
                     }

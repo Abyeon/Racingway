@@ -29,6 +29,8 @@ namespace Racingway.Race
         public bool Enabled { get; set; }
         public List<ITrigger> Triggers { get; set; }
         public List<Record> Records { get; set; }
+        public int? ClientFails { get; set; }
+        public int? ClientFinishes { get; set; }
 
         [BsonIgnore] public Record? BestRecord = null;
 
@@ -38,7 +40,7 @@ namespace Racingway.Race
         [BsonIgnore] public event EventHandler<(Player, Record)> OnFinished;
         [BsonIgnore] public event EventHandler<Player> OnFailed;
 
-        public Route(string name, Address address, string description, List<ITrigger> triggers, List<Record> records, bool allowMounts = false, bool enabled = true)
+        public Route(string name, Address address, string description, List<ITrigger> triggers, List<Record> records, bool allowMounts = false, bool enabled = true, int clientFails = 0, int clientFinishes = 0)
         {
             this.Id = ObjectId.NewObjectId();
 
@@ -49,6 +51,10 @@ namespace Racingway.Race
             this.Records = records;
             this.AllowMounts = allowMounts;
             this.Enabled = enabled;
+            this.ClientFails = clientFails;
+            this.ClientFinishes = clientFinishes;
+
+            //this.ClientFinishes = records.Where(r => r.IsClient).Count();
         }
 
         public BsonDocument GetSerialized()
@@ -77,6 +83,9 @@ namespace Racingway.Race
 
             doc["allowMounts"] = AllowMounts;
             doc["enabled"] = Enabled;
+
+            doc["clientFails"] = ClientFails;
+            doc["clientFinishes"] = ClientFinishes;
 
             return doc;
         }

@@ -4,6 +4,7 @@ using Racingway.Race.Collision;
 using Racingway.Race.Collision.Triggers;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Text;
@@ -22,12 +23,16 @@ namespace Racingway.Utils
         private const string RecordTable = "record";
         private const string RouteTable = "route";
 
+        private string dbPath = string.Empty;
+
         public Dictionary<string, Route> RouteCache = new Dictionary<string, Route>();
 
         internal LocalDatabase(Plugin plugin, string path)
         {
             this.Plugin = plugin;
             this.Database = new LiteDatabase(path);
+
+            this.dbPath = path;
 
             var recordCollection = GetRecords();
             recordCollection.EnsureIndex(r => r.Name);
@@ -87,7 +92,7 @@ namespace Racingway.Utils
                     try
                     {
                         Address address = BsonMapper.Global.Deserialize<Address>(bson["address"]);
-                        Route newRoute = new Route(bson["name"], address, bson["description"], new(), new());
+                        Route newRoute = new Route(bson["name"], address, bson["description"], new(), new(), bson["allowMounts"], bson["enabled"], bson["clientFails"], bson["clientFinishes"]);
 
                         try
                         {
@@ -100,8 +105,8 @@ namespace Racingway.Utils
                             e.ToString();
                         }
 
-                        newRoute.AllowMounts = bson["allowMounts"];
-                        newRoute.Enabled = bson["enabled"];
+                        //newRoute.AllowMounts = bson["allowMounts"];
+                        //newRoute.Enabled = bson["enabled"];
 
                         BsonArray arrayOfTriggers = (BsonArray)bson["triggers"];
                         foreach (var trigger in arrayOfTriggers)
@@ -188,11 +193,6 @@ namespace Racingway.Utils
         {
             List<Route> routes = GetRoutes().Query().ToList();
 
-            foreach (Route route in RouteCache.Values)
-            {
-                if (!routes.Contains(route)) RouteCache.Remove(route.Id.ToString());
-            }
-
             foreach (Route route in routes)
             {
                 // Get the best time for this record
@@ -206,6 +206,11 @@ namespace Racingway.Utils
                 {
                     RouteCache.Add(route.Id.ToString(), route);
                 }
+            }
+
+            foreach (Route route in RouteCache.Values)
+            {
+                if (!routes.Contains(route)) RouteCache.Remove(route.Id.ToString());
             }
         }
 
@@ -234,6 +239,48 @@ namespace Racingway.Utils
             {
                 dbLock.Release();
             }
+        }
+
+        // Grabbed from https://stackoverflow.com/a/14488941
+        static readonly string[] SizeSuffixes = { "bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB" };
+
+        static string SizeSuffix(Int64 value, int decimalPlaces = 1)
+        {
+            if (decimalPlaces < 0) { throw new ArgumentOutOfRangeException("decimalPlaces"); }
+            if (value < 0) { return "-" + SizeSuffix(-value, decimalPlaces); }
+            if (value == 0) { return string.Format("{0:n" + decimalPlaces + "} bytes", 0); }
+
+            // mag is 0 for bytes, 1 for KB, 2, for MB, etc.
+            int mag = (int)Math.Log(value, 1024);
+
+            // 1L << (mag * 10) == 2 ^ (10 * mag) 
+            // [i.e. the number of bytes in the unit corresponding to mag]
+            decimal adjustedSize = (decimal)value / (1L << (mag * 10));
+
+            // make adjustment when the value is large enough that
+            // it would round up to 1000 or more
+            if (Math.Round(adjustedSize, decimalPlaces) >= 1000)
+            {
+                mag += 1;
+                adjustedSize /= 1024;
+            }
+
+            return string.Format("{0:n" + decimalPlaces + "} {1}",
+                adjustedSize,
+                SizeSuffixes[mag]);
+        }
+
+        // Return the size of the db file in a string format
+        public string GetFileSizeString()
+        {
+            FileInfo fi = new FileInfo(dbPath);
+
+            if (fi.Exists)
+            {
+                return SizeSuffix(fi.Length);
+            }
+
+            return string.Empty;
         }
     }
 }
