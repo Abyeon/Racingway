@@ -4,6 +4,7 @@ using Racingway.Race.Collision;
 using Racingway.Race.Collision.Triggers;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Text;
@@ -22,10 +23,16 @@ namespace Racingway.Utils
         private const string RecordTable = "record";
         private const string RouteTable = "route";
 
+        private string dbPath = string.Empty;
+
+        public Dictionary<string, Route> RouteCache = new Dictionary<string, Route>();
+
         internal LocalDatabase(Plugin plugin, string path)
         {
             this.Plugin = plugin;
             this.Database = new LiteDatabase(path);
+
+            this.dbPath = path;
 
             var recordCollection = GetRecords();
             recordCollection.EnsureIndex(r => r.Name);
@@ -35,7 +42,6 @@ namespace Racingway.Utils
             recordCollection.EnsureIndex(r => r.Distance);
             recordCollection.EnsureIndex(r => r.Line);
 
-            // Incoming Lamda Hell
             try
             {
                 BsonMapper.Global.RegisterType<Vector3[]>
@@ -60,47 +66,86 @@ namespace Racingway.Utils
 
             var routeCollection = GetRoutes();
             routeCollection.EnsureIndex(r => r.Name);
-            routeCollection.EnsureIndex(r => r.Address);
+            //routeCollection.EnsureIndex(r => r.LocationId);
             routeCollection.EnsureIndex(r => r.Triggers);
+            routeCollection.EnsureIndex(r => r.Address);
+
+            BsonMapper.Global.RegisterType<Address>(
+                serialize: (address) => address.GetSerialized(),
+                deserialize: (bson) =>
+                {
+                    Address newAddress = new Address(
+                        uint.Parse(bson["territoryId"]),
+                        uint.Parse(bson["mapId"]),
+                        bson["locationId"],
+                        bson["readableName"]);
+
+                    return newAddress;
+                }
+            );
 
             BsonMapper.Global.RegisterType<Route>
             (
                 serialize: (route) => route.GetSerialized(),
                 deserialize: (bson) =>
                 {
-                    Route newRoute = new Route(bson["name"], bson["address"], new());
-
-                    BsonArray arrayOfTriggers = (BsonArray)bson["triggers"];
-                    foreach (var trigger in arrayOfTriggers)
+                    try
                     {
-                        BsonArray cubeArray = (BsonArray)trigger["Cube"];
-                        string type = trigger["Type"];
-                        Cube cube = new Cube(
-                            new Vector3(float.Parse(cubeArray[0]), float.Parse(cubeArray[1]), float.Parse(cubeArray[2])),
-                            new Vector3(float.Parse(cubeArray[3]), float.Parse(cubeArray[4]), float.Parse(cubeArray[5])),
-                            new Vector3(float.Parse(cubeArray[6]), float.Parse(cubeArray[7]), float.Parse(cubeArray[8])));
+                        Address address = BsonMapper.Global.Deserialize<Address>(bson["address"]);
+                        Route newRoute = new Route(bson["name"], address, bson["description"], new(), new(), bson["allowMounts"], bson["enabled"], bson["clientFails"], bson["clientFinishes"]);
 
-                        switch (type)
+                        try
                         {
-                            case "Start":
-                                newRoute.Triggers.Add(new Start(newRoute, cube));
-                                break;
-                            case "Checkpoint":
-                                newRoute.Triggers.Add(new Checkpoint(newRoute, cube));
-                                break;
-                            case "Fail":
-                                newRoute.Triggers.Add(new Fail(newRoute, cube));
-                                break;
-                            case "Finish":
-                                newRoute.Triggers.Add(new Finish(newRoute, cube));
-                                break;
-                            default:
-                                throw new Exception("Attempted to add a trigger type that does not exist!");
+                            List<Record> records = BsonMapper.Global.Deserialize<List<Record>>(bson["records"]);
+                            newRoute.Records = records;
+                            newRoute.Records.Sort((a, b) => a.Time.CompareTo(b.Time));
                         }
+                        catch (Exception e)
+                        {
+                            e.ToString();
+                        }
+
+                        //newRoute.AllowMounts = bson["allowMounts"];
+                        //newRoute.Enabled = bson["enabled"];
+
+                        BsonArray arrayOfTriggers = (BsonArray)bson["triggers"];
+                        foreach (var trigger in arrayOfTriggers)
+                        {
+                            BsonArray cubeArray = (BsonArray)trigger["Cube"];
+                            string type = trigger["Type"];
+                            Cube cube = new Cube(
+                                new Vector3(float.Parse(cubeArray[0]), float.Parse(cubeArray[1]), float.Parse(cubeArray[2])),
+                                new Vector3(float.Parse(cubeArray[3]), float.Parse(cubeArray[4]), float.Parse(cubeArray[5])),
+                                new Vector3(float.Parse(cubeArray[6]), float.Parse(cubeArray[7]), float.Parse(cubeArray[8])));
+
+                            switch (type)
+                            {
+                                case "Start":
+                                    newRoute.Triggers.Add(new Start(newRoute, cube));
+                                    break;
+                                case "Checkpoint":
+                                    newRoute.Triggers.Add(new Checkpoint(newRoute, cube));
+                                    break;
+                                case "Fail":
+                                    newRoute.Triggers.Add(new Fail(newRoute, cube));
+                                    break;
+                                case "Finish":
+                                    newRoute.Triggers.Add(new Finish(newRoute, cube));
+                                    break;
+                                default:
+                                    throw new Exception("Attempted to add a trigger type that does not exist!");
+                            }
+                        }
+
+                        newRoute.Id = bson["_id"];
+
+                        return newRoute;
+                    } catch (Exception e)
+                    {
+                        Plugin.Log.Error(e.ToString());
                     }
 
-                    newRoute.Id = bson["_id"];
-                    return newRoute;
+                    return null;
                 }
             );
         }
@@ -108,6 +153,13 @@ namespace Racingway.Utils
         public void Dispose()
         {
             Database.Dispose();
+            RouteCache.Clear();
+        }
+
+        // Making this to save people's legacy routes.
+        internal void ExportRoutesToFile(string Path)
+        {
+            Database.Execute($"select $ into $file({Path}) from {RouteTable}");
         }
 
         internal ILiteCollection<Record> GetRecords()
@@ -125,14 +177,53 @@ namespace Racingway.Utils
             return Database.GetCollection<Route>(RouteTable);
         }
 
+        private Record? GetBestRecord(Route route)
+        {
+            List<Record> routeRecords = GetRecords().Query().Where(r => r.RouteId == route.Id.ToString()).ToList();
+
+            if (routeRecords.Count > 0)
+            {
+                return routeRecords.OrderBy(r => r.Time.TotalNanoseconds).First();
+            }
+
+            return null;
+        }
+
+        internal void UpdateRouteCache()
+        {
+            List<Route> routes = GetRoutes().Query().ToList();
+
+            foreach (Route route in routes)
+            {
+                // Get the best time for this record
+                Record record = GetBestRecord(route);
+                if (record != null) route.BestRecord = record;
+
+                if (RouteCache.ContainsKey(route.Id.ToString()))
+                {
+                    RouteCache[route.Id.ToString()] = route;
+                } else
+                {
+                    RouteCache.Add(route.Id.ToString(), route);
+                }
+            }
+
+            foreach (Route route in RouteCache.Values)
+            {
+                if (!routes.Contains(route)) RouteCache.Remove(route.Id.ToString());
+            }
+        }
+
         internal async Task AddRoute(Route route)
         {
             await WriteToDatabase(() => {
                 if (!GetRoutes().Update(route))
                 {
+                    UpdateRouteCache();
                     return GetRoutes().Insert(route);
                 } else
                 {
+                    UpdateRouteCache();
                     return true;
                 }
             });
@@ -148,6 +239,48 @@ namespace Racingway.Utils
             {
                 dbLock.Release();
             }
+        }
+
+        // Grabbed from https://stackoverflow.com/a/14488941
+        static readonly string[] SizeSuffixes = { "bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB" };
+
+        static string SizeSuffix(Int64 value, int decimalPlaces = 1)
+        {
+            if (decimalPlaces < 0) { throw new ArgumentOutOfRangeException("decimalPlaces"); }
+            if (value < 0) { return "-" + SizeSuffix(-value, decimalPlaces); }
+            if (value == 0) { return string.Format("{0:n" + decimalPlaces + "} bytes", 0); }
+
+            // mag is 0 for bytes, 1 for KB, 2, for MB, etc.
+            int mag = (int)Math.Log(value, 1024);
+
+            // 1L << (mag * 10) == 2 ^ (10 * mag) 
+            // [i.e. the number of bytes in the unit corresponding to mag]
+            decimal adjustedSize = (decimal)value / (1L << (mag * 10));
+
+            // make adjustment when the value is large enough that
+            // it would round up to 1000 or more
+            if (Math.Round(adjustedSize, decimalPlaces) >= 1000)
+            {
+                mag += 1;
+                adjustedSize /= 1024;
+            }
+
+            return string.Format("{0:n" + decimalPlaces + "} {1}",
+                adjustedSize,
+                SizeSuffixes[mag]);
+        }
+
+        // Return the size of the db file in a string format
+        public string GetFileSizeString()
+        {
+            FileInfo fi = new FileInfo(dbPath);
+
+            if (fi.Exists)
+            {
+                return SizeSuffix(fi.Length);
+            }
+
+            return string.Empty;
         }
     }
 }

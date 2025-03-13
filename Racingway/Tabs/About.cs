@@ -5,6 +5,7 @@ using Dalamud.Utility;
 using ImGuiNET;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Text;
@@ -44,6 +45,12 @@ namespace Racingway.Tabs
                     ImGui.TextWrapped(Plugin.PluginInterface.Manifest.Changelog.ToString());
                 }
 
+                string fileSize = Plugin.Storage.GetFileSizeString();
+                if (fileSize != string.Empty)
+                {
+                    ImGui.TextColored(ImGuiColors.DalamudGrey, $"Size on disk: {fileSize}");
+                }
+
                 ImGui.Dummy(new Vector2(0, 10));
 
                 ImGui.Text("Triggers:");
@@ -52,7 +59,8 @@ namespace Racingway.Tabs
                 {
                     if (child.Success) ImGui.TextWrapped("The player's timer begins when the player either leaves this trigger or jumps!" +
                         " The idea is to have this right before the first jump, so your timer starts when you jump." +
-                        " There can only be one of these at a time in a route.");
+                        " There can only be one of these at a time in a route." +
+                        " This technically triggers a fail when a player re-enters it, so that will get logged to the chat if Log Fails is enabled.");
                 }
 
                 using (var child = ImRaii.TreeNode("Checkpoint", ImGuiTreeNodeFlags.DefaultOpen))

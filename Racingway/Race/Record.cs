@@ -18,11 +18,13 @@ namespace Racingway.Race
         public string World { get; set; }
         public TimeSpan Time { get; set; }
         public float Distance { get; set; }
+        public double[]? Splits { get; set; } = null;
         public TimedVector3[] Line { get; set; }
         public string RouteId { get; set; }
         public string RouteName { get; set; }
         public string RouteAddress { get; set; }
         public string RouteHash { get; set; }
+        public bool IsClient { get; set; }
 
         public Record(DateTime date, string name, string world, TimeSpan time, float distance, TimedVector3[] line, Route route)
         {
@@ -36,11 +38,12 @@ namespace Racingway.Race
             Line = line;
             RouteId = route.Id.ToString();
             RouteName = route.Name;
-            RouteAddress = route.Address;
+            RouteAddress = route.Address.LocationId;
             RouteHash = route.GetHash();
         }
 
-        public Record(DateTime date, string name, string world, TimeSpan time, float distance, TimedVector3[] line, string routeId, string routeName, string routeAddress, string routeHash)
+        [BsonCtor]
+        public Record(DateTime date, string name, string world, TimeSpan time, float distance, double[] splits, TimedVector3[] line, string routeId, string routeName, string routeAddress, string routeHash, bool isClient)
         {
             Id = new();
 
@@ -54,6 +57,7 @@ namespace Racingway.Race
             RouteName = routeName;
             RouteAddress = routeAddress;
             RouteHash = routeHash;
+            IsClient = isClient;
         }
 
         public string GetCSV()
@@ -61,7 +65,7 @@ namespace Racingway.Race
             // TODO: Research line simplification algos, or some other way to compress player lines... They BIG!
             //string compressedLine = Compression.ToCompressedBase64(Line);
 
-            return $"{Date.ToString("M/dd H:mm:ss")},{Name},{World},{Utils.Time.PrettyFormatTimeSpan(Time)},{Distance.ToString()},{RouteName}\n";
+            return $"{Date.ToString("M/dd/yyyy H:mm:ss")},{Name},{World},{Utils.Time.PrettyFormatTimeSpan(Time)},{Distance.ToString()},{RouteName}\n";
         }
     }
 }

@@ -37,17 +37,6 @@ namespace Racingway.Tabs
 
         }
 
-        public unsafe void SetFlagMarkerPosition(Vector3 position)
-        {
-            var agent = AgentMap.Instance();
-
-            var territoryId = agent->CurrentTerritoryId;
-            var mapId = agent->CurrentMapId;
-
-            agent->SetFlagMapMarker(territoryId, mapId, position);
-            agent->OpenMap(mapId);
-        }
-
         public void Draw()
         {
             ImGui.Text($"Current position: {Plugin.ClientState.LocalPlayer.Position.ToString()}");
@@ -58,7 +47,7 @@ namespace Racingway.Tabs
             {
                 if (tree.Success)
                 {
-                    foreach (Route route in Plugin.Storage.GetRoutes().Query().Where(x => x.Address == Plugin.CurrentAddress).ToList())
+                    foreach (Route route in Plugin.Storage.GetRoutes().Query().Where(x => x.Address.LocationId == Plugin.CurrentAddress.LocationId).ToList())
                     {
                         id++;
                         if (ImGui.Selectable($"{route.Name}##{id}", route.Id == Plugin.SelectedRoute))
@@ -74,17 +63,12 @@ namespace Racingway.Tabs
                 }
             }
 
-            Route? selectedRoute = Plugin.LoadedRoutes.FirstOrDefault(x => x.Id == Plugin.SelectedRoute, new Route(string.Empty, Plugin.CurrentAddress, new List<ITrigger>()));
+            Route? selectedRoute = Plugin.LoadedRoutes.FirstOrDefault(x => x.Id == Plugin.SelectedRoute, new Route(string.Empty, Plugin.CurrentAddress, string.Empty, new List<ITrigger>(), new List<Record>()));
 
             if (ImGui.Button("Create New Route"))
             {
-                selectedRoute = new Route(string.Empty, Plugin.CurrentAddress, new List<ITrigger>());
+                selectedRoute = new Route("New Route", Plugin.CurrentAddress, string.Empty, new List<ITrigger>(), new List<Record>());
                 updateRoute(selectedRoute);
-            }
-
-            if (ImGui.Button("Set Flag For Start"))
-            {
-                SetFlagMarkerPosition(selectedRoute.Triggers[0].Cube.Position);
             }
 
             ImGui.SameLine();
@@ -101,7 +85,7 @@ namespace Racingway.Tabs
                     Plugin.Storage.AddRoute(route);
 
                     // Only load route if its in our zone
-                    if (!Plugin.LoadedRoutes.Contains(route) && Plugin.CurrentAddress == route.Address)
+                    if (!Plugin.LoadedRoutes.Contains(route) && Plugin.CurrentAddress.LocationId == route.Address.LocationId)
                     {
                         Plugin.LoadedRoutes.Add(route);
                         Plugin.SelectedRoute = route.Id;
@@ -172,7 +156,10 @@ namespace Racingway.Tabs
             if (ImGuiComponents.IconButton(Dalamud.Interface.FontAwesomeIcon.Trash))
             {
                 Plugin.LoadedRoutes.Remove(selectedRoute);
+
                 Plugin.Storage.GetRoutes().Delete(selectedRoute.Id);
+                Plugin.Storage.UpdateRouteCache();
+
                 Plugin.SelectedRoute = Plugin.LoadedRoutes.Count == 0 ? null : Plugin.LoadedRoutes[0].Id;
                 selectedRoute = Plugin.LoadedRoutes.Count == 0 ? null : Plugin.LoadedRoutes[0];
             }
@@ -194,14 +181,19 @@ namespace Racingway.Tabs
             }
 
             string name = selectedRoute.Name;
-            if (ImGui.InputText("Name", ref name, 64, ImGuiInputTextFlags.EnterReturnsTrue))
+            if (ImGui.InputText("Name", ref name, 64))
             {
                 // Something
                 if (name == string.Empty) return;
                 selectedRoute.Name = name;
                 updateRoute(selectedRoute);
+            }
 
-                Plugin.ChatGui.Print(name);
+            string description = selectedRoute.Description;
+            if (ImGui.InputText("Description", ref description, 256))
+            {
+                selectedRoute.Description = description;
+                updateRoute(selectedRoute);
             }
 
             if (ImGui.Button("Add Trigger"))
@@ -210,8 +202,6 @@ namespace Racingway.Tabs
                 Checkpoint newTrigger = new Checkpoint(selectedRoute, Plugin.ClientState.LocalPlayer.Position - new Vector3(0, 0.1f, 0), Vector3.One, Vector3.Zero);
                 selectedRoute.Triggers.Add(newTrigger);
                 updateRoute(selectedRoute);
-
-                //Plugin.Log.Debug(Plugin.LoadedRoutes.Count.ToString());
             }
 
             for (int i = 0; i < selectedRoute.Triggers.Count; i++)
@@ -352,6 +342,7 @@ namespace Racingway.Tabs
             updateStartFinishBools();
 
             Plugin.Storage.AddRoute(route);
+            Plugin.Storage.UpdateRouteCache();
         }
 
         private void updateStartFinishBools()

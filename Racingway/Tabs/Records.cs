@@ -38,7 +38,7 @@ namespace Racingway.Tabs
             {
                 if (tree.Success)
                 {
-                    foreach (Route route in Plugin.Storage.GetRoutes().Query().Where(x => x.Address == Plugin.CurrentAddress).ToList())
+                    foreach (Route route in Plugin.Storage.GetRoutes().Query().Where(x => x.Address.LocationId == Plugin.CurrentAddress.LocationId).ToList())
                     {
                         id++;
                         if (ImGui.Selectable($"{route.Name}##{id}", route.Id == Plugin.SelectedRoute))
@@ -54,7 +54,12 @@ namespace Racingway.Tabs
                 }
             }
 
-            cachedRecords = Plugin.RecordList.Where(x => x.RouteId == Plugin.SelectedRoute.ToString()).ToList();
+            if (Plugin.SelectedRoute == null)
+            {
+                return;
+            }
+
+            cachedRecords = Plugin.Storage.RouteCache[Plugin.SelectedRoute.ToString()].Records;
 
             if (!Plugin.Configuration.AllowDuplicateRecords)
             {
@@ -83,19 +88,20 @@ namespace Racingway.Tabs
                 Plugin.Configuration.Save();
             }
 
-            ImGui.SameLine();
-            if (ImGui.Button("Clear Records"))
-            {
-                foreach (Record record in cachedRecords)
-                {
-                    Plugin.Storage.GetRecords().Delete(record.Id);
-                    Plugin.RecordList.Remove(record);
-                }
+            // Reimplement this later to be route-specific.
+            //ImGui.SameLine();
+            //if (ImGui.Button("Clear Records"))
+            //{
+            //    //foreach (Record record in cachedRecords)
+            //    //{
+            //    //    Plugin.Storage.GetRecords().Delete(record.Id);
+            //    //    Plugin.RecordList.Remove(record);
+            //    //}
 
-                cachedRecords.Clear();
+            //    //cachedRecords.Clear();
 
-                Plugin.DisplayedRecord = null;
-            }
+            //    Plugin.DisplayedRecord = null;
+            //}
 
             using (var table = ImRaii.Table("###race-records", 5, ImGuiTableFlags.Sortable))
             {
@@ -147,7 +153,7 @@ namespace Racingway.Tabs
 
                     foreach (Record record in cachedRecords)
                     {
-                        if (Plugin.DisplayedRecord == record.Id)
+                        if (Plugin.DisplayedRecord == record)
                         {
                             ImGui.PushStyleColor(ImGuiCol.Text, 0xFFF58742);
                         } else
@@ -158,7 +164,7 @@ namespace Racingway.Tabs
                         bool selected = false;
 
                         ImGui.TableNextColumn();
-                        ImGui.Selectable(record.Date.ToLocalTime().ToString("M/dd H:mm:ss"), ref selected, ImGuiSelectableFlags.SpanAllColumns);
+                        ImGui.Selectable(record.Date.ToLocalTime().ToString("M/dd/yyyy H:mm:ss"), ref selected, ImGuiSelectableFlags.SpanAllColumns);
 
                         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
                         {
@@ -176,13 +182,13 @@ namespace Racingway.Tabs
 
                         if (selected)
                         {
-                            if (Plugin.DisplayedRecord == record.Id)
+                            if (Plugin.DisplayedRecord == record)
                             {
                                 Plugin.DisplayedRecord = null;
                             }
                             else
                             {
-                                Plugin.DisplayedRecord = record.Id;
+                                Plugin.DisplayedRecord = record;
                             }
 
                             Plugin.ShowHideOverlay();

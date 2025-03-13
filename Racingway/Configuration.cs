@@ -10,7 +10,7 @@ namespace Racingway;
 [Serializable]
 public class Configuration : IPluginConfiguration
 {
-    public int Version { get; set; } = 0;
+    public int Version { get; set; } = 1;
 
     public bool AllowDuplicateRecords = true;
     public bool AnnounceLoadedRoutes = true;

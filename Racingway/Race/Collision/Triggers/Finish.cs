@@ -81,6 +81,12 @@ namespace Racingway.Race.Collision.Triggers
                 {
                     IPlayerCharacter actor = (IPlayerCharacter)player.actor;
                     Record record = new Record(now, actor.Name.ToString(), actor.HomeWorld.Value.Name.ToString(), t, distance, player.raceLine.ToArray(), this.Route);
+                    
+                    if (actor == Plugin.ClientState.LocalPlayer)
+                    {
+                        record.IsClient = true;
+                    }
+
                     Route.Finished(player, record);
                 } catch (Exception ex)
                 {
