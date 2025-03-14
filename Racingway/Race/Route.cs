@@ -118,6 +118,9 @@ namespace Racingway.Race
             doc["allowMounts"] = AllowMounts;
             doc["enabled"] = Enabled;
 
+            doc["clientFails"] = 0;
+            doc["clientFinishes"] = 0;
+
             return doc;
         }
 
