@@ -102,6 +102,32 @@ namespace Racingway.Tabs
                 Plugin.Configuration.LineQuality = quality;
                 Plugin.Configuration.Save();
             }
+
+            if (ImGui.Button("Debug Print Database"))
+            {
+                var routes = Plugin.Storage.GetRoutes().Query().ToList();
+
+                foreach (var route in routes)
+                {
+                    try
+                    {
+                        Plugin.Log.Debug(route.ToString());
+                        foreach (var record in route.Records)
+                        {
+                            try
+                            {
+                                Plugin.Log.Debug(record.GetCSV());
+                            } catch (Exception ex)
+                            {
+                                Plugin.Log.Error(ex.ToString());
+                            }
+                        }
+                    } catch (Exception ex)
+                    {
+                        Plugin.Log.Error(ex.ToString());
+                    }
+                }
+            }
         }
     }
 }

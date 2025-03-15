@@ -84,33 +84,35 @@ namespace Racingway.Tabs
                     ImGui.SameLine();
                     if (ImGui.Button("Import Route"))
                     {
-                        try
-                        {
-                            string data = ImGui.GetClipboardText();
-                            var Json = Compression.FromCompressedBase64(data);
+                        //try
+                        //{
+                        //    string data = ImGui.GetClipboardText();
+                        //    var Json = Compression.FromCompressedBase64(data);
 
-                            BsonValue bson = JsonSerializer.Deserialize(Json);
-                            Route route = BsonMapper.Global.Deserialize<Route>(bson);
+                        //    BsonValue bson = JsonSerializer.Deserialize(Json);
+                        //    Route route = BsonMapper.Global.Deserialize<Route>(bson);
 
-                            route.Records = new List<Record>();
+                        //    route.Records = new List<Record>();
 
-                            bool hasRoute = Plugin.Storage.RouteCache.ContainsKey(route.Id.ToString());
+                        //    bool hasRoute = Plugin.Storage.RouteCache.ContainsKey(route.Id.ToString());
 
-                            if (!hasRoute)
-                            {
-                                Plugin.AddRoute(route);
-                                Plugin.ChatGui.Print($"[RACE] Added {route.Name} to routes.");
-                            } else
-                            {
-                                Plugin.ChatGui.PrintError("[RACE] Route already saved!");
-                            }
+                        //    if (!hasRoute)
+                        //    {
+                        //        Plugin.AddRoute(route);
+                        //        Plugin.ChatGui.Print($"[RACE] Added {route.Name} to routes.");
+                        //    } else
+                        //    {
+                        //        Plugin.ChatGui.PrintError("[RACE] Route already saved!");
+                        //    }
+                        //}
+                        //catch (Exception ex)
+                        //{
+                        //    Plugin.ChatGui.PrintError($"[RACE] Failed to import setup. {ex.Message}");
+                        //    Plugin.Log.Error(ex, "Failed to import setup");
+                        //}
 
-                        }
-                        catch (Exception ex)
-                        {
-                            Plugin.ChatGui.PrintError($"[RACE] Failed to import setup. {ex.Message}");
-                            Plugin.Log.Error(ex, "Failed to import setup");
-                        }
+                        string data = ImGui.GetClipboardText();
+                        _ = Plugin.Storage.ImportFromBase64(data);
                     }
                     if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
                     {
@@ -245,44 +247,58 @@ namespace Racingway.Tabs
 
                             ImGui.TableNextColumn();
 
-                            List<Record> records = route.Records.GroupBy(x => x.Name).Select(g => g.OrderByDescending(x => x.Time).Last()).ToList();
-
-                            if (records.ElementAtOrDefault(0) != null)
+                            try
                             {
-                                ImGui.TextColored(new Vector4(1, 0.85f, 0, 1), Time.PrettyFormatTimeSpan(records[0].Time));
-                                ImGui.SameLine();
-                                ImGui.TextColored(ImGuiColors.DalamudGrey, records[0].Name);
+                                if (route.Records == null)
+                                {
+                                    route.Records = new List<Record>();
+                                }
+
+                                List<Record> records = route.Records.GroupBy(x => x.Name).Select(g => g.OrderByDescending(x => x.Time).Last()).ToList();
+
+                                if (records.ElementAtOrDefault(0) != null)
+                                {
+                                    ImGui.TextColored(new Vector4(1, 0.85f, 0, 1), Time.PrettyFormatTimeSpan(records[0].Time));
+                                    ImGui.SameLine();
+                                    ImGui.TextColored(ImGuiColors.DalamudGrey, records[0].Name);
+                                }
+
+                                if (records.ElementAtOrDefault(1) != null)
+                                {
+                                    ImGui.TextColored(new Vector4(0.82f, 0.82f, 0.82f, 1), Time.PrettyFormatTimeSpan(records[1].Time));
+                                    ImGui.SameLine();
+                                    ImGui.TextColored(ImGuiColors.DalamudGrey, records[1].Name);
+                                }
+
+                                if (records.ElementAtOrDefault(2) != null)
+                                {
+                                    ImGui.TextColored(new Vector4(0.84f, 0.49f, 0.078f, 1), Time.PrettyFormatTimeSpan(records[2].Time));
+                                    ImGui.SameLine();
+                                    ImGui.TextColored(ImGuiColors.DalamudGrey, records[2].Name);
+                                }
+
+                                if (route.ClientFails > 0)
+                                {
+                                    ImGui.TextColored(ImGuiColors.DalamudGrey, "Your Fails:");
+                                    ImGui.SameLine();
+                                    ImGui.TextColored(ImGuiColors.DalamudRed, route.ClientFails.ToString());
+                                }
+
+                                if (route.ClientFinishes > 0)
+                                {
+                                    if (route.ClientFails > 0) ImGui.SameLine();
+
+                                    ImGui.TextColored(ImGuiColors.DalamudGrey, "Your Finishes:");
+                                    ImGui.SameLine();
+                                    ImGui.TextColored(ImGuiColors.HealerGreen, route.ClientFinishes.ToString());
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Plugin.Log.Error(ex.ToString());
                             }
 
-                            if (records.ElementAtOrDefault(1) != null)
-                            {
-                                ImGui.TextColored(new Vector4(0.82f, 0.82f, 0.82f, 1), Time.PrettyFormatTimeSpan(records[1].Time));
-                                ImGui.SameLine();
-                                ImGui.TextColored(ImGuiColors.DalamudGrey, records[1].Name);
-                            }
-
-                            if (records.ElementAtOrDefault(2) != null)
-                            {
-                                ImGui.TextColored(new Vector4(0.84f, 0.49f, 0.078f, 1), Time.PrettyFormatTimeSpan(records[2].Time));
-                                ImGui.SameLine();
-                                ImGui.TextColored(ImGuiColors.DalamudGrey, records[2].Name);
-                            }
-
-                            if (route.ClientFails > 0)
-                            {
-                                ImGui.TextColored(ImGuiColors.DalamudGrey, "Your Fails:");
-                                ImGui.SameLine();
-                                ImGui.TextColored(ImGuiColors.DalamudRed, route.ClientFails.ToString());
-                            }
-
-                            if (route.ClientFinishes > 0)
-                            {
-                                if (route.ClientFails > 0) ImGui.SameLine();
-
-                                ImGui.TextColored(ImGuiColors.DalamudGrey, "Your Finishes:");
-                                ImGui.SameLine();
-                                ImGui.TextColored(ImGuiColors.HealerGreen, route.ClientFinishes.ToString());
-                            }
+                            
                         }
                     }
                 }

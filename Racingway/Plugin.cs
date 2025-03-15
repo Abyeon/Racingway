@@ -308,19 +308,15 @@ public sealed class Plugin : IDalamudPlugin
         try
         {
             Storage.UpdateRouteCache();
-            
-            List<Route> addressRoutes = Storage.RouteCache.Values.Where(r => r.Address.LocationId == address.LocationId).ToList();
-            LoadedRoutes = addressRoutes;
+            LoadedRoutes = Storage.RouteCache.Values.Where(r => r.Address.LocationId == address.LocationId).ToList();
 
-            // Update route addresses to address legacy routes
-            //foreach (Route route in addressRoutes)
-            //{
-            //    if (route.Address == null || route.Address != address)
-            //    {
-            //        route.Address = address;
-            //        Storage.AddRoute(route);
-            //    }
-            //}
+            foreach (Route route in LoadedRoutes) 
+            {
+                if (route.Records == null)
+                {
+                    route.Records = new();
+                }
+            }
 
             DisplayedRecord = null;
 
@@ -331,9 +327,9 @@ public sealed class Plugin : IDalamudPlugin
                 player.Value.raceLine.Clear();
             }
 
-            if (addressRoutes.Count() > 0 && Configuration.AnnounceLoadedRoutes)
+            if (LoadedRoutes.Count() > 0 && Configuration.AnnounceLoadedRoutes)
             {
-                ChatGui.Print($"[RACE] Loaded {addressRoutes.Count()} route(s) in this area.");
+                ChatGui.Print($"[RACE] Loaded {LoadedRoutes.Count()} route(s) in this area.");
             }
 
             if (LoadedRoutes.Count > 0)
