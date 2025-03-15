@@ -1,43 +1,21 @@
 using Dalamud.Game.Command;
 using Dalamud.IoC;
 using Dalamud.Plugin;
-using System.IO;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
 using Racingway.Windows;
-using Dalamud.Game.Inventory;
-using Dalamud.Game.Inventory.InventoryEventArgTypes;
 using System;
-using Dalamud.Game.Network;
 using System.Collections.Generic;
 using Dalamud.Game.ClientState.Objects.Types;
 using System.Linq;
 using Dalamud.Game.ClientState.Objects.SubKinds;
-using System.Numerics;
 using Racingway.Utils;
-using Lumina.Excel.Sheets;
-using Lumina.Excel;
-using FFXIVClientStructs.FFXIV.Client.Game;
-using FFXIVClientStructs.Interop.Generated;
 using LiteDB;
-using FFXIVClientStructs.FFXIV.Client.Graphics.Render;
-using static FFXIVClientStructs.FFXIV.Client.UI.AddonJobHudRDM0.BalanceGauge;
 using System.Threading.Tasks;
-using System.Collections.Concurrent;
-using System.Threading;
 using System.Diagnostics;
 using Racingway.Race;
-using Racingway.Race.Collision;
-using Racingway.Race.Collision.Triggers;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Game.Text.SeStringHandling;
-using static Dalamud.Interface.Utility.Raii.ImRaii;
-using FFXIVClientStructs.FFXIV.Client.UI.Agent;
-using FFXIVClientStructs.FFXIV.Client.System.String;
-using FFXIVClientStructs.FFXIV.Client.UI;
-using FFXIVClientStructs.FFXIV.Client.Game.Character;
-using Racingway.Tabs;
-
 namespace Racingway;
 
 public sealed class Plugin : IDalamudPlugin
@@ -64,6 +42,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public TriggerOverlay TriggerOverlay { get; init; }
     private MainWindow MainWindow { get; init; }
+    public TimerWindow TimerWindow { get; init; }
 
     public List<Route> LoadedRoutes { get; set; } = new();
 
@@ -108,15 +87,17 @@ public sealed class Plugin : IDalamudPlugin
 
             MainWindow = new MainWindow(this);
             TriggerOverlay = new TriggerOverlay(this);
+            TimerWindow = new TimerWindow(this);
 
             WindowSystem.AddWindow(MainWindow);
             WindowSystem.AddWindow(TriggerOverlay);
+            WindowSystem.AddWindow(TimerWindow);
 
             LoadedRoutes = new List<Route>();
 
             CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
             {
-                HelpMessage = "Setup your race!"
+                HelpMessage = "Open the main UI"
             });
 
             Framework.Update += OnFrameworkTick;
@@ -147,6 +128,14 @@ public sealed class Plugin : IDalamudPlugin
 
     public void ShowHideOverlay()
     {
+        if (Configuration.DrawTimer)
+        {
+            TimerWindow.IsOpen = true;
+        } else
+        {
+            TimerWindow.IsOpen = false;
+        }
+
         if (Configuration.DrawRacingLines || Configuration.DrawTriggers || DisplayedRecord != null)
         {
             TriggerOverlay.IsOpen = true;
@@ -302,7 +291,7 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnLogout(int type, int code)
     {
-        Log.Debug(type + " " + code);
+        LocalTimer.Reset();
         LoadedRoutes.Clear();
     }
 
@@ -312,6 +301,8 @@ public sealed class Plugin : IDalamudPlugin
         Log.Debug("Detected area change: " + address.ReadableName);
 
         CurrentAddress = address;
+
+        LocalTimer.Reset();
         LoadedRoutes.Clear();
 
         try

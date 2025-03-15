@@ -61,14 +61,14 @@ namespace Racingway.Race.Collision.Triggers
 
             if (index != -1)
             {
+                var elapsedTime = Route.PlayersInParkour[index].Item2.ElapsedMilliseconds;
+                var t = TimeSpan.FromMilliseconds(elapsedTime);
+
                 player.AddPoint();
                 player.inParkour = false;
 
                 Touchers.Remove(player.id);
                 OnLeft(player);
-
-                var elapsedTime = Route.PlayersInParkour[index].Item2.ElapsedMilliseconds;
-                var t = TimeSpan.FromMilliseconds(elapsedTime);
 
                 Route.PlayersInParkour.RemoveAt(index);
 
