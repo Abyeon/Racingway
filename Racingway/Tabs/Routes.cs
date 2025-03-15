@@ -110,7 +110,7 @@ namespace Racingway.Tabs
                 //string text = Compression.ToCompressedBase64(Plugin.Configuration.Triggers);
                 //Plugin.Log.Debug(selectedRoute.JsonFriendly().ToString());
                 //string input = selectedRoute.GetSerialized().AsDocument.ToString();
-                string input = JsonSerializer.Serialize(selectedRoute.GetSerialized());
+                string input = JsonSerializer.Serialize(selectedRoute.GetEmptySerialized());
                 string text = Compression.ToCompressedBase64(input);
                 if (text != string.Empty)
                 {

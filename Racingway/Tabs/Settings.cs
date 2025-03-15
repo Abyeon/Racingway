@@ -39,6 +39,27 @@ namespace Racingway.Tabs
                 Plugin.ShowHideOverlay();
             }
 
+            if (ImGui.Button($"{(Plugin.Configuration.DrawTimer ? "Disable" : "Enable")} Timer Display"))
+            {
+                Plugin.Configuration.DrawTimer = !Plugin.Configuration.DrawTimer;
+                Plugin.Configuration.Save();
+                Plugin.ShowHideOverlay();
+            }
+
+            var size = Plugin.Configuration.TimerSize;
+            if (ImGui.DragFloat("Timer Font Size", ref size, 0.01f, 1f, 20f))
+            {
+                Plugin.Configuration.TimerSize = size;
+                Plugin.Configuration.Save();
+            }
+
+            var color = Plugin.Configuration.TimerColor;
+            if (ImGui.ColorEdit4("Timer Background Color", ref color)) {
+                Plugin.Configuration.TimerColor = color;
+                Plugin.Configuration.Save();
+            }
+            
+
             if (ImGui.Button("Clear racing lines"))
             {
                 foreach (var actor in Plugin.trackedPlayers.Values)
