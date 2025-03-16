@@ -74,30 +74,32 @@ namespace Racingway.Tabs
             ImGui.SameLine();
             if (ImGuiComponents.IconButton(Dalamud.Interface.FontAwesomeIcon.FileImport))
             {
-                try
-                {
-                    string data = ImGui.GetClipboardText();
-                    var Json = Compression.FromCompressedBase64(data);
+                //try
+                //{
+                //    string data = ImGui.GetClipboardText();
+                //    var Json = Compression.FromCompressedBase64(data);
 
-                    BsonValue bson = JsonSerializer.Deserialize(Json);
-                    Route route = BsonMapper.Global.Deserialize<Route>(bson);
+                //    BsonValue bson = JsonSerializer.Deserialize(Json);
+                //    Route route = BsonMapper.Global.Deserialize<Route>(bson);
 
-                    Plugin.Storage.AddRoute(route);
+                //    Plugin.Storage.AddRoute(route);
 
-                    // Only load route if its in our zone
-                    if (!Plugin.LoadedRoutes.Contains(route) && Plugin.CurrentAddress.LocationId == route.Address.LocationId)
-                    {
-                        Plugin.LoadedRoutes.Add(route);
-                        Plugin.SelectedRoute = route.Id;
-                    }
+                //    // Only load route if its in our zone
+                //    if (!Plugin.LoadedRoutes.Contains(route) && Plugin.CurrentAddress.LocationId == route.Address.LocationId)
+                //    {
+                //        Plugin.LoadedRoutes.Add(route);
+                //        Plugin.SelectedRoute = route.Id;
+                //    }
 
-                    Plugin.ChatGui.Print($"[RACE] Added {route.Name} to routes.");
-                }
-                catch (Exception ex)
-                {
-                    Plugin.ChatGui.PrintError($"[RACE] Failed to import setup. {ex.Message}");
-                    Plugin.Log.Error(ex, "Failed to import setup");
-                }
+                //    Plugin.ChatGui.Print($"[RACE] Added {route.Name} to routes.");
+                //}
+                //catch (Exception ex)
+                //{
+                //    Plugin.ChatGui.PrintError($"[RACE] Failed to import setup. {ex.Message}");
+                //    Plugin.Log.Error(ex, "Failed to import setup");
+                //}
+                string data = ImGui.GetClipboardText();
+                _ = Plugin.Storage.ImportFromBase64(data);
             }
             if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
             {

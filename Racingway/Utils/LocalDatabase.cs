@@ -1,3 +1,4 @@
+using ImGuiNET;
 using LiteDB;
 using Racingway.Race;
 using Racingway.Race.Collision;
@@ -30,7 +31,7 @@ namespace Racingway.Utils
         internal LocalDatabase(Plugin plugin, string path)
         {
             this.Plugin = plugin;
-            this.Database = new LiteDatabase(path);
+            this.Database = new LiteDatabase($"filename={path};upgrade=true");
 
             this.dbPath = path;
 
@@ -195,6 +196,11 @@ namespace Racingway.Utils
 
             foreach (Route route in routes)
             {
+                if (route.Records == null)
+                {
+                    route.Records = new List<Record>();
+                }
+
                 // Get the best time for this record
                 Record record = GetBestRecord(route);
                 if (record != null) route.BestRecord = record;
@@ -227,6 +233,36 @@ namespace Racingway.Utils
                     return true;
                 }
             });
+        }
+
+        internal async Task ImportFromBase64(string data)
+        {
+            try
+            {
+                var Json = Compression.FromCompressedBase64(data);
+
+                BsonValue bson = JsonSerializer.Deserialize(Json);
+                Route route = BsonMapper.Global.Deserialize<Route>(bson);
+
+                route.Records = new List<Record>();
+
+                bool hasRoute = Plugin.Storage.RouteCache.ContainsKey(route.Id.ToString());
+
+                if (!hasRoute)
+                {
+                    Plugin.AddRoute(route);
+                    Plugin.ChatGui.Print($"[RACE] Added {route.Name} to routes.");
+                }
+                else
+                {
+                    Plugin.ChatGui.PrintError("[RACE] Route already saved!");
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.ChatGui.PrintError($"[RACE] Failed to import route. {ex.Message}");
+                Plugin.Log.Error(ex, "Failed to import route");
+            }
         }
 
         private async Task WriteToDatabase(Func<object> action)

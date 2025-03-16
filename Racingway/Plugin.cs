@@ -16,6 +16,7 @@ using System.Diagnostics;
 using Racingway.Race;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Game.Text.SeStringHandling;
+using Dalamud.Interface.ManagedFontAtlas;
 namespace Racingway;
 
 public sealed class Plugin : IDalamudPlugin
@@ -39,6 +40,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public Configuration Configuration { get; init; }
     public readonly WindowSystem WindowSystem = new("Racingway");
+    public FontManager FontManager { get; init; }
 
     public TriggerOverlay TriggerOverlay { get; init; }
     private MainWindow MainWindow { get; init; }
@@ -60,6 +62,7 @@ public sealed class Plugin : IDalamudPlugin
             territoryHelper = new TerritoryHelper(this);
 
             Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+            FontManager = new FontManager(this);
 
             try
             {
@@ -308,19 +311,15 @@ public sealed class Plugin : IDalamudPlugin
         try
         {
             Storage.UpdateRouteCache();
-            
-            List<Route> addressRoutes = Storage.RouteCache.Values.Where(r => r.Address.LocationId == address.LocationId).ToList();
-            LoadedRoutes = addressRoutes;
+            LoadedRoutes = Storage.RouteCache.Values.Where(r => r.Address.LocationId == address.LocationId).ToList();
 
-            // Update route addresses to address legacy routes
-            //foreach (Route route in addressRoutes)
-            //{
-            //    if (route.Address == null || route.Address != address)
-            //    {
-            //        route.Address = address;
-            //        Storage.AddRoute(route);
-            //    }
-            //}
+            foreach (Route route in LoadedRoutes) 
+            {
+                if (route.Records == null)
+                {
+                    route.Records = new();
+                }
+            }
 
             DisplayedRecord = null;
 
@@ -331,9 +330,9 @@ public sealed class Plugin : IDalamudPlugin
                 player.Value.raceLine.Clear();
             }
 
-            if (addressRoutes.Count() > 0 && Configuration.AnnounceLoadedRoutes)
+            if (LoadedRoutes.Count() > 0 && Configuration.AnnounceLoadedRoutes)
             {
-                ChatGui.Print($"[RACE] Loaded {addressRoutes.Count()} route(s) in this area.");
+                ChatGui.Print($"[RACE] Loaded {LoadedRoutes.Count()} route(s) in this area.");
             }
 
             if (LoadedRoutes.Count > 0)
@@ -489,6 +488,7 @@ public sealed class Plugin : IDalamudPlugin
         LoadedRoutes.Clear();
 
         LocalTimer.Stop();
+        FontManager.Dispose();
 
         MainWindow.Dispose();
         TriggerOverlay.Dispose();

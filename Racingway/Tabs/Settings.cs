@@ -1,9 +1,15 @@
+using Dalamud.Interface;
+using Dalamud.Interface.Colors;
+using Dalamud.Interface.FontIdentifier;
+using Dalamud.Interface.ImGuiFontChooserDialog;
 using ImGuiNET;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Racingway.Tabs
 {
@@ -23,8 +29,21 @@ namespace Racingway.Tabs
 
         }
 
+        private Vector2 spacing = new Vector2(0, 10);
+
+        private void SectionSeparator(string text)
+        {
+            ImGui.Separator();
+            ImGui.TextColored(ImGuiColors.DalamudOrange, text);
+            ImGui.Dummy(spacing);
+        }
+
         public void Draw()
         {
+            //ImGui.Separator();
+            ImGui.TextColored(ImGuiColors.DalamudOrange, "Display Settings");
+            ImGui.Dummy(spacing);
+
             if (ImGui.Button($"{(Plugin.Configuration.DrawTriggers ? "Disable" : "Enable")} Triggers Display"))
             {
                 Plugin.Configuration.DrawTriggers = !Plugin.Configuration.DrawTriggers;
@@ -46,27 +65,49 @@ namespace Racingway.Tabs
                 Plugin.ShowHideOverlay();
             }
 
+            SectionSeparator("Timer Settings");
+
+            if (ImGui.Button("Change Font"))
+            {
+                DisplayFontSelector();
+            }
+
             var size = Plugin.Configuration.TimerSize;
-            if (ImGui.DragFloat("Timer Font Size", ref size, 0.01f, 1f, 20f))
+            if (ImGui.DragFloat("Font Size", ref size, 0.01f, 1f, 20f))
             {
                 Plugin.Configuration.TimerSize = size;
                 Plugin.Configuration.Save();
             }
 
-            var color = Plugin.Configuration.TimerColor;
-            if (ImGui.ColorEdit4("Timer Background Color", ref color)) {
-                Plugin.Configuration.TimerColor = color;
+            var bgColor = Plugin.Configuration.TimerColor;
+            if (ImGui.ColorEdit4("Background Color", ref bgColor, ImGuiColorEditFlags.NoInputs)) {
+                Plugin.Configuration.TimerColor = bgColor;
                 Plugin.Configuration.Save();
             }
-            
 
-            if (ImGui.Button("Clear racing lines"))
+            /* Commenting this out for now until I actually implement this feature
+            var normalColor = Plugin.Configuration.NormalColor;
+            if (ImGui.ColorEdit4("Normal Color", ref normalColor, ImGuiColorEditFlags.NoInputs))
             {
-                foreach (var actor in Plugin.trackedPlayers.Values)
-                {
-                    actor.raceLine.Clear();
-                }
+                Plugin.Configuration.NormalColor = normalColor;
+                Plugin.Configuration.Save();
             }
+
+            var finishColor = Plugin.Configuration.FinishColor;
+            if (ImGui.ColorEdit4("Finish Color", ref finishColor, ImGuiColorEditFlags.NoInputs))
+            {
+                Plugin.Configuration.FinishColor = finishColor;
+                Plugin.Configuration.Save();
+            }
+
+            var failColor = Plugin.Configuration.FailColor;
+            if (ImGui.ColorEdit4("Fail Color", ref failColor, ImGuiColorEditFlags.NoInputs))
+            {
+                Plugin.Configuration.FailColor = failColor;
+                Plugin.Configuration.Save();
+            }*/
+
+            SectionSeparator("Chat Settings");
 
             bool announceRoutes = Plugin.Configuration.AnnounceLoadedRoutes;
             if (ImGui.Checkbox("Announce Loaded Routes in Chat", ref announceRoutes))
@@ -89,6 +130,8 @@ namespace Racingway.Tabs
                 Plugin.Configuration.Save();
             }
 
+            SectionSeparator("Misc. Settings");
+
             bool trackOthers = Plugin.Configuration.TrackOthers;
             if (ImGui.Checkbox("Track Other Players", ref trackOthers))
             {
@@ -102,6 +145,59 @@ namespace Racingway.Tabs
                 Plugin.Configuration.LineQuality = quality;
                 Plugin.Configuration.Save();
             }
+
+            if (ImGui.Button("Clear racing lines"))
+            {
+                foreach (var actor in Plugin.trackedPlayers.Values)
+                {
+                    actor.raceLine.Clear();
+                }
+            }
+
+#if DEBUG
+            if (ImGui.Button("Debug Print Database"))
+            {
+                var routes = Plugin.Storage.GetRoutes().Query().ToList();
+
+                foreach (var route in routes)
+                {
+                    try
+                    {
+                        Plugin.Log.Debug(route.ToString());
+                        foreach (var record in route.Records)
+                        {
+                            try
+                            {
+                                Plugin.Log.Debug(record.GetCSV());
+                            } catch (Exception ex)
+                            {
+                                Plugin.Log.Error(ex.ToString());
+                            }
+                        }
+                    } catch (Exception ex)
+                    {
+                        Plugin.Log.Error(ex.ToString());
+                    }
+                }
+            }
+#endif
+        }
+
+        private void DisplayFontSelector()
+        {
+            var chooser = SingleFontChooserDialog.CreateAuto((UiBuilder)Plugin.PluginInterface.UiBuilder);
+            if (Plugin.Configuration.TimerFont is SingleFontSpec font)
+            {
+                chooser.SelectedFont = font;
+            }
+            chooser.SelectedFontSpecChanged += Chooser_SelectedFontSpecChanged;
+        }
+
+        private void Chooser_SelectedFontSpecChanged(SingleFontSpec font)
+        {
+            Plugin.Configuration.TimerFont = font;
+            Plugin.FontManager.Handle = Plugin.Configuration.TimerFont.CreateFontHandle(Plugin.PluginInterface.UiBuilder.FontAtlas);
+            Plugin.Configuration.Save();
         }
     }
 }

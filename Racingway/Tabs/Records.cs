@@ -1,4 +1,5 @@
 using Dalamud.Interface.Utility.Raii;
+using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using ImGuiNET;
 using LiteDB;
 using Racingway.Race;
@@ -60,6 +61,7 @@ namespace Racingway.Tabs
             }
 
             cachedRecords = Plugin.Storage.RouteCache[Plugin.SelectedRoute.ToString()].Records;
+            if (cachedRecords == null) return;
 
             if (!Plugin.Configuration.AllowDuplicateRecords)
             {
