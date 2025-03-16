@@ -219,10 +219,16 @@ namespace Racingway.Tabs
                                         if (ImGui.Selectable("Delete"))
                                         {
                                             int index = Plugin.LoadedRoutes.FindIndex(r => r.Id == route.Id);
+                                            bool exists = Plugin.Storage.RouteCache.ContainsKey(route.Id.ToString());
+
                                             if (index != -1)
                                             {
+                                                Plugin.ChatGui.Print("Deleted?");
                                                 Plugin.LoadedRoutes.RemoveAt(index);
+                                            }
 
+                                            if (exists)
+                                            {
                                                 Plugin.Storage.GetRoutes().Delete(route.Id);
                                                 Plugin.Storage.UpdateRouteCache();
 

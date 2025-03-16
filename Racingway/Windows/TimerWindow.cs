@@ -44,11 +44,18 @@ namespace Racingway.Windows
             }
 
             ImGui.PushStyleColor(ImGuiCol.FrameBg, color);
+            Plugin.FontManager.PushFont();
         }
 
         public override void Draw()
         {
             ImGui.SetWindowFontScale(Plugin.Configuration.TimerSize);
+
+            if (Plugin.FontManager.FontPushed && !Plugin.FontManager.FontReady)
+            {
+                ImGui.Text("Loading font, please wait...");
+                return;
+            }
 
             TimeSpan span = TimeSpan.FromMilliseconds(Plugin.LocalTimer.ElapsedMilliseconds);
             string timerText = Time.PrettyFormatTimeSpan(span);
@@ -69,8 +76,10 @@ namespace Racingway.Windows
 
         public override void PostDraw()
         {
+            Plugin.FontManager.PopFont();
             base.PostDraw();
-            ImGui.PopStyleColor(2);
+            ImGui.PopStyleColor();
+            ImGui.PopStyleColor();
         }
     }
 }

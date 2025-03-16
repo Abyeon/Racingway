@@ -32,7 +32,6 @@ namespace Racingway.Utils
         {
             this.Plugin = plugin;
             this.Database = new LiteDatabase($"filename={path};upgrade=true");
-            Plugin.ChatGui.Print(typeof(LiteDatabase).Assembly.GetName().Version.ToString());
 
             this.dbPath = path;
 
@@ -197,6 +196,11 @@ namespace Racingway.Utils
 
             foreach (Route route in routes)
             {
+                if (route.Records == null)
+                {
+                    route.Records = new List<Record>();
+                }
+
                 // Get the best time for this record
                 Record record = GetBestRecord(route);
                 if (record != null) route.BestRecord = record;

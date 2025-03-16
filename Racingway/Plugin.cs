@@ -16,6 +16,7 @@ using System.Diagnostics;
 using Racingway.Race;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Game.Text.SeStringHandling;
+using Dalamud.Interface.ManagedFontAtlas;
 namespace Racingway;
 
 public sealed class Plugin : IDalamudPlugin
@@ -39,6 +40,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public Configuration Configuration { get; init; }
     public readonly WindowSystem WindowSystem = new("Racingway");
+    public FontManager FontManager { get; init; }
 
     public TriggerOverlay TriggerOverlay { get; init; }
     private MainWindow MainWindow { get; init; }
@@ -60,6 +62,7 @@ public sealed class Plugin : IDalamudPlugin
             territoryHelper = new TerritoryHelper(this);
 
             Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+            FontManager = new FontManager(this);
 
             try
             {
@@ -485,6 +488,7 @@ public sealed class Plugin : IDalamudPlugin
         LoadedRoutes.Clear();
 
         LocalTimer.Stop();
+        FontManager.Dispose();
 
         MainWindow.Dispose();
         TriggerOverlay.Dispose();
