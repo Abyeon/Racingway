@@ -74,32 +74,12 @@ namespace Racingway.Tabs
             ImGui.SameLine();
             if (ImGuiComponents.IconButton(Dalamud.Interface.FontAwesomeIcon.FileImport))
             {
-                //try
-                //{
-                //    string data = ImGui.GetClipboardText();
-                //    var Json = Compression.FromCompressedBase64(data);
-
-                //    BsonValue bson = JsonSerializer.Deserialize(Json);
-                //    Route route = BsonMapper.Global.Deserialize<Route>(bson);
-
-                //    Plugin.Storage.AddRoute(route);
-
-                //    // Only load route if its in our zone
-                //    if (!Plugin.LoadedRoutes.Contains(route) && Plugin.CurrentAddress.LocationId == route.Address.LocationId)
-                //    {
-                //        Plugin.LoadedRoutes.Add(route);
-                //        Plugin.SelectedRoute = route.Id;
-                //    }
-
-                //    Plugin.ChatGui.Print($"[RACE] Added {route.Name} to routes.");
-                //}
-                //catch (Exception ex)
-                //{
-                //    Plugin.ChatGui.PrintError($"[RACE] Failed to import setup. {ex.Message}");
-                //    Plugin.Log.Error(ex, "Failed to import setup");
-                //}
                 string data = ImGui.GetClipboardText();
-                _ = Plugin.Storage.ImportFromBase64(data);
+
+                Plugin.DataQueue.QueueDataOperation(async () =>
+                {
+                    await Plugin.Storage.ImportFromBase64(data);
+                });
             }
             if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
             {
@@ -109,9 +89,6 @@ namespace Racingway.Tabs
             ImGui.SameLine();
             if (ImGuiComponents.IconButton(Dalamud.Interface.FontAwesomeIcon.FileExport))
             {
-                //string text = Compression.ToCompressedBase64(Plugin.Configuration.Triggers);
-                //Plugin.Log.Debug(selectedRoute.JsonFriendly().ToString());
-                //string input = selectedRoute.GetSerialized().AsDocument.ToString();
                 string input = JsonSerializer.Serialize(selectedRoute.GetEmptySerialized());
                 string text = Compression.ToCompressedBase64(input);
                 if (text != string.Empty)
@@ -127,32 +104,32 @@ namespace Racingway.Tabs
                 ImGui.SetTooltip("Export config to clipboard.");
             }
 
-            ImGui.SameLine();
-            if (ImGuiComponents.IconButton(Dalamud.Interface.FontAwesomeIcon.Save))
-            {
-                Route routeWithSameName = Plugin.Storage.GetRoutes().FindOne(x => x.Name == selectedRoute.Name);
+            //ImGui.SameLine();
+            //if (ImGuiComponents.IconButton(Dalamud.Interface.FontAwesomeIcon.Save))
+            //{
+            //    Route routeWithSameName = Plugin.Storage.GetRoutes().FindOne(x => x.Name == selectedRoute.Name);
 
-                if (selectedRoute.Name == string.Empty)
-                {
-                    Plugin.ChatGui.PrintError("[RACE] Cannot save a route without a name.");
-                    return;
-                } else if (selectedRoute.Id != routeWithSameName.Id)
-                {
-                    Plugin.ChatGui.PrintError("[RACE] Cannot save a route with the same name as another.");
-                    return;
-                } else if (selectedRoute == null)
-                {
-                    Plugin.ChatGui.PrintError("[RACE] Cannot save an empty route.. How did we get here?");
-                }
+            //    if (selectedRoute.Name == string.Empty)
+            //    {
+            //        Plugin.ChatGui.PrintError("[RACE] Cannot save a route without a name.");
+            //        return;
+            //    } else if (selectedRoute.Id != routeWithSameName.Id)
+            //    {
+            //        Plugin.ChatGui.PrintError("[RACE] Cannot save a route with the same name as another.");
+            //        return;
+            //    } else if (selectedRoute == null)
+            //    {
+            //        Plugin.ChatGui.PrintError("[RACE] Cannot save an empty route.. How did we get here?");
+            //    }
 
-                //string text = Compression.ToCompressedBase64(Plugin.Configuration.SelectedRoute);
-                //Plugin.Configuration.CompressedRoutes.Add(text);
-                updateRoute(selectedRoute);
-            }
-            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-            {
-                ImGui.SetTooltip("Save route to config.");
-            }
+            //    //string text = Compression.ToCompressedBase64(Plugin.Configuration.SelectedRoute);
+            //    //Plugin.Configuration.CompressedRoutes.Add(text);
+            //    updateRoute(selectedRoute);
+            //}
+            //if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            //{
+            //    ImGui.SetTooltip("Save route to config.");
+            //}
 
             ImGui.SameLine();
             if (ImGuiComponents.IconButton(Dalamud.Interface.FontAwesomeIcon.Trash))
@@ -173,7 +150,7 @@ namespace Racingway.Tabs
             ImGui.SameLine();
             if (ImGuiComponents.IconButton(Dalamud.Interface.FontAwesomeIcon.Recycle))
             {
-                Parallel.Invoke(() => Plugin.territoryHelper.GetLocationID());
+                Plugin.territoryHelper.GetLocationID();
             }
 
             if (selectedRoute == null)
@@ -343,8 +320,11 @@ namespace Racingway.Tabs
             Plugin.SubscribeToRouteEvents();
             updateStartFinishBools();
 
-            Plugin.Storage.AddRoute(route);
-            Plugin.Storage.UpdateRouteCache();
+            Plugin.DataQueue.QueueDataOperation(async () =>
+            {
+                await Plugin.Storage.AddRoute(route);
+                Plugin.Storage.UpdateRouteCache();
+            });
         }
 
         private void updateStartFinishBools()

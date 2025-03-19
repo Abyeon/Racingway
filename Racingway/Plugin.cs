@@ -17,6 +17,7 @@ using Racingway.Race;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Interface.ManagedFontAtlas;
+using Racingway.Utils.Storage;
 namespace Racingway;
 
 public sealed class Plugin : IDalamudPlugin
@@ -34,6 +35,8 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IDataManager DataManager { get; private set; } = null!;
 
     internal LocalDatabase Storage { get; init; }
+    public DataQueue DataQueue { get; init; }
+
     internal TerritoryHelper territoryHelper { get; set; }
 
     private const string CommandName = "/race";
@@ -63,6 +66,8 @@ public sealed class Plugin : IDalamudPlugin
 
             Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
             FontManager = new FontManager(this);
+
+            DataQueue = new DataQueue();
 
             try
             {
@@ -118,7 +123,7 @@ public sealed class Plugin : IDalamudPlugin
             ShowHideOverlay();
 
             // Update our address when plugin first loads
-            Parallel.Invoke(() => territoryHelper.GetLocationID());
+            territoryHelper.GetLocationID();
         } catch (Exception ex)
         {
             Log.Error(ex.ToString());
@@ -156,13 +161,19 @@ public sealed class Plugin : IDalamudPlugin
 
         foreach(Route route in LoadedRoutes)
         {
-            route.CheckCollision(player);
+            Parallel.Invoke(() =>
+            {
+                route.CheckCollision(player);
+            });
         }
     }
+
+    private IPlayerCharacter? localPlayer = null;
 
     private void OnFrameworkTick(IFramework framework)
     {
         if (!ClientState.IsLoggedIn || ClientState.IsPvP) return;
+        localPlayer = ClientState.LocalPlayer;
 
         if (polls != null && polls.Count > 0)
         {
@@ -247,25 +258,25 @@ public sealed class Plugin : IDalamudPlugin
                 {
                     // Copied from above but modified to track just the client. A tad stupid.
                     // Check for people
-                    ICharacter player = ClientState.LocalPlayer;
-                    if (player != null)
+                    //ICharacter player = ClientState.LocalPlayer;
+                    if (localPlayer != null)
                     {
-                        uint id = player.EntityId;
+                        uint id = localPlayer.EntityId;
 
                         if (!trackedPlayers.ContainsKey(id))
                         {
-                            trackedPlayers.Add(id, new Player(id, player, this));
+                            trackedPlayers.Add(id, new Player(id, localPlayer, this));
                         }
                         else
                         {
-                            trackedPlayers[id].actor = player;
+                            trackedPlayers[id].actor = localPlayer;
 
                             bool lastGrounded = trackedPlayers[id].isGrounded;
                             trackedPlayers[id].UpdateState();
 
-                            if (player.Position != trackedPlayers[id].position || lastGrounded != trackedPlayers[id].isGrounded)
+                            if (localPlayer.Position != trackedPlayers[id].position || lastGrounded != trackedPlayers[id].isGrounded)
                             {
-                                trackedPlayers[id].Moved(player.Position);
+                                trackedPlayers[id].Moved(localPlayer.Position);
                             }
 
                             trackedPlayers[id].lastSeen = 0;
@@ -285,8 +296,9 @@ public sealed class Plugin : IDalamudPlugin
 
         try
         {
-            Parallel.Invoke(() => territoryHelper.GetLocationID());
-        } catch (Exception e)
+            territoryHelper.GetLocationID();
+        }
+        catch (Exception e)
         {
             Plugin.Log.Error(e.ToString());
         }
@@ -382,54 +394,58 @@ public sealed class Plugin : IDalamudPlugin
     // Triggered whenever a player finished any loaded route
     private void OnFinish(object? sender, (Player, Record) e)
     {
-        if (e.Item1.actor.EntityId == ClientState.LocalPlayer.EntityId)
+        DataQueue.QueueDataOperation(async () =>
         {
-            LocalTimer.Stop();
-        }
+            if (localPlayer != null && e.Item1.actor.EntityId == localPlayer.EntityId)
+            {
+                LocalTimer.Stop();
+            }
 
-        var prettyPrint = Time.PrettyFormatTimeSpan(e.Item2.Time);
+            var prettyPrint = Time.PrettyFormatTimeSpan(e.Item2.Time);
 
-        Route? route = sender as Route;
+            Route? route = sender as Route;
 
-        if (route == null)
-        {
-            Plugin.ChatGui.PrintError("[RACE] Route is null.");
-            return;
-        }
+            if (route == null)
+            {
+                Plugin.ChatGui.PrintError("[RACE] Route is null.");
+                return;
+            }
 
-        if (Configuration.LogFinish)
-        {
-            PayloadedChat((IPlayerCharacter)e.Item1.actor, $" just finished {route.Name} in {prettyPrint} and {e.Item2.Distance} units.");
-        }
+            if (Configuration.LogFinish)
+            {
+                PayloadedChat((IPlayerCharacter)e.Item1.actor, $" just finished {route.Name} in {prettyPrint} and {e.Item2.Distance} units.");
+            }
 
-        //RecordList.Add(e.Item2 as Record);
-        //Storage.AddRecord(e.Item2 as Record);
+            route.Records.Add(e.Item2 as Record);
+            route.Records = route.Records.OrderBy(r => r.Time.TotalNanoseconds).ToList();
 
-        route.Records.Add(e.Item2 as Record);
-        route.Records = route.Records.OrderBy(r => r.Time.TotalNanoseconds).ToList();
-
-        if (e.Item1.actor.EntityId == ClientState.LocalPlayer.EntityId)
-        {
-            route.ClientFinishes++;
-        }
+            if (localPlayer != null && e.Item1.actor.EntityId == localPlayer.EntityId)
+            {
+                route.ClientFinishes++;
+            }
 
 
-        Storage.RouteCache[route.Id.ToString()] = route;
-        Storage.AddRoute(route); // Update the entry for this route
+            Storage.RouteCache[route.Id.ToString()] = route;
+            await Storage.AddRoute(route); // Update the entry for this route
+        });
     }
+
 
     // Triggered when a player fails any loaded route
     private void OnFailed(object? sender, Player e)
     {
-        if (e.actor.EntityId == ClientState.LocalPlayer.EntityId)
+        if (localPlayer != null && e.actor.EntityId == localPlayer.EntityId)
         {
             Route? route = sender as Route;
             if (route != null)
             {
                 route.ClientFails++;
 
-                Storage.RouteCache[route.Id.ToString()].ClientFails = route.ClientFails;
-                Storage.AddRoute(route);
+                DataQueue.QueueDataOperation(async () =>
+                {
+                    Storage.RouteCache[route.Id.ToString()].ClientFails = route.ClientFails;
+                    await Storage.AddRoute(route);
+                });
             }
 
             LocalTimer.Reset();
@@ -445,16 +461,19 @@ public sealed class Plugin : IDalamudPlugin
     {
         bool containsRoute = Storage.RouteCache.ContainsKey(route.Id.ToString());
 
-        _ = Storage.AddRoute(route);
-        if (!containsRoute)
+        DataQueue.QueueDataOperation(async () =>
         {
-            Storage.RouteCache.Add(route.Id.ToString(), route);
-        }
+            await Storage.AddRoute(route);
+            if (!containsRoute)
+            {
+                Storage.RouteCache.Add(route.Id.ToString(), route);
+            }
 
-        // Just reload all routes for the area when we import a new one
-        List<Route> addressRoutes = Storage.RouteCache.Values.Where(r => r.Address.LocationId == CurrentAddress.LocationId).ToList();
-        LoadedRoutes = addressRoutes;
-        DisplayedRecord = null;
+            // Just reload all routes for the area when we import a new one
+            List<Route> addressRoutes = Storage.RouteCache.Values.Where(r => r.Address.LocationId == CurrentAddress.LocationId).ToList();
+            LoadedRoutes = addressRoutes;
+            DisplayedRecord = null;
+        });
 
         SubscribeToRouteEvents();
     }
@@ -496,17 +515,16 @@ public sealed class Plugin : IDalamudPlugin
         Storage.Dispose();
         Configuration.Save();
 
+        DataQueue.Dispose();
+
         CommandManager.RemoveHandler(CommandName);
     }
 
-    private async void OnCommand(string command, string args)
+    private void OnCommand(string command, string args)
     {
         // in response to the slash command, just toggle the display status of our main ui
 
         ToggleMainUI();
-
-        //await territoryHelper.GetLocationID(0);
-        //Log.Debug(Storage.GetRecords().FindOne(x => x.Id == DisplayedRecord).Line.Length.ToString());
     }
 
     private void DrawUI() => WindowSystem.Draw();

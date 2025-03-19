@@ -13,7 +13,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Racingway.Utils
+namespace Racingway.Utils.Storage
 {
     internal class LocalDatabase : IDisposable
     {
@@ -30,10 +30,10 @@ namespace Racingway.Utils
 
         internal LocalDatabase(Plugin plugin, string path)
         {
-            this.Plugin = plugin;
-            this.Database = new LiteDatabase($"filename={path};upgrade=true");
+            Plugin = plugin;
+            Database = new LiteDatabase($"filename={path};upgrade=true");
 
-            this.dbPath = path;
+            dbPath = path;
 
             var recordCollection = GetRecords();
             recordCollection.EnsureIndex(r => r.Name);
@@ -45,22 +45,24 @@ namespace Racingway.Utils
 
             try
             {
-                BsonMapper.Global.RegisterType<Vector3[]>
+                BsonMapper.Global.RegisterType
                 (
                     serialize: (vector) => new BsonArray(vector.Select(x => new BsonValue(x.ToString()))),
-                    deserialize: (bson) => {
-                        string[] values = bson.AsArray.Select(x => x.ToString()).ToArray();
-                        Vector3[] vectors = values.Select(v =>
+                    deserialize: (bson) =>
+                    {
+                        var values = bson.AsArray.Select(x => x.ToString()).ToArray();
+                        var vectors = values.Select(v =>
                         {
-                            string trimmed = v.Trim().Substring(2, v.Length - 4);
-                            float[] values = trimmed.Trim().Split(',').Select(x => float.Parse(x)).ToArray();
+                            var trimmed = v.Trim().Substring(2, v.Length - 4);
+                            var values = trimmed.Trim().Split(',').Select(x => float.Parse(x)).ToArray();
                             return new Vector3(values[0], values[1], values[2]);
                         }).ToArray();
 
                         return vectors;
                     }
                 );
-            } catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 Plugin.Log.Error(ex.ToString());
             }
@@ -71,11 +73,11 @@ namespace Racingway.Utils
             routeCollection.EnsureIndex(r => r.Triggers);
             routeCollection.EnsureIndex(r => r.Address);
 
-            BsonMapper.Global.RegisterType<Address>(
+            BsonMapper.Global.RegisterType(
                 serialize: (address) => address.GetSerialized(),
                 deserialize: (bson) =>
                 {
-                    Address newAddress = new Address(
+                    var newAddress = new Address(
                         uint.Parse(bson["territoryId"]),
                         uint.Parse(bson["mapId"]),
                         bson["locationId"],
@@ -92,12 +94,12 @@ namespace Racingway.Utils
                 {
                     try
                     {
-                        Address address = BsonMapper.Global.Deserialize<Address>(bson["address"]);
-                        Route newRoute = new Route(bson["name"], address, bson["description"], new(), new(), bson["allowMounts"], bson["enabled"], bson["clientFails"], bson["clientFinishes"]);
+                        var address = BsonMapper.Global.Deserialize<Address>(bson["address"]);
+                        var newRoute = new Route(bson["name"], address, bson["description"], new(), new(), bson["allowMounts"], bson["enabled"], bson["clientFails"], bson["clientFinishes"]);
 
                         try
                         {
-                            List<Record> records = BsonMapper.Global.Deserialize<List<Record>>(bson["records"]);
+                            var records = BsonMapper.Global.Deserialize<List<Record>>(bson["records"]);
                             newRoute.Records = records;
                             newRoute.Records.Sort((a, b) => a.Time.CompareTo(b.Time));
                         }
@@ -109,12 +111,12 @@ namespace Racingway.Utils
                         //newRoute.AllowMounts = bson["allowMounts"];
                         //newRoute.Enabled = bson["enabled"];
 
-                        BsonArray arrayOfTriggers = (BsonArray)bson["triggers"];
+                        var arrayOfTriggers = (BsonArray)bson["triggers"];
                         foreach (var trigger in arrayOfTriggers)
                         {
-                            BsonArray cubeArray = (BsonArray)trigger["Cube"];
+                            var cubeArray = (BsonArray)trigger["Cube"];
                             string type = trigger["Type"];
-                            Cube cube = new Cube(
+                            var cube = new Cube(
                                 new Vector3(float.Parse(cubeArray[0]), float.Parse(cubeArray[1]), float.Parse(cubeArray[2])),
                                 new Vector3(float.Parse(cubeArray[3]), float.Parse(cubeArray[4]), float.Parse(cubeArray[5])),
                                 new Vector3(float.Parse(cubeArray[6]), float.Parse(cubeArray[7]), float.Parse(cubeArray[8])));
@@ -141,7 +143,8 @@ namespace Racingway.Utils
                         newRoute.Id = bson["_id"];
 
                         return newRoute;
-                    } catch (Exception e)
+                    }
+                    catch (Exception e)
                     {
                         Plugin.Log.Error(e.ToString());
                     }
@@ -180,7 +183,7 @@ namespace Racingway.Utils
 
         private Record? GetBestRecord(Route route)
         {
-            List<Record> routeRecords = GetRecords().Query().Where(r => r.RouteId == route.Id.ToString()).ToList();
+            var routeRecords = GetRecords().Query().Where(r => r.RouteId == route.Id.ToString()).ToList();
 
             if (routeRecords.Count > 0)
             {
@@ -192,9 +195,9 @@ namespace Racingway.Utils
 
         internal void UpdateRouteCache()
         {
-            List<Route> routes = GetRoutes().Query().ToList();
+            var routes = GetRoutes().Query().ToList();
 
-            foreach (Route route in routes)
+            foreach (var route in routes)
             {
                 if (route.Records == null)
                 {
@@ -202,19 +205,20 @@ namespace Racingway.Utils
                 }
 
                 // Get the best time for this record
-                Record record = GetBestRecord(route);
+                var record = GetBestRecord(route);
                 if (record != null) route.BestRecord = record;
 
                 if (RouteCache.ContainsKey(route.Id.ToString()))
                 {
                     RouteCache[route.Id.ToString()] = route;
-                } else
+                }
+                else
                 {
                     RouteCache.Add(route.Id.ToString(), route);
                 }
             }
 
-            foreach (Route route in RouteCache.Values)
+            foreach (var route in RouteCache.Values)
             {
                 if (!routes.Contains(route)) RouteCache.Remove(route.Id.ToString());
             }
@@ -222,12 +226,14 @@ namespace Racingway.Utils
 
         internal async Task AddRoute(Route route)
         {
-            await WriteToDatabase(() => {
+            await WriteToDatabase(() =>
+            {
                 if (!GetRoutes().Update(route))
                 {
                     UpdateRouteCache();
                     return GetRoutes().Insert(route);
-                } else
+                }
+                else
                 {
                     UpdateRouteCache();
                     return true;
@@ -241,8 +247,8 @@ namespace Racingway.Utils
             {
                 var Json = Compression.FromCompressedBase64(data);
 
-                BsonValue bson = JsonSerializer.Deserialize(Json);
-                Route route = BsonMapper.Global.Deserialize<Route>(bson);
+                var bson = JsonSerializer.Deserialize(Json);
+                var route = BsonMapper.Global.Deserialize<Route>(bson);
 
                 route.Records = new List<Record>();
 
@@ -271,7 +277,8 @@ namespace Racingway.Utils
             {
                 await dbLock.WaitAsync();
                 action.Invoke();
-            } finally
+            }
+            finally
             {
                 dbLock.Release();
             }
@@ -280,18 +287,18 @@ namespace Racingway.Utils
         // Grabbed from https://stackoverflow.com/a/14488941
         static readonly string[] SizeSuffixes = { "bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB" };
 
-        static string SizeSuffix(Int64 value, int decimalPlaces = 1)
+        static string SizeSuffix(long value, int decimalPlaces = 1)
         {
             if (decimalPlaces < 0) { throw new ArgumentOutOfRangeException("decimalPlaces"); }
             if (value < 0) { return "-" + SizeSuffix(-value, decimalPlaces); }
             if (value == 0) { return string.Format("{0:n" + decimalPlaces + "} bytes", 0); }
 
             // mag is 0 for bytes, 1 for KB, 2, for MB, etc.
-            int mag = (int)Math.Log(value, 1024);
+            var mag = (int)Math.Log(value, 1024);
 
             // 1L << (mag * 10) == 2 ^ (10 * mag) 
             // [i.e. the number of bytes in the unit corresponding to mag]
-            decimal adjustedSize = (decimal)value / (1L << (mag * 10));
+            var adjustedSize = (decimal)value / (1L << mag * 10);
 
             // make adjustment when the value is large enough that
             // it would round up to 1000 or more
@@ -309,7 +316,7 @@ namespace Racingway.Utils
         // Return the size of the db file in a string format
         public string GetFileSizeString()
         {
-            FileInfo fi = new FileInfo(dbPath);
+            var fi = new FileInfo(dbPath);
 
             if (fi.Exists)
             {
