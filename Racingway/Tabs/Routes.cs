@@ -160,7 +160,7 @@ namespace Racingway.Tabs
             }
 
             string name = selectedRoute.Name;
-            if (ImGui.InputText("Name", ref name, 64))
+            if (ImGui.InputText("Name", ref name, 64) && name != selectedRoute.Name)
             {
                 // Something
                 if (name == string.Empty) return;
@@ -169,7 +169,7 @@ namespace Racingway.Tabs
             }
 
             string description = selectedRoute.Description;
-            if (ImGui.InputText("Description", ref description, 256))
+            if (ImGui.InputText("Description", ref description, 256) && description != selectedRoute.Description)
             {
                 selectedRoute.Description = description;
                 updateRoute(selectedRoute);

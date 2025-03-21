@@ -223,7 +223,6 @@ namespace Racingway.Tabs
 
                                             if (index != -1)
                                             {
-                                                Plugin.ChatGui.Print("Deleted?");
                                                 Plugin.LoadedRoutes.RemoveAt(index);
                                             }
 
