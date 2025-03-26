@@ -314,18 +314,7 @@ namespace Racingway.Tabs
         {
             var agent = AgentMap.Instance();
 
-            if (agent->IsFlagMarkerSet)
-            {
-                var flag = agent->FlagMapMarker;
-                flag.TerritoryId = territoryId;
-                flag.MapId = mapId;
-                flag.YFloat = position.Y;
-                flag.XFloat = position.X;
-            } else
-            {
-                agent->SetFlagMapMarker(territoryId, mapId, position);
-            }
-
+            agent->SetFlagMapMarker(territoryId, mapId, position);
             agent->OpenMap(mapId, territoryId, title);
         }
     }
