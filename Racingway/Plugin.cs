@@ -141,7 +141,8 @@ public sealed class Plugin : IDalamudPlugin
             TimerWindow.IsOpen = true;
         } else
         {
-            TimerWindow.IsOpen = false;
+            if (!(Configuration.ShowWhenInParkour && LocalTimer.IsRunning))
+                TimerWindow.IsOpen = false;
         }
 
         if (Configuration.DrawRacingLines || Configuration.DrawTriggers || DisplayedRecord != null)
@@ -386,9 +387,19 @@ public sealed class Plugin : IDalamudPlugin
     {
         if (e.id == ClientState.LocalPlayer.EntityId)
         {
-            LocalTimer.Reset();
-            LocalTimer.Start();
+            LocalTimer.Restart();
+
+            // Display Timer
+            if (Configuration.ShowWhenInParkour && !TimerWindow.IsOpen)
+            {
+                TimerWindow.IsOpen = true;
+            }
         }
+
+        Route? route = sender as Route;
+
+        if (Configuration.LogStart)
+            PayloadedChat((IPlayerCharacter)e.actor, $" just started {route.Name}");
     }
 
     // Triggered whenever a player finished any loaded route
@@ -399,6 +410,7 @@ public sealed class Plugin : IDalamudPlugin
             if (localPlayer != null && e.Item1.actor.EntityId == localPlayer.EntityId)
             {
                 LocalTimer.Stop();
+                HideTimer();
             }
 
             var prettyPrint = Time.PrettyFormatTimeSpan(e.Item2.Time);
@@ -434,27 +446,50 @@ public sealed class Plugin : IDalamudPlugin
     // Triggered when a player fails any loaded route
     private void OnFailed(object? sender, Player e)
     {
+        Route? route = sender as Route;
+        if (route == null) return;
+
         if (localPlayer != null && e.actor.EntityId == localPlayer.EntityId)
         {
-            Route? route = sender as Route;
-            if (route != null)
-            {
-                route.ClientFails++;
-
-                DataQueue.QueueDataOperation(async () =>
-                {
-                    Storage.RouteCache[route.Id.ToString()].ClientFails = route.ClientFails;
-                    await Storage.AddRoute(route);
-                });
-            }
-
             LocalTimer.Reset();
+            HideTimer();
+
+            route.ClientFails++;
+
+            DataQueue.QueueDataOperation(async () =>
+            {
+                Storage.RouteCache[route.Id.ToString()].ClientFails = route.ClientFails;
+                await Storage.AddRoute(route);
+            });
         }
+
+        //int index = route.PlayersInParkour.FindIndex(x => x.Item1 == e);
+        //if (index == -1) return; // return if player is not in parkour
+
+        //e.inParkour = false;
+
+        //route.PlayersInParkour.RemoveAt(index);
+        //e.raceLine.Clear();
+        //e.timer.Reset();
 
         if (Configuration.LogFails)
         {
             PayloadedChat((IPlayerCharacter)e.actor, " just failed the parkour.");
         }
+    }
+
+    private void HideTimer()
+    {
+        if (Configuration.DrawTimer) return;
+        if (!Configuration.ShowWhenInParkour) return;
+        if (!TimerWindow.IsOpen) return;
+
+        // Disable after set time
+        Task.Delay(Configuration.SecondsShownAfter * 1000).ContinueWith(_ =>
+        {
+            if (LocalTimer.IsRunning) return; // Dont disable if we're back in parkour.
+            TimerWindow.IsOpen = false;
+        });
     }
 
     public void AddRoute(Route route)

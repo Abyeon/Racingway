@@ -57,17 +57,17 @@ namespace Racingway.Race.Collision.Triggers
             if (player.isGrounded)
             {
                 Color = ActiveColor;
-                int index = Route.PlayersInParkour.FindIndex(x => x.Item1 == player);
 
-                if (index == -1) return;
+                Route.Failed(player);
 
-                if (player.inParkour) Route.Failed(player);
+                //int index = Route.PlayersInParkour.FindIndex(x => x.Item1 == player);
+                //if (index == -1) return; // return if player is not in parkour
 
-                player.inParkour = false;
+                //player.inParkour = false;
 
-                Route.PlayersInParkour.RemoveAt(index);
-                player.raceLine.Clear();
-                player.timer.Reset();
+                //Route.PlayersInParkour.RemoveAt(index);
+                //player.raceLine.Clear();
+                //player.timer.Reset();
             }
         }
 

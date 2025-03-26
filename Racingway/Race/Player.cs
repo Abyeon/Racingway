@@ -82,7 +82,7 @@ namespace Racingway.Race
                 }
             }
 
-            UpdateState();
+            //UpdateState();
             Plugin.CheckCollision(this);
         }
 
