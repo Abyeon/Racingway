@@ -446,23 +446,31 @@ public sealed class Plugin : IDalamudPlugin
     // Triggered when a player fails any loaded route
     private void OnFailed(object? sender, Player e)
     {
+        Route? route = sender as Route;
+        if (route == null) return;
+
         if (localPlayer != null && e.actor.EntityId == localPlayer.EntityId)
         {
-            Route? route = sender as Route;
-            if (route != null)
-            {
-                route.ClientFails++;
-
-                DataQueue.QueueDataOperation(async () =>
-                {
-                    Storage.RouteCache[route.Id.ToString()].ClientFails = route.ClientFails;
-                    await Storage.AddRoute(route);
-                });
-            }
-
             LocalTimer.Reset();
             HideTimer();
+
+            route.ClientFails++;
+
+            DataQueue.QueueDataOperation(async () =>
+            {
+                Storage.RouteCache[route.Id.ToString()].ClientFails = route.ClientFails;
+                await Storage.AddRoute(route);
+            });
         }
+
+        //int index = route.PlayersInParkour.FindIndex(x => x.Item1 == e);
+        //if (index == -1) return; // return if player is not in parkour
+
+        //e.inParkour = false;
+
+        //route.PlayersInParkour.RemoveAt(index);
+        //e.raceLine.Clear();
+        //e.timer.Reset();
 
         if (Configuration.LogFails)
         {
@@ -472,6 +480,7 @@ public sealed class Plugin : IDalamudPlugin
 
     private void HideTimer()
     {
+        if (Configuration.DrawTimer) return;
         if (!Configuration.ShowWhenInParkour) return;
         if (!TimerWindow.IsOpen) return;
 

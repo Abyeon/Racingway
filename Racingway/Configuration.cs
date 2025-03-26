@@ -34,7 +34,7 @@ public class Configuration : IPluginConfiguration
 
     // Timer Behavior
     public bool ShowWhenInParkour { get; set; } = true;
-    public int SecondsShownAfter { get; set; } = 10;
+    public int SecondsShownAfter { get; set; } = 2;
 
     // Chat output
     public bool LogStart { get; set; } = false;

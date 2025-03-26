@@ -45,6 +45,7 @@ namespace Racingway.Race.Collision.Triggers
 
             Route.Failed(player);
             player.inParkour = false;
+            player.timer.Reset();
 
             player.raceLine.Clear();
             Route.PlayersInParkour.RemoveAt(index);

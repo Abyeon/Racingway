@@ -93,6 +93,15 @@ namespace Racingway.Windows
                     }
                 }
             }
+
+#if DEBUG
+            // Debug info
+            foreach (var actor in Plugin.trackedPlayers.Values)
+            {
+                draw.DrawText3d("Grounded: " + actor.isGrounded.ToString(), actor.position, 0xFFFFFFFF);
+                draw.DrawText3d("In Mount: " + actor.inMount.ToString(), actor.position + new Vector3(0, 0.5f, 0), 0xFFFFFFFF);
+            }
+#endif
         }
     }
 }

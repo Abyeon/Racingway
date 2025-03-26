@@ -178,7 +178,7 @@ namespace Racingway.Tabs
                                         var start = route.Triggers.FirstOrDefault(t => t.GetType() == typeof(Start), null);
                                         if (start != null)
                                         {
-                                            SetFlagMarkerPosition(start.Cube.Position, route.Address.TerritoryId, route.Address.MapId);
+                                            SetFlagMarkerPosition(start.Cube.Position, route.Address.TerritoryId, route.Address.MapId, route.Name);
                                         } else
                                         {
                                             Plugin.ChatGui.PrintError("[RACE] There appears to be no start trigger in this route.");
@@ -310,12 +310,23 @@ namespace Racingway.Tabs
             }
         }
 
-        public unsafe void SetFlagMarkerPosition(Vector3 position, uint territoryId, uint mapId)
+        public unsafe void SetFlagMarkerPosition(Vector3 position, uint territoryId, uint mapId, string title)
         {
             var agent = AgentMap.Instance();
 
-            agent->SetFlagMapMarker(territoryId, mapId, position);
-            agent->OpenMap(mapId);
+            if (agent->IsFlagMarkerSet)
+            {
+                var flag = agent->FlagMapMarker;
+                flag.TerritoryId = territoryId;
+                flag.MapId = mapId;
+                flag.YFloat = position.Y;
+                flag.XFloat = position.X;
+            } else
+            {
+                agent->SetFlagMapMarker(territoryId, mapId, position);
+            }
+
+            agent->OpenMap(mapId, territoryId, title);
         }
     }
 }
