@@ -60,7 +60,7 @@ namespace Racingway.Tabs
                         selectedSearch = Search.None;
                     }
 
-                    if (ImGui.Selectable("Loaded Routes", selectedSearch == Search.Loaded))
+                    if (ImGui.Selectable("Loaded Routes (" + Plugin.LoadedRoutes.Count.ToString() + ")", selectedSearch == Search.Loaded))
                     {
                         selectedSearch = Search.Loaded;
                     }
@@ -84,33 +84,6 @@ namespace Racingway.Tabs
                     ImGui.SameLine();
                     if (ImGui.Button("Import Route"))
                     {
-                        //try
-                        //{
-                        //    string data = ImGui.GetClipboardText();
-                        //    var Json = Compression.FromCompressedBase64(data);
-
-                        //    BsonValue bson = JsonSerializer.Deserialize(Json);
-                        //    Route route = BsonMapper.Global.Deserialize<Route>(bson);
-
-                        //    route.Records = new List<Record>();
-
-                        //    bool hasRoute = Plugin.Storage.RouteCache.ContainsKey(route.Id.ToString());
-
-                        //    if (!hasRoute)
-                        //    {
-                        //        Plugin.AddRoute(route);
-                        //        Plugin.ChatGui.Print($"[RACE] Added {route.Name} to routes.");
-                        //    } else
-                        //    {
-                        //        Plugin.ChatGui.PrintError("[RACE] Route already saved!");
-                        //    }
-                        //}
-                        //catch (Exception ex)
-                        //{
-                        //    Plugin.ChatGui.PrintError($"[RACE] Failed to import setup. {ex.Message}");
-                        //    Plugin.Log.Error(ex, "Failed to import setup");
-                        //}
-
                         string data = ImGui.GetClipboardText();
                         _ = Plugin.Storage.ImportFromBase64(data);
                     }
