@@ -47,7 +47,7 @@ namespace Racingway.Tabs
             {
                 if (tree.Success)
                 {
-                    foreach (Route route in Plugin.Storage.GetRoutes().Query().Where(x => x.Address.LocationId == Plugin.CurrentAddress.LocationId).ToList())
+                    foreach (Route route in Plugin.LoadedRoutes)
                     {
                         id++;
                         if (ImGui.Selectable($"{route.Name}##{id}", route.Id == Plugin.SelectedRoute))
@@ -65,13 +65,6 @@ namespace Racingway.Tabs
 
             Route? selectedRoute = Plugin.LoadedRoutes.FirstOrDefault(x => x.Id == Plugin.SelectedRoute, new Route(string.Empty, Plugin.CurrentAddress, string.Empty, new List<ITrigger>(), new List<Record>()));
 
-            if (ImGui.Button("Create New Route"))
-            {
-                selectedRoute = new Route("New Route", Plugin.CurrentAddress, string.Empty, new List<ITrigger>(), new List<Record>());
-                updateRoute(selectedRoute);
-            }
-
-            ImGui.SameLine();
             if (ImGuiComponents.IconButton(Dalamud.Interface.FontAwesomeIcon.FileImport))
             {
                 string data = ImGui.GetClipboardText();
@@ -102,49 +95,6 @@ namespace Racingway.Tabs
             if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
             {
                 ImGui.SetTooltip("Export config to clipboard.");
-            }
-
-            //ImGui.SameLine();
-            //if (ImGuiComponents.IconButton(Dalamud.Interface.FontAwesomeIcon.Save))
-            //{
-            //    Route routeWithSameName = Plugin.Storage.GetRoutes().FindOne(x => x.Name == selectedRoute.Name);
-
-            //    if (selectedRoute.Name == string.Empty)
-            //    {
-            //        Plugin.ChatGui.PrintError("[RACE] Cannot save a route without a name.");
-            //        return;
-            //    } else if (selectedRoute.Id != routeWithSameName.Id)
-            //    {
-            //        Plugin.ChatGui.PrintError("[RACE] Cannot save a route with the same name as another.");
-            //        return;
-            //    } else if (selectedRoute == null)
-            //    {
-            //        Plugin.ChatGui.PrintError("[RACE] Cannot save an empty route.. How did we get here?");
-            //    }
-
-            //    //string text = Compression.ToCompressedBase64(Plugin.Configuration.SelectedRoute);
-            //    //Plugin.Configuration.CompressedRoutes.Add(text);
-            //    updateRoute(selectedRoute);
-            //}
-            //if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-            //{
-            //    ImGui.SetTooltip("Save route to config.");
-            //}
-
-            ImGui.SameLine();
-            if (ImGuiComponents.IconButton(Dalamud.Interface.FontAwesomeIcon.Trash))
-            {
-                Plugin.LoadedRoutes.Remove(selectedRoute);
-
-                Plugin.Storage.GetRoutes().Delete(selectedRoute.Id);
-                Plugin.Storage.UpdateRouteCache();
-
-                Plugin.SelectedRoute = Plugin.LoadedRoutes.Count == 0 ? null : Plugin.LoadedRoutes[0].Id;
-                selectedRoute = Plugin.LoadedRoutes.Count == 0 ? null : Plugin.LoadedRoutes[0];
-            }
-            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-            {
-                ImGui.SetTooltip("Delete route. (IRREVERSIBLE)");
             }
 
             ImGui.SameLine();

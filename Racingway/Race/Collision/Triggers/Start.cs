@@ -60,14 +60,14 @@ namespace Racingway.Race.Collision.Triggers
 
                 Route.Failed(player);
 
-                //int index = Route.PlayersInParkour.FindIndex(x => x.Item1 == player);
-                //if (index == -1) return; // return if player is not in parkour
+                int index = Route.PlayersInParkour.FindIndex(x => x.Item1 == player);
+                if (index == -1) return; // return if player is not in parkour
 
-                //player.inParkour = false;
+                player.inParkour = false;
 
-                //Route.PlayersInParkour.RemoveAt(index);
-                //player.raceLine.Clear();
-                //player.timer.Reset();
+                Route.PlayersInParkour.RemoveAt(index);
+                player.raceLine.Clear();
+                player.timer.Reset();
             }
         }
 
