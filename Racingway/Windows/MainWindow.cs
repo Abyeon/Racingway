@@ -1,19 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.Net.NetworkInformation;
 using System.Numerics;
-using Dalamud.Interface.Colors;
-using Dalamud.Interface.Components;
-using Dalamud.Interface.Internal;
-using Dalamud.Interface.Utility;
+using System.Reflection.Emit;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
-using Dalamud.Plugin.Services;
 using ImGuiNET;
-using ImGuizmoNET;
-using Newtonsoft.Json;
 using Racingway.Tabs;
-using Racingway.Utils;
 
 namespace Racingway.Windows;
 
@@ -50,16 +42,30 @@ public class MainWindow : Window, IDisposable
         }
     }
 
+    private string? SelectedTab { get; set; }
+
+    public void SelectTab(string label)
+    {
+        SelectedTab = label;
+    }
+
+    // Thanks to Asriel:
+    //https://github.com/WorkingRobot/Waitingway/blob/5b97266c2f68f8a6f38d19e1d9a0337973254264/Waitingway/Windows/Settings.cs#L75
+    private ImRaii.IEndObject TabItem(string label)
+    {
+        var isSelected = string.Equals(SelectedTab, label, StringComparison.Ordinal);
+        if (isSelected)
+        {
+            SelectedTab = null;
+            var open = true;
+            return ImRaii.TabItem(label, ref open, ImGuiTabItemFlags.SetSelected);
+        }
+        return ImRaii.TabItem(label);
+    }
+
     public override void Draw()
     {
         if (Plugin.ClientState == null) return;
-
-        //using (_ = ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.DalamudYellow))
-        //{
-        //    ImGui.TextWrapped("WARNING: It is likely that the way things are saved WILL change." +
-        //        " Meaning that your saved routes and records will be deleted in the future." +
-        //        " If you would like to import a route in the future, save the information via screenshots or otherwise!");
-        //}
 
         using (var tabBar = ImRaii.TabBar("##race-tabs", ImGuiTabBarFlags.None))
         {
@@ -68,11 +74,37 @@ public class MainWindow : Window, IDisposable
                 for (var i = 0; i < Tabs.Count; i++)
                 {
                     var tab = Tabs[i];
+                    
+                    //var isSelected = string.Equals(SelectedTab, tab.Name, StringComparison.Ordinal);
+                    //if (isSelected)
+                    //{
+                    //    SelectedTab = null;
+                    //    var open = true;
+                    //    ImGui.BeginTabItem(tab.Name, ref open, ImGuiTabItemFlags.SetSelected);
+                    //} else
+                    //{
+                    //    ImGui.BeginTabItem(tab.Name);
+                    //}
 
-                    using (var child = ImRaii.TabItem(tab.Name))
+                    //// Doing this so that if a tab requires a scrollbar, the tabbar stays on top.
+                    //using (var tabChild = ImRaii.Child($"###{tab.Name}-child"))
+                    //{
+                    //    if (!tabChild.Success) continue;
+                    //    tab.Draw();
+                    //}
+
+                    //ImGui.EndTabItem();
+
+                    using (var child = TabItem(tab.Name))
                     {
                         if (!child.Success) continue;
-                        tab.Draw();
+
+                        // Doing this so that if a tab requires a scrollbar, the tabbar stays on top.
+                        using (var tabChild = ImRaii.Child($"###{tab.Name}-child"))
+                        {
+                            if (!tabChild.Success) continue;
+                            tab.Draw();
+                        }
                     }
                 }
             }

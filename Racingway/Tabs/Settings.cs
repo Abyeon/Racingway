@@ -123,6 +123,8 @@ namespace Racingway.Tabs
                     Plugin.Configuration.Save();
                 }
 
+                ImGuiComponents.HelpMarker("This will display the timer even if you have it toggled off.", FontAwesomeIcon.ExclamationTriangle);
+
                 int secondsShownAfter = Plugin.Configuration.SecondsShownAfter;
                 if (ImGui.InputInt("Hide Delay", ref secondsShownAfter))
                 {

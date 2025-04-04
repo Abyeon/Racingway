@@ -52,6 +52,7 @@ namespace Racingway.Race
             World = world;
             Time = time;
             Distance = distance;
+            Splits = splits;
             Line = line;
             RouteId = routeId;
             RouteName = routeName;
@@ -59,6 +60,19 @@ namespace Racingway.Race
             RouteHash = routeHash;
             IsClient = isClient;
         }
+
+        /// Optimal output for sharing a route?
+        /// Only need:
+        ///     Name
+        ///     World
+        ///     Date
+        ///     Time
+        ///     Splits
+        ///     Line
+        ///         Can derive distance
+        ///         Can also optimize this to be doubles instead of longs by getting the difference from previous point
+        ///     Hash
+        ///
 
         public string GetCSV()
         {

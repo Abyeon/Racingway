@@ -85,11 +85,36 @@ namespace Racingway.Tabs
                     if (ImGui.Button("Import Route"))
                     {
                         string data = ImGui.GetClipboardText();
-                        _ = Plugin.Storage.ImportFromBase64(data);
+
+                        Plugin.DataQueue.QueueDataOperation(async () =>
+                        {
+                            await Plugin.Storage.ImportRouteFromBase64(data);
+                        });
                     }
                     if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
                     {
                         ImGui.SetTooltip("Import route from clipboard.");
+                    }
+
+                    ImGui.SameLine();
+                    if (ImGui.Button("Import Record"))
+                    {
+                        string data = ImGui.GetClipboardText();
+
+                        Plugin.DataQueue.QueueDataOperation(async () =>
+                        {
+                            try
+                            {
+                                await Plugin.Storage.ImportRecordFromBase64(data);
+                            } catch (Exception ex)
+                            {
+                                Plugin.Log.Error(ex.ToString());
+                            }
+                        });
+                    }
+                    if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                    {
+                        ImGui.SetTooltip("Import record from clipboard, this will automatically get assigned to the route if it exists.");
                     }
 
                     filter.Draw("Filter");
@@ -171,9 +196,17 @@ namespace Racingway.Tabs
                                             Plugin.ChatGui.PrintError("[RACE] Error exporting route to clipboard.");
                                         }
                                     }
-                                    if (ImGui.Selectable("Display Records"))
+
+                                    if (selectedSearch == Search.Loaded) // Hide this button unless it's a loaded route for now
                                     {
-                                        Plugin.ChatGui.Print("[RACE] Not implemented yet.");
+                                        if (ImGui.Selectable("Display Records"))
+                                        {
+                                            if (Plugin.LoadedRoutes.Contains(route))
+                                            {
+                                                Plugin.MainWindow.SelectTab("Records");
+                                                Plugin.SelectedRoute = route.Id;
+                                            }
+                                        }
                                     }
 
                                     if (Plugin.LoadedRoutes.Contains(route) && route.Records.Count > 0)

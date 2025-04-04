@@ -39,7 +39,7 @@ namespace Racingway.Tabs
             {
                 if (tree.Success)
                 {
-                    foreach (Route route in Plugin.Storage.GetRoutes().Query().Where(x => x.Address.LocationId == Plugin.CurrentAddress.LocationId).ToList())
+                    foreach (Route route in Plugin.LoadedRoutes)
                     {
                         id++;
                         if (ImGui.Selectable($"{route.Name}##{id}", route.Id == Plugin.SelectedRoute))
@@ -129,18 +129,22 @@ namespace Racingway.Tabs
                         {
                             case 0: // Date
                                 comparison = record1.Date.CompareTo(record2.Date);
+                                if (comparison == 0) comparison = record1.Time.CompareTo(record2.Time);
                                 break;
                             case 1: // Name
                                 comparison = string.Compare(record1.Name, record2.Name);
+                                if (comparison == 0) comparison = record1.Time.CompareTo(record2.Time);
                                 break;
                             case 2: // World
                                 comparison = string.Compare(record1.World, record2.World);
+                                if (comparison == 0) comparison = record1.Time.CompareTo(record2.Time);
                                 break;
                             case 3: // Time
                                 comparison = record1.Time.CompareTo(record2.Time);
                                 break;
                             case 4: // Distance
                                 comparison = record1.Distance.CompareTo(record2.Distance);
+                                if (comparison == 0) comparison = record1.Time.CompareTo(record2.Time);
                                 break;
                         }
 
@@ -153,8 +157,13 @@ namespace Racingway.Tabs
                         return comparison;
                     });
 
-                    foreach (Record record in cachedRecords)
+                    for (int i = 0; i < cachedRecords.Count; i++)
                     {
+                        Record record = cachedRecords[i];
+
+                        ImGui.PushID(i);
+
+                        // Change color of text if this is the selected record
                         if (Plugin.DisplayedRecord == record)
                         {
                             ImGui.PushStyleColor(ImGuiCol.Text, 0xFFF58742);
@@ -173,6 +182,35 @@ namespace Racingway.Tabs
                             ImGui.SetTooltip("Click to display race line.");
                         }
 
+                        // Right-click menu
+                        using (var popup = ImRaii.ContextPopupItem(i.ToString()))
+                        {
+                            if (popup.Success)
+                            {
+                                if (ImGui.Selectable("Export to Clipboard"))
+                                {
+                                    Plugin.Log.Debug($"{record.Name}: {Time.PrettyFormatTimeSpan(record.Time)}, {record.Distance}");
+
+                                    // update route hash.. because old records probably have a broken hash.. oops!
+                                    record.RouteHash = Plugin.Storage.RouteCache[Plugin.SelectedRoute.ToString()].GetHash();
+
+                                    var doc = BsonMapper.Global.ToDocument(record);
+                                    string json = JsonSerializer.Serialize(doc);
+                                    string text = Compression.ToCompressedBase64(json);
+
+                                    if (text != string.Empty)
+                                    {
+                                        ImGui.SetClipboardText(text);
+                                    }
+                                    else
+                                    {
+                                        Plugin.ChatGui.PrintError("[RACE] Error exporting record to clipboard.");
+                                    }
+                                }
+                            }
+                        }
+
+                        // Draw record info
                         ImGui.TableNextColumn();
                         ImGui.Text(record.Name);
                         ImGui.TableNextColumn();
@@ -182,6 +220,7 @@ namespace Racingway.Tabs
                         ImGui.TableNextColumn();
                         ImGui.Text(record.Distance.ToString());
 
+                        // If the record was selected, display that record
                         if (selected)
                         {
                             if (Plugin.DisplayedRecord == record)
@@ -196,6 +235,7 @@ namespace Racingway.Tabs
                             Plugin.ShowHideOverlay();
                         }
 
+                        ImGui.PopID();
                         ImGui.PopStyleColor();
                     }
                 }

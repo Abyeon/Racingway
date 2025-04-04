@@ -71,7 +71,7 @@ namespace Racingway.Tabs
 
                 Plugin.DataQueue.QueueDataOperation(async () =>
                 {
-                    await Plugin.Storage.ImportFromBase64(data);
+                    await Plugin.Storage.ImportRouteFromBase64(data);
                 });
             }
             if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))

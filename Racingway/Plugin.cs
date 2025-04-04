@@ -46,7 +46,7 @@ public sealed class Plugin : IDalamudPlugin
     public FontManager FontManager { get; init; }
 
     public TriggerOverlay TriggerOverlay { get; init; }
-    private MainWindow MainWindow { get; init; }
+    public MainWindow MainWindow { get; init; }
     public TimerWindow TimerWindow { get; init; }
 
     public List<Route> LoadedRoutes { get; set; } = new();
@@ -318,6 +318,7 @@ public sealed class Plugin : IDalamudPlugin
 
         CurrentAddress = address;
 
+        HideTimer();
         LocalTimer.Reset();
         LoadedRoutes.Clear();
 
