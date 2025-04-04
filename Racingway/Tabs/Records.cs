@@ -39,7 +39,7 @@ namespace Racingway.Tabs
             {
                 if (tree.Success)
                 {
-                    foreach (Route route in Plugin.Storage.GetRoutes().Query().Where(x => x.Address.LocationId == Plugin.CurrentAddress.LocationId).ToList())
+                    foreach (Route route in Plugin.LoadedRoutes)
                     {
                         id++;
                         if (ImGui.Selectable($"{route.Name}##{id}", route.Id == Plugin.SelectedRoute))
@@ -153,8 +153,11 @@ namespace Racingway.Tabs
                         return comparison;
                     });
 
-                    foreach (Record record in cachedRecords)
+                    for (int i = 0; i < cachedRecords.Count; i++)
                     {
+                        Record record = cachedRecords[i];
+
+                        ImGui.PushID(i);
                         if (Plugin.DisplayedRecord == record)
                         {
                             ImGui.PushStyleColor(ImGuiCol.Text, 0xFFF58742);
@@ -171,6 +174,31 @@ namespace Racingway.Tabs
                         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
                         {
                             ImGui.SetTooltip("Click to display race line.");
+                        }
+
+                        using (var popup = ImRaii.ContextPopup(i.ToString()))
+                        {
+                            if (popup.Success)
+                            {
+                                if (ImGui.Selectable("Export to Clipboard"))
+                                {
+                                    // update route hash.. because old records probably have a broken hash.. oops!
+                                    record.RouteHash = Plugin.Storage.RouteCache[Plugin.SelectedRoute.ToString()].GetHash();
+
+                                    var doc = BsonMapper.Global.ToDocument(record);
+                                    string json = JsonSerializer.Serialize(doc);
+                                    string text = Compression.ToCompressedBase64(json);
+
+                                    if (text != string.Empty)
+                                    {
+                                        ImGui.SetClipboardText(text);
+                                    }
+                                    else
+                                    {
+                                        Plugin.ChatGui.PrintError("[RACE] Error exporting record to clipboard.");
+                                    }
+                                }
+                            }
                         }
 
                         ImGui.TableNextColumn();
@@ -196,6 +224,7 @@ namespace Racingway.Tabs
                             Plugin.ShowHideOverlay();
                         }
 
+                        ImGui.PopID();
                         ImGui.PopStyleColor();
                     }
                 }

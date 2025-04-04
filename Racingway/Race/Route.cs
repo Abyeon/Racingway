@@ -126,7 +126,7 @@ namespace Racingway.Race
 
         public string GetHash()
         {
-            string input = JsonSerializer.Serialize(this.GetSerialized());
+            string input = JsonSerializer.Serialize(this.GetEmptySerialized());
             string text = Compression.ToCompressedBase64(input);
             byte[] bytes = Encoding.UTF8.GetBytes(text);
             

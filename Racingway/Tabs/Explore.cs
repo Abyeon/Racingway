@@ -85,11 +85,30 @@ namespace Racingway.Tabs
                     if (ImGui.Button("Import Route"))
                     {
                         string data = ImGui.GetClipboardText();
-                        _ = Plugin.Storage.ImportFromBase64(data);
+
+                        Plugin.DataQueue.QueueDataOperation(async () =>
+                        {
+                            await Plugin.Storage.ImportRouteFromBase64(data);
+                        });
                     }
                     if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
                     {
                         ImGui.SetTooltip("Import route from clipboard.");
+                    }
+
+                    ImGui.SameLine();
+                    if (ImGui.Button("Import Record"))
+                    {
+                        string data = ImGui.GetClipboardText();
+
+                        Plugin.DataQueue.QueueDataOperation(async () =>
+                        {
+                            await Plugin.Storage.ImportRecordFromBase64(data);
+                        });
+                    }
+                    if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                    {
+                        ImGui.SetTooltip("Import record from clipboard, this will automatically get assigned to the route if it exists.");
                     }
 
                     filter.Draw("Filter");

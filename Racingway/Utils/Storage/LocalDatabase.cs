@@ -41,7 +41,7 @@ namespace Racingway.Utils.Storage
             recordCollection.EnsureIndex(r => r.Date);
             recordCollection.EnsureIndex(r => r.Time);
             recordCollection.EnsureIndex(r => r.Distance);
-            recordCollection.EnsureIndex(r => r.Line);
+            //recordCollection.EnsureIndex(r => r.Line);
 
             try
             {
@@ -160,11 +160,11 @@ namespace Racingway.Utils.Storage
             RouteCache.Clear();
         }
 
-        // Making this to save people's legacy routes.
-        internal void ExportRoutesToFile(string Path)
-        {
-            Database.Execute($"select $ into $file({Path}) from {RouteTable}");
-        }
+        //// Making this to save people's legacy routes.
+        //internal void ExportRoutesToFile(string Path)
+        //{
+        //    Database.Execute($"select $ into $file({Path}) from {RouteTable}");
+        //}
 
         internal ILiteCollection<Record> GetRecords()
         {
@@ -181,17 +181,17 @@ namespace Racingway.Utils.Storage
             return Database.GetCollection<Route>(RouteTable);
         }
 
-        private Record? GetBestRecord(Route route)
-        {
-            var routeRecords = GetRecords().Query().Where(r => r.RouteId == route.Id.ToString()).ToList();
+        //private Record? GetBestRecord(Route route)
+        //{
+        //    var routeRecords = GetRecords().Query().Where(r => r.RouteId == route.Id.ToString()).ToList();
 
-            if (routeRecords.Count > 0)
-            {
-                return routeRecords.OrderBy(r => r.Time.TotalNanoseconds).First();
-            }
+        //    if (routeRecords.Count > 0)
+        //    {
+        //        return routeRecords.OrderBy(r => r.Time.TotalNanoseconds).First();
+        //    }
 
-            return null;
-        }
+        //    return null;
+        //}
 
         internal void UpdateRouteCache()
         {
@@ -204,9 +204,9 @@ namespace Racingway.Utils.Storage
                     route.Records = new List<Record>();
                 }
 
-                // Get the best time for this record
-                var record = GetBestRecord(route);
-                if (record != null) route.BestRecord = record;
+                // Get the best time for this record ???? This should never have even worked tbh.
+                //var record = GetBestRecord(route);
+                //if (record != null) route.BestRecord = record;
 
                 if (RouteCache.ContainsKey(route.Id.ToString()))
                 {
@@ -241,7 +241,7 @@ namespace Racingway.Utils.Storage
             });
         }
 
-        internal async Task ImportFromBase64(string data)
+        internal async Task ImportRouteFromBase64(string data)
         {
             try
             {
@@ -268,6 +268,48 @@ namespace Racingway.Utils.Storage
             {
                 Plugin.ChatGui.PrintError($"[RACE] Failed to import route. {ex.Message}");
                 Plugin.Log.Error(ex, "Failed to import route");
+            }
+        }
+
+        internal async Task ImportRecordFromBase64(string data)
+        {
+            try
+            {
+                var Json = Compression.FromCompressedBase64(data);
+
+                var bson = JsonSerializer.Deserialize(Json);
+                var record = BsonMapper.Global.Deserialize<Record>(bson);
+
+                bool hasRoute = Plugin.Storage.RouteCache.ContainsKey(record.RouteId.ToString());
+
+                if (hasRoute)
+                {
+                    var route = Plugin.Storage.RouteCache[record.RouteId];
+                    string hash = route.GetHash();
+
+                    // Check if route matches record's saved hash
+                    if (hash != record.RouteHash)
+                    {
+                        Plugin.Log.Error(hash + " != " + record.RouteHash);
+                        throw new Exception("Saved version of route may not match the one this record was made in.");
+                    }
+
+                    if (!route.Records.Contains(record))
+                    {
+                        route.Records.Add(record);
+                        AddRoute(route);
+                    } else
+                    {
+                        throw new Exception("Route already contains this record.");
+                    }
+                } else
+                {
+                    throw new Exception("Route that record was intended for does not exist.");
+                }
+            } catch (Exception ex)
+            {
+                Plugin.ChatGui.PrintError($"[RACE] Failed to import record. {ex.Message}");
+                Plugin.Log.Error(ex, "Failed to import record");
             }
         }
 
