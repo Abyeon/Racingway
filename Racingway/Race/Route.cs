@@ -1,5 +1,6 @@
 using ImGuiNET;
 using LiteDB;
+using Newtonsoft.Json;
 using Racingway.Race.Collision;
 using Racingway.Race.Collision.Triggers;
 using Racingway.Utils;
@@ -124,9 +125,23 @@ namespace Racingway.Race
             return doc;
         }
 
+        private struct SmallRoute
+        {
+            public SmallRoute(string locationId, ITrigger[] triggers)
+            {
+                LocationId = locationId;
+                Triggers = triggers;
+            }
+
+            public string LocationId;
+            public ITrigger[] Triggers;
+        }
+
         public string GetHash()
         {
-            string input = JsonSerializer.Serialize(this.GetEmptySerialized());
+            SmallRoute smallRoute = new SmallRoute(this.Address.LocationId, this.Triggers.ToArray());
+
+            string input = System.Text.Json.JsonSerializer.Serialize(smallRoute);
             string text = Compression.ToCompressedBase64(input);
             byte[] bytes = Encoding.UTF8.GetBytes(text);
             

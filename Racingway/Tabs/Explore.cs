@@ -103,7 +103,13 @@ namespace Racingway.Tabs
 
                         Plugin.DataQueue.QueueDataOperation(async () =>
                         {
-                            await Plugin.Storage.ImportRecordFromBase64(data);
+                            try
+                            {
+                                await Plugin.Storage.ImportRecordFromBase64(data);
+                            } catch (Exception ex)
+                            {
+                                Plugin.Log.Error(ex.ToString());
+                            }
                         });
                     }
                     if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
@@ -190,9 +196,17 @@ namespace Racingway.Tabs
                                             Plugin.ChatGui.PrintError("[RACE] Error exporting route to clipboard.");
                                         }
                                     }
-                                    if (ImGui.Selectable("Display Records"))
+
+                                    if (selectedSearch == Search.Loaded) // Hide this button unless it's a loaded route for now
                                     {
-                                        Plugin.ChatGui.Print("[RACE] Not implemented yet.");
+                                        if (ImGui.Selectable("Display Records"))
+                                        {
+                                            if (Plugin.LoadedRoutes.Contains(route))
+                                            {
+                                                Plugin.MainWindow.SelectTab("Records");
+                                                Plugin.SelectedRoute = route.Id;
+                                            }
+                                        }
                                     }
 
                                     if (Plugin.LoadedRoutes.Contains(route) && route.Records.Count > 0)

@@ -280,11 +280,13 @@ namespace Racingway.Utils.Storage
                 var bson = JsonSerializer.Deserialize(Json);
                 var record = BsonMapper.Global.Deserialize<Record>(bson);
 
-                bool hasRoute = Plugin.Storage.RouteCache.ContainsKey(record.RouteId.ToString());
+                bool hasRoute = RouteCache.ContainsKey(record.RouteId.ToString());
 
                 if (hasRoute)
                 {
-                    var route = Plugin.Storage.RouteCache[record.RouteId];
+                    //var route1 = GetRoutes().Find(x => x.Id.ToString() == record.RouteId).FirstOrDefault();
+                    var route = RouteCache[record.RouteId];
+                    var records = route.Records;
                     string hash = route.GetHash();
 
                     // Check if route matches record's saved hash
@@ -294,10 +296,12 @@ namespace Racingway.Utils.Storage
                         throw new Exception("Saved version of route may not match the one this record was made in.");
                     }
 
-                    if (!route.Records.Contains(record))
+                    // Incredibly stupid way to check if a duplicate record exists.. Because my LiteDB implementation was flawed from the start! I might burn it all down..
+                    if (!records.Exists(r => r.Name == record.Name && r.World == record.World && r.Time == record.Time))
                     {
                         route.Records.Add(record);
-                        AddRoute(route);
+                        await AddRoute(route);
+                        return;
                     } else
                     {
                         throw new Exception("Route already contains this record.");

@@ -129,18 +129,22 @@ namespace Racingway.Tabs
                         {
                             case 0: // Date
                                 comparison = record1.Date.CompareTo(record2.Date);
+                                if (comparison == 0) comparison = record1.Time.CompareTo(record2.Time);
                                 break;
                             case 1: // Name
                                 comparison = string.Compare(record1.Name, record2.Name);
+                                if (comparison == 0) comparison = record1.Time.CompareTo(record2.Time);
                                 break;
                             case 2: // World
                                 comparison = string.Compare(record1.World, record2.World);
+                                if (comparison == 0) comparison = record1.Time.CompareTo(record2.Time);
                                 break;
                             case 3: // Time
                                 comparison = record1.Time.CompareTo(record2.Time);
                                 break;
                             case 4: // Distance
                                 comparison = record1.Distance.CompareTo(record2.Distance);
+                                if (comparison == 0) comparison = record1.Time.CompareTo(record2.Time);
                                 break;
                         }
 
@@ -158,6 +162,8 @@ namespace Racingway.Tabs
                         Record record = cachedRecords[i];
 
                         ImGui.PushID(i);
+
+                        // Change color of text if this is the selected record
                         if (Plugin.DisplayedRecord == record)
                         {
                             ImGui.PushStyleColor(ImGuiCol.Text, 0xFFF58742);
@@ -176,12 +182,15 @@ namespace Racingway.Tabs
                             ImGui.SetTooltip("Click to display race line.");
                         }
 
-                        using (var popup = ImRaii.ContextPopup(i.ToString()))
+                        // Right-click menu
+                        using (var popup = ImRaii.ContextPopupItem(i.ToString()))
                         {
                             if (popup.Success)
                             {
                                 if (ImGui.Selectable("Export to Clipboard"))
                                 {
+                                    Plugin.Log.Debug($"{record.Name}: {Time.PrettyFormatTimeSpan(record.Time)}, {record.Distance}");
+
                                     // update route hash.. because old records probably have a broken hash.. oops!
                                     record.RouteHash = Plugin.Storage.RouteCache[Plugin.SelectedRoute.ToString()].GetHash();
 
@@ -201,6 +210,7 @@ namespace Racingway.Tabs
                             }
                         }
 
+                        // Draw record info
                         ImGui.TableNextColumn();
                         ImGui.Text(record.Name);
                         ImGui.TableNextColumn();
@@ -210,6 +220,7 @@ namespace Racingway.Tabs
                         ImGui.TableNextColumn();
                         ImGui.Text(record.Distance.ToString());
 
+                        // If the record was selected, display that record
                         if (selected)
                         {
                             if (Plugin.DisplayedRecord == record)
