@@ -89,10 +89,13 @@ namespace Racingway.Windows
                 TimedVector3[] displayedRecordLine = displayedRecord.Line;
 
                 // Resize the array so we only supply the line up till the time offset we want
-                int maxIndex = Array.FindIndex(displayedRecordLine, x => x.Offset >= Plugin.LocalTimer.ElapsedMilliseconds);
-                if (maxIndex > 0)
+                if (Plugin.LocalTimer.IsRunning)
                 {
-                    Array.Resize(ref displayedRecordLine, maxIndex - 1);
+                    int maxIndex = Array.FindIndex(displayedRecordLine, x => x.Offset >= Plugin.LocalTimer.ElapsedMilliseconds);
+                    if (maxIndex > 0)
+                    {
+                        Array.Resize(ref displayedRecordLine, maxIndex - 1);
+                    }
                 }
 
                 selectedStyle.Draw(displayedRecordLine, Plugin.Configuration.HighlightedLineColor.ToByteColor().RGBA, draw);
