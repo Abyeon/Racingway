@@ -14,21 +14,33 @@ using ImGuizmoNET;
 using Racingway.Race;
 using LiteDB;
 using Racingway.Race.Collision.Triggers;
+using Racingway.Race.LineStyles;
+using Dalamud.Utility.Numerics;
 
 
 namespace Racingway.Windows
 {
     public class TriggerOverlay : Window, IDisposable
     {
-        private Plugin Plugin;
+        private Plugin Plugin { get; }
 
         private ImGuiIOPtr Io;
+
+        public List<ILineStyle> LineStyles { get; private set; }
+        public ILineStyle selectedStyle { get; set; }
 
         public TriggerOverlay(Plugin plugin) : base("Trigger Overlay")
         {
             Flags = ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoDocking | ImGuiWindowFlags.NoNavFocus | ImGuiWindowFlags.NoNavInputs | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoInputs;
             
-            Plugin = plugin;
+            this.Plugin = plugin;
+            this.LineStyles = [
+                new Line(plugin),
+                new Dotted(plugin),
+                new DottedLine(plugin)
+            ];
+
+            this.selectedStyle = this.LineStyles.FirstOrDefault(x => x.Name == plugin.Configuration.LineStyle, this.LineStyles[0]);
         }
 
         public void Dispose()
@@ -39,7 +51,7 @@ namespace Racingway.Windows
         public unsafe override void Draw()
         {
             ImGuiHelpers.SetWindowPosRelativeMainViewport("Trigger Overlay", new Vector2(0, 0));
-            
+
             ImDrawListPtr drawList = ImGui.GetWindowDrawList();
             DrawHelper draw = new DrawHelper(drawList);
 
@@ -66,12 +78,7 @@ namespace Racingway.Windows
                 {
                     TimedVector3[] raceLine = actor.raceLine.ToArray();
 
-                    for (var i = 1; i < raceLine.Length; i++)
-                    {
-                        if (raceLine[i - 1].asVector() == Vector3.Zero) continue;
-
-                        draw.DrawLine3d(raceLine[i - 1].asVector(), raceLine[i].asVector(), 0x55FFFFFF, 2.0f);
-                    }
+                    selectedStyle.Draw(raceLine, Plugin.Configuration.LineColor.ToByteColor().RGBA, draw);
                 }
             }
 
@@ -81,17 +88,17 @@ namespace Racingway.Windows
                 Record displayedRecord = Plugin.DisplayedRecord;
                 TimedVector3[] displayedRecordLine = displayedRecord.Line;
 
-                for (var i = 1; i < displayedRecordLine.Length; i++)
+                // Resize the array so we only supply the line up till the time offset we want
+                if (Plugin.LocalTimer.IsRunning)
                 {
-                    if (displayedRecordLine[i - 1].asVector() == Vector3.Zero) continue;
-
-                    // This allows for realtime ghost playback of player records
-                    if (!Plugin.LocalTimer.IsRunning || Plugin.LocalTimer.ElapsedMilliseconds >= displayedRecordLine[i].Offset)
+                    int maxIndex = Array.FindIndex(displayedRecordLine, x => x.Offset >= Plugin.LocalTimer.ElapsedMilliseconds);
+                    if (maxIndex > 0)
                     {
-                        //Plugin.Log.Debug(Plugin.LocalTimer.ElapsedMilliseconds.ToString());
-                        draw.DrawLine3d(displayedRecordLine[i - 1].asVector(), displayedRecordLine[i].asVector(), 0x55FFCCFF, 2.0f);
+                        Array.Resize(ref displayedRecordLine, maxIndex - 1);
                     }
                 }
+
+                selectedStyle.Draw(displayedRecordLine, Plugin.Configuration.HighlightedLineColor.ToByteColor().RGBA, draw);
             }
         }
     }

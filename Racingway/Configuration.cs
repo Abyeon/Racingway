@@ -3,6 +3,7 @@ using Dalamud.Interface.FontIdentifier;
 using Dalamud.Plugin;
 using Racingway.Race;
 using Racingway.Race.Collision;
+using Racingway.Tabs;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -41,9 +42,16 @@ public class Configuration : IPluginConfiguration
     public bool LogFails { get; set; } = false;
     public bool LogFinish { get; set; } = true;
 
+    // Line Style
+    public int LineQuality { get; set; } = 5;
+    public string LineStyle { get; set; } = "Line";
+    public float DotSize { get; set; } = 3.0f;
+    public float LineThickness { get; set; } = 2.0f;
+    public Vector4 LineColor { get; set; } = new Vector4(1f, 1f, 1f, 0.33f); // 0x55FFFFFF hopefully
+    public Vector4 HighlightedLineColor { get; set; } = new Vector4(1f, 0.8f, 1f, 0.33f); // 0x55FFCCFF hopefully
+
     // Misc Settings
     public bool TrackOthers { get; set; } = true;
-    public int LineQuality { get; set; } = 10;
 
     public void Save()
     {

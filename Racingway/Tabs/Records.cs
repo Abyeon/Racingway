@@ -207,6 +207,18 @@ namespace Racingway.Tabs
                                         Plugin.ChatGui.PrintError("[RACE] Error exporting record to clipboard.");
                                     }
                                 }
+
+                                if (ImGui.Selectable("Delete"))
+                                {
+                                    Plugin.DataQueue.QueueDataOperation(async () =>
+                                    {
+                                        Route route = Plugin.Storage.RouteCache[Plugin.SelectedRoute.ToString()];
+                                        route.Records.Remove(record);
+
+                                        Plugin.Storage.RouteCache[route.Id.ToString()] = route;
+                                        await Plugin.Storage.AddRoute(route);
+                                    });
+                                }
                             }
                         }
 

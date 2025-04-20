@@ -1,19 +1,15 @@
 using Dalamud.Interface;
-using Dalamud.Interface.Animation;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.FontIdentifier;
 using Dalamud.Interface.ImGuiFontChooserDialog;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using ImGuiNET;
+using Racingway.Race.LineStyles;
+using Racingway.Windows;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Racingway.Tabs
 {
@@ -45,8 +41,8 @@ namespace Racingway.Tabs
 
         public void Draw()
         {
-            //ImGui.Separator();
             ImGui.TextColored(ImGuiColors.DalamudOrange, "Display Toggles");
+            #region Display Toggles
             ImGui.Dummy(spacing);
 
             if (ImGui.Button($"{(Plugin.Configuration.DrawTriggers ? "Disable" : "Enable")} Triggers Display"))
@@ -69,19 +65,24 @@ namespace Racingway.Tabs
                 Plugin.Configuration.Save();
                 Plugin.ShowHideOverlay();
             }
+            #endregion
 
             SectionSeparator("Timer Style");
+            #region Timer Style
 
             if (ImGui.Button("Change Font"))
             {
                 DisplayFontSelector();
             }
 
-            var size = Plugin.Configuration.TimerSize;
-            if (ImGui.DragFloat("Font Size", ref size, 0.01f, 1f, 20f))
+            using (_ = ImRaii.ItemWidth(200f))
             {
-                Plugin.Configuration.TimerSize = size;
-                Plugin.Configuration.Save();
+                var size = Plugin.Configuration.TimerSize;
+                if (ImGui.DragFloat("Font Size", ref size, 0.01f, 1f, 20f))
+                {
+                    Plugin.Configuration.TimerSize = size;
+                    Plugin.Configuration.Save();
+                }
             }
 
             var bgColor = Plugin.Configuration.TimerColor;
@@ -136,8 +137,10 @@ namespace Racingway.Tabs
 
                 ImGuiComponents.HelpMarker("Delay the timer window being hidden by x seconds.");
             }
+            #endregion
 
             SectionSeparator("Chat Output");
+            #region Chat Output
 
             bool announceRoutes = Plugin.Configuration.AnnounceLoadedRoutes;
             if (ImGui.Checkbox("Announce Loaded Routes in Chat", ref announceRoutes))
@@ -170,20 +173,82 @@ namespace Racingway.Tabs
                 Plugin.Configuration.LogFinish = logFinish;
                 Plugin.Configuration.Save();
             }
+            #endregion
+
+            SectionSeparator("Line Style");
+            #region Line Style
+
+            using (_ = ImRaii.ItemWidth(200f))
+            {
+                int quality = Plugin.Configuration.LineQuality;
+                if (ImGui.DragInt("Line Quality", ref quality, 0.05f, 1, 50))
+                {
+                    Plugin.Configuration.LineQuality = quality;
+                    Plugin.Configuration.Save();
+                }
+
+                ImGuiComponents.HelpMarker("How many frames between line points. 1 line quality = 1 point per frame.");
+
+                // Combo box for selecting the desired line style
+                using (var child = ImRaii.Combo("Line Style", Plugin.Configuration.LineStyle))
+                {
+                    if (child.Success)
+                    {
+                        foreach (ILineStyle style in Plugin.TriggerOverlay.LineStyles)
+                        {
+                            if (ImGui.Selectable(style.Name))
+                            {
+                                Plugin.Configuration.LineStyle = style.Name;
+                                Plugin.TriggerOverlay.selectedStyle = style;
+
+                                Plugin.Configuration.Save();
+                            }
+
+                            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                            {
+                                ImGui.SetTooltip(style.Description);
+                            }
+                        }
+                    }
+                }
+
+                float dotSize = Plugin.Configuration.DotSize;
+                if (ImGui.DragFloat("Dot Size", ref dotSize, 0.05f, 1f, 10f))
+                {
+                    Plugin.Configuration.DotSize = dotSize;
+                    Plugin.Configuration.Save();
+                }
+
+                float lineThickness = Plugin.Configuration.LineThickness;
+                if (ImGui.DragFloat("Line Thickness", ref lineThickness, 0.05f, 1f, 10f))
+                {
+                    Plugin.Configuration.LineThickness = lineThickness;
+                    Plugin.Configuration.Save();
+                }
+
+                var lineColor = Plugin.Configuration.LineColor;
+                if (ImGui.ColorEdit4("Line Color", ref lineColor, ImGuiColorEditFlags.NoInputs))
+                {
+                    Plugin.Configuration.LineColor = lineColor;
+                    Plugin.Configuration.Save();
+                }
+
+                var highlightedLineColor = Plugin.Configuration.HighlightedLineColor;
+                if (ImGui.ColorEdit4("Highlighted Line Color", ref highlightedLineColor, ImGuiColorEditFlags.NoInputs))
+                {
+                    Plugin.Configuration.HighlightedLineColor = highlightedLineColor;
+                    Plugin.Configuration.Save();
+                }
+            }
+            #endregion
 
             SectionSeparator("Misc. Settings");
+            #region Misc Settings
 
             bool trackOthers = Plugin.Configuration.TrackOthers;
             if (ImGui.Checkbox("Track Other Players", ref trackOthers))
             {
                 Plugin.Configuration.TrackOthers = trackOthers;
-                Plugin.Configuration.Save();
-            }
-
-            int quality = Plugin.Configuration.LineQuality;
-            if (ImGui.DragInt("Line Quality", ref quality, 0.05f, 0, 50))
-            {
-                Plugin.Configuration.LineQuality = quality;
                 Plugin.Configuration.Save();
             }
 
@@ -194,6 +259,8 @@ namespace Racingway.Tabs
                     actor.raceLine.Clear();
                 }
             }
+
+            #endregion
 
 #if DEBUG
             if (ImGui.Button("Debug Print Database"))

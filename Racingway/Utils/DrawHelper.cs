@@ -29,6 +29,16 @@ namespace Racingway.Utils
             }
         }
 
+        public void DrawPoint3d(Vector3 position, uint color, float radius)
+        {
+            Vector2 screenPos = new Vector2();
+
+            if (Plugin.GameGui.WorldToScreen(position, out screenPos))
+            {
+                drawList.AddCircleFilled(screenPos, radius, color);
+            }
+        }
+
         public void DrawLine3d(Vector3 start, Vector3 end, uint color, float thickness)
         {
             Vector2 screenPos1 = new Vector2();

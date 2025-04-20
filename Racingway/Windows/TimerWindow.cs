@@ -65,12 +65,6 @@ namespace Racingway.Windows
 
             Vector2 endPos = ImGui.GetCursorPos();
 
-            //ImGui.SetCursorPos(startPos);
-
-            //ImDrawListPtr drawList = ImGui.GetBackgroundDrawList();
-
-            //drawList.AddRectFilled(startPos, endPos, Plugin.Configuration.TimerColor));
-
             ImGui.SetWindowFontScale(1.0f);
         }
 
