@@ -505,9 +505,8 @@ public sealed class Plugin : IDalamudPlugin
                 Storage.RouteCache.Add(route.Id.ToString(), route);
             }
 
-            // Just reload all routes for the area when we import a new one
-            List<Route> addressRoutes = Storage.RouteCache.Values.Where(r => r.Address.LocationId == CurrentAddress.LocationId).ToList();
-            LoadedRoutes = addressRoutes;
+            // Pretend we just loaded into the zone.
+            AddressChanged(CurrentAddress);
             DisplayedRecord = null;
         });
 

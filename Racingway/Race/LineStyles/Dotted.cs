@@ -22,6 +22,8 @@ namespace Racingway.Race.LineStyles
 
         public void Draw(TimedVector3[] line, uint color, DrawHelper draw)
         {
+            if (line.Length == 0) return;
+
             for (int i = 0; i < line.Length; i++)
             {
                 draw.DrawPoint3d(line[i].asVector(), color, Plugin.Configuration.DotSize);

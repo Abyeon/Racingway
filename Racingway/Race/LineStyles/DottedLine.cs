@@ -23,6 +23,8 @@ namespace Racingway.Race.LineStyles
 
         public void Draw(TimedVector3[] line, uint color, DrawHelper draw)
         {
+            if (line.Length == 0) return;
+
             draw.DrawPoint3d(line[0].asVector(), color, 3.0f);
 
             for (int i = 1; i < line.Length; i++)
