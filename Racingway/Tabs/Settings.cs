@@ -271,7 +271,7 @@ namespace Racingway.Tabs
                 {
                     try
                     {
-                        Plugin.Log.Debug(route.ToString());
+                        Plugin.Log.Debug(route.Name + ": " + route.Records.Count.ToString() + " records.");
                         foreach (var record in route.Records)
                         {
                             try

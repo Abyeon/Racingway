@@ -90,20 +90,58 @@ namespace Racingway.Tabs
                 Plugin.Configuration.Save();
             }
 
-            // Reimplement this later to be route-specific.
-            //ImGui.SameLine();
-            //if (ImGui.Button("Clear Records"))
-            //{
-            //    //foreach (Record record in cachedRecords)
-            //    //{
-            //    //    Plugin.Storage.GetRecords().Delete(record.Id);
-            //    //    Plugin.RecordList.Remove(record);
-            //    //}
+            var ctrl = ImGui.GetIO().KeyCtrl;
+            using (ImRaii.Disabled(!ctrl))
+            {
+                ImGui.SameLine();
 
-            //    //cachedRecords.Clear();
+                if (ImGui.Button("Purge Duplicates"))
+                {
+                    Plugin.DataQueue.QueueDataOperation(async () =>
+                    {
+                        // Get the records
+                        Route route = Plugin.Storage.RouteCache[Plugin.SelectedRoute.ToString()];
+                        List<Record> records = route.Records;
 
-            //    Plugin.DisplayedRecord = null;
-            //}
+                        // Sort records by time
+                        records.Sort((record1, record2) => record1.Time.CompareTo(record2.Time));
+
+                        // Create an array containing only distinct records
+                        List<Record> distinct = records.GroupBy(r => r.Name).Select(g => g.First()).ToList();
+
+                        // Update the route
+                        route.Records = distinct;
+                        Plugin.Storage.RouteCache[route.Id.ToString()] = route;
+                        await Plugin.Storage.AddRoute(route);
+                    });
+                }
+
+                if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                {
+                    ImGui.SetTooltip("Hold Ctrl to enable.");
+                }
+
+                ImGui.SameLine();
+
+                if (ImGui.Button("Clear Records"))
+                {
+                    Plugin.DataQueue.QueueDataOperation(async () =>
+                    {
+                        Route route = Plugin.Storage.RouteCache[Plugin.SelectedRoute.ToString()];
+
+                        route.Records.Clear();
+
+                        // Update the route
+                        Plugin.Storage.RouteCache[route.Id.ToString()] = route;
+                        await Plugin.Storage.AddRoute(route);
+                    });
+                }
+
+                if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                {
+                    ImGui.SetTooltip("Hold Ctrl to enable.");
+                }
+            }
 
             using (var table = ImRaii.Table("###race-records", 5, ImGuiTableFlags.Sortable))
             {

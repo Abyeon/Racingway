@@ -245,10 +245,19 @@ namespace Racingway.Utils.Storage
         {
             try
             {
-                var Json = Compression.FromCompressedBase64(data);
+                string normalized = data.Normalize();
+                string Json = Compression.FromCompressedBase64(normalized);
 
-                var bson = JsonSerializer.Deserialize(Json);
-                var route = BsonMapper.Global.Deserialize<Route>(bson);
+                BsonValue bson = JsonSerializer.Deserialize(Json);
+                Route route = BsonMapper.Global.Deserialize<Route>(bson);
+
+                // If the route is somehow null, lets log the JSON.
+                if (route == null)
+                {
+                    Plugin.Log.Warning("Imported route was null, printing the uncompressed Base64... ");
+                    Plugin.Log.Warning(Json);
+                    throw new NullReferenceException("Route is null. Check /xllog.");
+                }
 
                 route.Records = new List<Record>();
 
