@@ -1,12 +1,12 @@
-using System;
-using System.Collections.Generic;
-using System.Numerics;
 using Dalamud.Configuration;
 using Dalamud.Interface.FontIdentifier;
 using Dalamud.Plugin;
 using Racingway.Race;
 using Racingway.Race.Collision;
 using Racingway.Tabs;
+using System;
+using System.Collections.Generic;
+using System.Numerics;
 
 namespace Racingway;
 
@@ -24,11 +24,10 @@ public class Configuration : IPluginConfiguration
     public bool DrawTriggers { get; set; } = false;
     public bool DrawRacingLines { get; set; } = false;
     public bool DrawTimer { get; set; } = false;
-    public bool DebugMode { get; set; } = false; // Enable debug mode for additional logging and UI elements
 
     // Timer Style
     public float TimerSize { get; set; } = 2f;
-    public IFontSpec? TimerFont { get; set; } = null;
+    public IFontSpec TimerFont { get; set; } = null;
     public Vector4 TimerColor { get; set; } = new Vector4(0, 0, 0, 0.75f);
     public Vector4 NormalColor { get; set; } = new Vector4(1, 1, 1, 1);
     public Vector4 FinishColor { get; set; } = new Vector4(0, 1, 1, 1);
@@ -53,17 +52,6 @@ public class Configuration : IPluginConfiguration
 
     // Misc Settings
     public bool TrackOthers { get; set; } = true;
-
-    // Database Cleanup Settings
-    public int MaxPathSamplingPoints { get; set; } = 500;
-    public float PathSimplificationTolerance { get; set; } = 0.3f;
-
-    // Record Cleanup Filters
-    public bool EnableAutoCleanup { get; set; } = false;
-    public float MinTimeFilter { get; set; } = 5.0f; // Records with completion time less than this (in seconds) will be filtered
-    public int MaxRecordsPerRoute { get; set; } = 100; // Keep only top N records per route
-    public bool RemoveNonClientRecords { get; set; } = false; // Option to remove records not created by the client
-    public bool KeepPersonalBestOnly { get; set; } = false; // Keep only personal best per route
 
     public void Save()
     {

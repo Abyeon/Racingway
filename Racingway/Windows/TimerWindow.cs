@@ -1,12 +1,17 @@
-using System;
-using System.Numerics;
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
-using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Windowing;
+using Dalamud.Utility;
+using Dalamud.Utility.Numerics;
 using ImGuiNET;
 using Racingway.Utils;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Numerics;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace Racingway.Windows
 {
@@ -14,100 +19,61 @@ namespace Racingway.Windows
     {
         private Plugin Plugin { get; }
 
-        public TimerWindow(Plugin plugin)
-            : base("Race Timer##race")
+        public TimerWindow(Plugin Plugin) : base("Race Timer##race")
         {
-            Flags =
-                ImGuiWindowFlags.NoScrollbar
-                | ImGuiWindowFlags.AlwaysAutoResize
-                | ImGuiWindowFlags.NoCollapse
-                | ImGuiWindowFlags.NoDecoration;
+            Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoDecoration;
 
-            this.Plugin = plugin;
+            this.Plugin = Plugin;
         }
 
-        public void Dispose() { }
+        public void Dispose()
+        {
+
+        }
 
         public override void PreDraw()
         {
             base.PreDraw();
             ImGui.PushStyleColor(ImGuiCol.WindowBg, Plugin.Configuration.TimerColor);
-            ImGui.PushStyleColor(
-                ImGuiCol.FrameBg,
-                new Vector4(0, 0, 0, Plugin.Configuration.TimerColor.W)
-            );
+
+            Vector4 color;
+            unsafe
+            {
+                color = *ImGui.GetStyleColorVec4(ImGuiCol.FrameBg);
+                color.W = Plugin.Configuration.TimerColor.W;
+            }
+
+            ImGui.PushStyleColor(ImGuiCol.FrameBg, color);
             Plugin.FontManager.PushFont();
         }
 
         public override void Draw()
         {
-            // Set font size
             ImGui.SetWindowFontScale(Plugin.Configuration.TimerSize);
 
-            // Center window
-            Position = ImGuiHelpers.MainViewport.Size / 2 - Size / 2;
-
-            // Display timer
-            string time = Time.PrettyFormatTimeSpan(
-                TimeSpan.FromMilliseconds(Plugin.LocalTimer.ElapsedMilliseconds)
-            );
-
-            // Use green text when running, white when stopped
-            if (Plugin.LocalTimer.IsRunning)
+            if (Plugin.FontManager.FontPushed && !Plugin.FontManager.FontReady)
             {
-                ImGui.TextColored(ImGuiColors.ParsedGreen, time);
-            }
-            else
-            {
-                ImGui.Text(time);
+                ImGui.Text("Loading font, please wait...");
+                return;
             }
 
-            // Add icon buttons on the same line as the timer
-            ImGui.SameLine();
+            TimeSpan span = TimeSpan.FromMilliseconds(Plugin.LocalTimer.ElapsedMilliseconds);
+            string timerText = Time.PrettyFormatTimeSpan(span);
+            Vector2 startPos = ImGui.GetCursorPos();
 
-            // Small spacing between timer and buttons
-            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 5);
+            ImGui.Text(timerText);
 
-            // Make icons smaller
-            ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(2, 2));
-            ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(3, 0));
-            ImGui.PushStyleVar(ImGuiStyleVar.ItemInnerSpacing, new Vector2(2, 0));
+            Vector2 endPos = ImGui.GetCursorPos();
 
-            // Clear lines button (trash icon)
-            if (ImGuiComponents.IconButton(FontAwesomeIcon.Trash))
-            {
-                foreach (var actor in Plugin.trackedPlayers.Values)
-                {
-                    actor.raceLine.Clear();
-                }
-            }
-
-            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-            {
-                ImGui.SetTooltip("Clear racing lines");
-            }
-
-            // Open main window button (cog icon)
-            ImGui.SameLine();
-            if (ImGuiComponents.IconButton(FontAwesomeIcon.Cog))
-            {
-                Plugin.MainWindow.Toggle();
-            }
-
-            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-            {
-                ImGui.SetTooltip("Open main window");
-            }
-
-            // Restore default style
-            ImGui.PopStyleVar(3);
+            ImGui.SetWindowFontScale(1.0f);
         }
 
         public override void PostDraw()
         {
             Plugin.FontManager.PopFont();
-            ImGui.PopStyleColor(2);
             base.PostDraw();
+            ImGui.PopStyleColor();
+            ImGui.PopStyleColor();
         }
     }
 }

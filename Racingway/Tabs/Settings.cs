@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Numerics;
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
@@ -10,6 +7,9 @@ using Dalamud.Interface.Utility.Raii;
 using ImGuiNET;
 using Racingway.Race.LineStyles;
 using Racingway.Windows;
+using System;
+using System.Collections.Generic;
+using System.Numerics;
 
 namespace Racingway.Tabs
 {
@@ -20,14 +20,15 @@ namespace Racingway.Tabs
 
         private Plugin Plugin { get; }
 
-        private bool _isPopupOpen = true;
-
         public Settings(Plugin plugin)
         {
             this.Plugin = plugin;
         }
 
-        public void Dispose() { }
+        public void Dispose()
+        {
+
+        }
 
         private Vector2 spacing = new Vector2(0, 10);
 
@@ -44,33 +45,21 @@ namespace Racingway.Tabs
             #region Display Toggles
             ImGui.Dummy(spacing);
 
-            if (
-                ImGui.Button(
-                    $"{(Plugin.Configuration.DrawTriggers ? "Disable" : "Enable")} Triggers Display"
-                )
-            )
+            if (ImGui.Button($"{(Plugin.Configuration.DrawTriggers ? "Disable" : "Enable")} Triggers Display"))
             {
                 Plugin.Configuration.DrawTriggers = !Plugin.Configuration.DrawTriggers;
                 Plugin.Configuration.Save();
                 Plugin.ShowHideOverlay();
             }
 
-            if (
-                ImGui.Button(
-                    $"{(Plugin.Configuration.DrawRacingLines ? "Disable" : "Enable")} Racing Lines Display"
-                )
-            )
+            if (ImGui.Button($"{(Plugin.Configuration.DrawRacingLines ? "Disable" : "Enable")} Racing Lines Display"))
             {
                 Plugin.Configuration.DrawRacingLines = !Plugin.Configuration.DrawRacingLines;
                 Plugin.Configuration.Save();
                 Plugin.ShowHideOverlay();
             }
 
-            if (
-                ImGui.Button(
-                    $"{(Plugin.Configuration.DrawTimer ? "Disable" : "Enable")} Timer Display"
-                )
-            )
+            if (ImGui.Button($"{(Plugin.Configuration.DrawTimer ? "Disable" : "Enable")} Timer Display"))
             {
                 Plugin.Configuration.DrawTimer = !Plugin.Configuration.DrawTimer;
                 Plugin.Configuration.Save();
@@ -97,8 +86,7 @@ namespace Racingway.Tabs
             }
 
             var bgColor = Plugin.Configuration.TimerColor;
-            if (ImGui.ColorEdit4("Background Color", ref bgColor, ImGuiColorEditFlags.NoInputs))
-            {
+            if (ImGui.ColorEdit4("Background Color", ref bgColor, ImGuiColorEditFlags.NoInputs)) {
                 Plugin.Configuration.TimerColor = bgColor;
                 Plugin.Configuration.Save();
             }
@@ -136,16 +124,12 @@ namespace Racingway.Tabs
                     Plugin.Configuration.Save();
                 }
 
-                ImGuiComponents.HelpMarker(
-                    "This will display the timer even if you have it toggled off.",
-                    FontAwesomeIcon.ExclamationTriangle
-                );
+                ImGuiComponents.HelpMarker("This will display the timer even if you have it toggled off.", FontAwesomeIcon.ExclamationTriangle);
 
                 int secondsShownAfter = Plugin.Configuration.SecondsShownAfter;
                 if (ImGui.InputInt("Hide Delay", ref secondsShownAfter))
                 {
-                    if (secondsShownAfter < 0)
-                        secondsShownAfter = 0;
+                    if (secondsShownAfter < 0) secondsShownAfter = 0;
 
                     Plugin.Configuration.SecondsShownAfter = secondsShownAfter;
                     Plugin.Configuration.Save();
@@ -166,16 +150,13 @@ namespace Racingway.Tabs
             }
 
             bool logStart = Plugin.Configuration.LogStart;
-            if (ImGui.Checkbox("Log Starts In Chat", ref logStart))
+            if(ImGui.Checkbox("Log Starts In Chat", ref logStart))
             {
                 Plugin.Configuration.LogStart = logStart;
                 Plugin.Configuration.Save();
             }
 
-            ImGuiComponents.HelpMarker(
-                "This will likely spam your chat window.",
-                FontAwesomeIcon.ExclamationTriangle
-            );
+            ImGuiComponents.HelpMarker("This will likely spam your chat window.", FontAwesomeIcon.ExclamationTriangle);
 
             bool logFails = Plugin.Configuration.LogFails;
             if (ImGui.Checkbox("Log Fails In Chat", ref logFails))
@@ -184,10 +165,7 @@ namespace Racingway.Tabs
                 Plugin.Configuration.Save();
             }
 
-            ImGuiComponents.HelpMarker(
-                "This will likely spam your chat window.",
-                FontAwesomeIcon.ExclamationTriangle
-            );
+            ImGuiComponents.HelpMarker("This will likely spam your chat window.", FontAwesomeIcon.ExclamationTriangle);
 
             bool logFinish = Plugin.Configuration.LogFinish;
             if (ImGui.Checkbox("Log Finishes In Chat", ref logFinish))
@@ -209,9 +187,7 @@ namespace Racingway.Tabs
                     Plugin.Configuration.Save();
                 }
 
-                ImGuiComponents.HelpMarker(
-                    "How many frames between line points. 1 line quality = 1 point per frame."
-                );
+                ImGuiComponents.HelpMarker("How many frames between line points. 1 line quality = 1 point per frame.");
 
                 // Combo box for selecting the desired line style
                 using (var child = ImRaii.Combo("Line Style", Plugin.Configuration.LineStyle))
@@ -258,13 +234,7 @@ namespace Racingway.Tabs
                 }
 
                 var highlightedLineColor = Plugin.Configuration.HighlightedLineColor;
-                if (
-                    ImGui.ColorEdit4(
-                        "Highlighted Line Color",
-                        ref highlightedLineColor,
-                        ImGuiColorEditFlags.NoInputs
-                    )
-                )
+                if (ImGui.ColorEdit4("Highlighted Line Color", ref highlightedLineColor, ImGuiColorEditFlags.NoInputs))
                 {
                     Plugin.Configuration.HighlightedLineColor = highlightedLineColor;
                     Plugin.Configuration.Save();
@@ -292,196 +262,6 @@ namespace Racingway.Tabs
 
             #endregion
 
-            SectionSeparator("Database Management");
-            #region Database Management
-
-            // Auto-cleanup settings
-            bool enableAutoCleanup = Plugin.Configuration.EnableAutoCleanup;
-            if (ImGui.Checkbox("Enable Auto-Cleanup of Records", ref enableAutoCleanup))
-            {
-                Plugin.Configuration.EnableAutoCleanup = enableAutoCleanup;
-                Plugin.Configuration.Save();
-            }
-
-            ImGuiComponents.HelpMarker(
-                "When enabled, records will be automatically filtered based on the criteria below."
-            );
-
-            using (_ = ImRaii.ItemWidth(200f))
-            {
-                // Min Time Filter
-                float minTimeFilter = Plugin.Configuration.MinTimeFilter;
-                if (ImGui.DragFloat("Minimum Time (seconds)", ref minTimeFilter, 0.1f, 0f, 120f))
-                {
-                    Plugin.Configuration.MinTimeFilter = minTimeFilter < 0 ? 0 : minTimeFilter;
-                    Plugin.Configuration.Save();
-                }
-                ImGuiComponents.HelpMarker(
-                    "Records with completion time less than this will be removed when cleanup runs. Set to 0 to disable."
-                );
-
-                // Max Records per Route
-                int maxRecordsPerRoute = Plugin.Configuration.MaxRecordsPerRoute;
-                if (ImGui.DragInt("Max Records per Route", ref maxRecordsPerRoute, 1, 0, 1000))
-                {
-                    Plugin.Configuration.MaxRecordsPerRoute =
-                        maxRecordsPerRoute < 0 ? 0 : maxRecordsPerRoute;
-                    Plugin.Configuration.Save();
-                }
-                ImGuiComponents.HelpMarker(
-                    "Only keep top N fastest records per route. Set to 0 to keep all records."
-                );
-
-                // Remove Non-Client Records
-                bool removeNonClientRecords = Plugin.Configuration.RemoveNonClientRecords;
-                if (ImGui.Checkbox("Remove Other Players' Records", ref removeNonClientRecords))
-                {
-                    Plugin.Configuration.RemoveNonClientRecords = removeNonClientRecords;
-                    Plugin.Configuration.Save();
-                }
-                ImGuiComponents.HelpMarker("When enabled, only your own records will be kept.");
-
-                // Keep Personal Best Only
-                bool keepPersonalBestOnly = Plugin.Configuration.KeepPersonalBestOnly;
-                if (ImGui.Checkbox("Keep Only Personal Bests", ref keepPersonalBestOnly))
-                {
-                    Plugin.Configuration.KeepPersonalBestOnly = keepPersonalBestOnly;
-                    Plugin.Configuration.Save();
-                }
-                ImGuiComponents.HelpMarker(
-                    "When enabled, only your personal best time for each route will be kept."
-                );
-            }
-
-            ImGui.Separator();
-            // Add a section for advanced path settings
-            if (ImGui.TreeNode("Advanced Path Settings"))
-            {
-                using (_ = ImRaii.ItemWidth(200f))
-                {
-                    int maxPathPoints = Plugin.Configuration.MaxPathSamplingPoints;
-                    if (ImGui.DragInt("Max Path Points", ref maxPathPoints, 1, 100, 2000))
-                    {
-                        Plugin.Configuration.MaxPathSamplingPoints =
-                            maxPathPoints < 100 ? 100 : maxPathPoints;
-                        Plugin.Configuration.Save();
-                    }
-                    ImGuiComponents.HelpMarker(
-                        "Maximum number of points to store for each race path. Higher values = more accurate paths but larger database size."
-                    );
-
-                    float simplificationTolerance = Plugin
-                        .Configuration
-                        .PathSimplificationTolerance;
-                    if (
-                        ImGui.DragFloat(
-                            "Path Simplification Tolerance",
-                            ref simplificationTolerance,
-                            0.01f,
-                            0.05f,
-                            2.0f
-                        )
-                    )
-                    {
-                        Plugin.Configuration.PathSimplificationTolerance = simplificationTolerance;
-                        Plugin.Configuration.Save();
-                    }
-                    ImGuiComponents.HelpMarker(
-                        "Lower values = more accurate paths but larger database size."
-                    );
-                }
-                ImGui.TreePop();
-            }
-
-            // Add a button to manually run cleanup now
-            if (ImGui.Button("Run Cleanup Now"))
-            {
-                ImGui.OpenPopup("Confirm Cleanup");
-            }
-
-            // Confirmation popup
-            if (
-                ImGui.BeginPopupModal(
-                    "Confirm Cleanup",
-                    ref _isPopupOpen,
-                    ImGuiWindowFlags.AlwaysAutoResize
-                )
-            )
-            {
-                ImGui.Text("This will immediately delete records based on your filter settings.");
-                ImGui.Text("This action cannot be undone. Are you sure?");
-                ImGui.Separator();
-
-                if (ImGui.Button("Confirm", new Vector2(120, 0)))
-                {
-                    RunDatabaseCleanup();
-                    ImGui.CloseCurrentPopup();
-                }
-                ImGui.SameLine();
-                if (ImGui.Button("Cancel", new Vector2(120, 0)))
-                {
-                    ImGui.CloseCurrentPopup();
-                }
-                ImGui.EndPopup();
-            }
-
-            // Add a button to compact database
-            if (ImGui.Button("Compact Database"))
-            {
-                ImGui.OpenPopup("Confirm Compact");
-            }
-
-            // Confirmation popup for compacting
-            if (
-                ImGui.BeginPopupModal(
-                    "Confirm Compact",
-                    ref _isPopupOpen,
-                    ImGuiWindowFlags.AlwaysAutoResize
-                )
-            )
-            {
-                ImGui.Text("This will rebuild the database to reduce its size.");
-                ImGui.Text("This process may take some time. Continue?");
-                ImGui.Separator();
-
-                if (ImGui.Button("Confirm", new Vector2(120, 0)))
-                {
-                    Plugin.DataQueue.QueueDataOperation(async () =>
-                    {
-                        try
-                        {
-                            await Plugin.Storage.CompactDatabase();
-                            Plugin.ChatGui.Print(
-                                "[RACE] Database has been compacted successfully."
-                            );
-                        }
-                        catch (Exception ex)
-                        {
-                            Plugin.Log.Error(ex, "Error compacting database");
-                            Plugin.ChatGui.PrintError(
-                                "[RACE] Error compacting database. See logs for details."
-                            );
-                        }
-                    });
-                    ImGui.CloseCurrentPopup();
-                }
-                ImGui.SameLine();
-                if (ImGui.Button("Cancel", new Vector2(120, 0)))
-                {
-                    ImGui.CloseCurrentPopup();
-                }
-                ImGui.EndPopup();
-            }
-
-            // Show database file size
-            string dbSize = Plugin.Storage.GetFileSizeString();
-            if (!string.IsNullOrEmpty(dbSize))
-            {
-                ImGui.Text($"Current Database Size: {dbSize}");
-            }
-
-            #endregion
-
 #if DEBUG
             if (ImGui.Button("Debug Print Database"))
             {
@@ -491,22 +271,18 @@ namespace Racingway.Tabs
                 {
                     try
                     {
-                        Plugin.Log.Debug(
-                            route.Name + ": " + route.Records.Count.ToString() + " records."
-                        );
+                        Plugin.Log.Debug(route.Name + ": " + route.Records.Count.ToString() + " records.");
                         foreach (var record in route.Records)
                         {
                             try
                             {
                                 Plugin.Log.Debug(record.GetCSV());
-                            }
-                            catch (Exception ex)
+                            } catch (Exception ex)
                             {
                                 Plugin.Log.Error(ex.ToString());
                             }
                         }
-                    }
-                    catch (Exception ex)
+                    } catch (Exception ex)
                     {
                         Plugin.Log.Error(ex.ToString());
                     }
@@ -517,9 +293,7 @@ namespace Racingway.Tabs
 
         private void DisplayFontSelector()
         {
-            var chooser = SingleFontChooserDialog.CreateAuto(
-                (UiBuilder)Plugin.PluginInterface.UiBuilder
-            );
+            var chooser = SingleFontChooserDialog.CreateAuto((UiBuilder)Plugin.PluginInterface.UiBuilder);
             if (Plugin.Configuration.TimerFont is SingleFontSpec font)
             {
                 chooser.SelectedFont = font;
@@ -530,35 +304,8 @@ namespace Racingway.Tabs
         private void Chooser_SelectedFontSpecChanged(SingleFontSpec font)
         {
             Plugin.Configuration.TimerFont = font;
-            Plugin.FontManager.Handle = Plugin.Configuration.TimerFont.CreateFontHandle(
-                Plugin.PluginInterface.UiBuilder.FontAtlas
-            );
+            Plugin.FontManager.Handle = Plugin.Configuration.TimerFont.CreateFontHandle(Plugin.PluginInterface.UiBuilder.FontAtlas);
             Plugin.Configuration.Save();
-        }
-
-        private void RunDatabaseCleanup()
-        {
-            // Run the cleanup in a background task
-            Plugin.DataQueue.QueueDataOperation(async () =>
-            {
-                try
-                {
-                    await Plugin.Storage.CleanupRecords(
-                        Plugin.Configuration.MinTimeFilter,
-                        Plugin.Configuration.MaxRecordsPerRoute,
-                        Plugin.Configuration.RemoveNonClientRecords,
-                        Plugin.Configuration.KeepPersonalBestOnly
-                    );
-                    Plugin.ChatGui.Print("[RACE] Records cleanup completed successfully.");
-                }
-                catch (Exception ex)
-                {
-                    Plugin.Log.Error(ex, "Error cleaning up records");
-                    Plugin.ChatGui.PrintError(
-                        "[RACE] Error cleaning up records. See logs for details."
-                    );
-                }
-            });
         }
     }
 }

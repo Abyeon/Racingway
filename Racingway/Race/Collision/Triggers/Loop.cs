@@ -50,40 +50,32 @@ namespace Racingway.Race.Collision.Triggers
 
         public void CheckCollision(Player player)
         {
-            try
+            var inTrigger = Cube.PointInCube(player.position);
+
+            // Initialize player state if not already tracked
+            if (!playerState.ContainsKey(player.id))
             {
-                // Check if player is in the trigger area
-                var inTrigger = Cube.PointInCube(player.position);
+                playerState[player.id] = inTrigger ? RaceState.NotStarted : RaceState.NotStarted;
+            }
 
-                // Initialize player state if not already tracked
-                if (!playerState.ContainsKey(player.id))
+            // Handle state changes based on player position
+            if (inTrigger)
+            {
+                // Player is inside the trigger
+                if (!Touchers.Contains(player.id))
                 {
-                    playerState[player.id] = RaceState.NotStarted;
-                }
-
-                // Handle state changes based on player position
-                if (inTrigger)
-                {
-                    // Player is inside the trigger
-                    if (!Touchers.Contains(player.id))
-                    {
-                        Touchers.Add(player.id);
-                        HandlePlayerEnteredTrigger(player);
-                    }
-                }
-                else
-                {
-                    // Player is outside the trigger
-                    if (Touchers.Contains(player.id))
-                    {
-                        Touchers.Remove(player.id);
-                        HandlePlayerLeftTrigger(player);
-                    }
+                    Touchers.Add(player.id);
+                    HandlePlayerEnteredTrigger(player);
                 }
             }
-            catch (Exception ex)
+            else
             {
-                Racingway.Plugin.Log.Error(ex, "Error in Loop.CheckCollision");
+                // Player is outside the trigger
+                if (Touchers.Contains(player.id))
+                {
+                    Touchers.Remove(player.id);
+                    HandlePlayerLeftTrigger(player);
+                }
             }
         }
 
@@ -114,141 +106,64 @@ namespace Racingway.Race.Collision.Triggers
 
         private void StartRace(Player player)
         {
-            try
-            {
-                // Set player state first
-                playerState[player.id] = RaceState.Running;
+            playerState[player.id] = RaceState.Running;
 
-                // Start the player timer
-                player.timer.Reset(); // Reset first to ensure accurate timing
-                player.timer.Start();
-                player.inParkour = true;
-                player.AddPoint();
+            player.timer.Start();
+            player.inParkour = true;
+            player.AddPoint();
 
-                // Check if this is the local player
-                bool isLocalPlayer = false;
-                try
-                {
-                    isLocalPlayer = player.actor == Racingway.Plugin.ClientState.LocalPlayer;
-                }
-                catch (Exception ex)
-                {
-                    Racingway.Plugin.Log.Error(ex, "Error checking if player is local player");
-                }
+            Route.PlayersInParkour.Add((player, Stopwatch.StartNew()));
+            Route.Started(player);
 
-                // Store the route locally to avoid race conditions
-                Route routeRef = Route;
-
-                // Add to the players in parkour list using the thread-safe method
-                routeRef.AddPlayerToParkour(player, Stopwatch.StartNew());
-
-                // Important: Clear the race line first before starting
-                player.raceLine.Clear();
-
-                // Fire the started event directly - we're letting the event handler
-                // manage thread safety to avoid excessive delays in event propagation
-                routeRef.Started(player);
-
-                // Log for debugging
-                Racingway.Plugin.Log.Debug(
-                    $"Started race for player {player.id}. Is local player: {isLocalPlayer}"
-                );
-            }
-            catch (Exception ex)
-            {
-                Racingway.Plugin.Log.Error(ex, "Error in StartRace");
-            }
+            player.raceLine.Clear();
         }
 
         private void CompleteRace(Player player)
         {
-            try
-            {
-                // Store the route reference to prevent race conditions
-                Route routeRef = Route;
+            int index = Route.PlayersInParkour.FindIndex(x => x.Item1 == player);
 
-                // Check if this is the local player
-                bool isLocalPlayer = false;
+            if (index != -1)
+            {
+                var elapsedTime = Route.PlayersInParkour[index].Item2.ElapsedMilliseconds;
+                var t = TimeSpan.FromMilliseconds(elapsedTime);
+
+                player.AddPoint();
+                player.inParkour = false;
+
+                Route.PlayersInParkour.RemoveAt(index);
+
+                var distance = player.GetDistanceTraveled();
+
+                player.timer.Stop();
+                player.timer.Reset();
+
                 try
                 {
-                    isLocalPlayer = player.actor == Racingway.Plugin.ClientState.LocalPlayer;
-                }
-                catch
-                {
-                    // Ignore if we can't check local player status
-                }
-
-                // Try to remove the player from parkour tracking and get elapsed time
-                TimeSpan t;
-                if (routeRef.RemovePlayerFromParkour(player, out t))
-                {
-                    // Update player state
-                    player.AddPoint();
-                    player.inParkour = false;
-
-                    // Get the distance and record the final race stats
-                    var distance = player.GetDistanceTraveled();
-
-                    // Stop timer
-                    player.timer.Stop();
-                    player.timer.Reset();
-
-                    // Log completion for local player
-                    if (isLocalPlayer)
-                    {
-                        Racingway.Plugin.Log.Debug($"Local player race completed. Time: {t}");
-
-                        // Print directly to chat for local player
-                        string prettyTime = Racingway.Utils.Time.PrettyFormatTimeSpan(t);
-                        Racingway.Plugin.ChatGui.Print(
-                            $"[RACE] You completed {routeRef.Name} in {prettyTime}!"
-                        );
-                    }
-
-                    // Log for debugging
-                    Racingway.Plugin.Log.Debug(
-                        $"Completed race for player {player.id} in {t}. Is local player: {isLocalPlayer}"
+                    IPlayerCharacter actor = (IPlayerCharacter)player.actor;
+                    Record record = new Record(
+                        DateTime.UtcNow,
+                        actor.Name.ToString(),
+                        actor.HomeWorld.Value.Name.ToString(),
+                        t,
+                        distance,
+                        player.raceLine.ToArray(),
+                        this.Route
                     );
 
-                    try
+                    if (actor == Plugin.ClientState.LocalPlayer)
                     {
-                        // Create a record immediately
-                        IPlayerCharacter actor = (IPlayerCharacter)player.actor;
-                        Record record = new Record
-                        {
-                            Date = DateTime.UtcNow,
-                            Name = actor.Name.ToString(),
-                            World = actor.HomeWorld.Value.Name.ToString(),
-                            Time = t,
-                            Distance = distance,
-                            Line = player.GetRaceLineAsVectorArray(),
-                            RouteId = routeRef.Id.ToString(),
-                            RouteHash = routeRef.GetHash(),
-                        };
-
-                        if (isLocalPlayer)
-                        {
-                            record.IsClient = true;
-                        }
-
-                        // Fire the finished event directly - let event handlers manage thread safety
-                        routeRef.Finished(player, record);
-
-                        // Reset the player's state
-                        playerState[player.id] = RaceState.NotStarted;
+                        record.IsClient = true;
                     }
-                    catch (Exception ex)
-                    {
-                        Racingway.Plugin.Log.Error(
-                            ex,
-                            "Error creating record or firing finished event"
-                        );
-                    }
+
+                    Route.Finished(player, record);
+
+                    // Reset the player's state to not started
+                    playerState[player.id] = RaceState.NotStarted;
                 }
-            }
-            catch (Exception ex)
-            {
-                Racingway.Plugin.Log.Error(ex, "Error in CompleteRace");
+                catch (Exception ex)
+                {
+                    Plugin.Log.Error(ex.ToString());
+                }
             }
         }
 
