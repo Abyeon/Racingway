@@ -1,22 +1,21 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
-using Dalamud.Interface.Windowing;
-using ImGuiNET;
-using Dalamud.Interface.Utility;
-using System.Numerics;
-using Racingway.Utils;
-using Serilog;
 using Dalamud.Game.ClientState.Objects.Types;
+using Dalamud.Interface.Utility;
+using Dalamud.Interface.Windowing;
+using Dalamud.Utility.Numerics;
+using ImGuiNET;
 using ImGuizmoNET;
-using Racingway.Race;
 using LiteDB;
+using Racingway.Race;
 using Racingway.Race.Collision.Triggers;
 using Racingway.Race.LineStyles;
-using Dalamud.Utility.Numerics;
-
+using Racingway.Utils;
+using Serilog;
 
 namespace Racingway.Windows
 {
@@ -29,26 +28,31 @@ namespace Racingway.Windows
         public List<ILineStyle> LineStyles { get; private set; }
         public ILineStyle selectedStyle { get; set; }
 
-        public TriggerOverlay(Plugin plugin) : base("Trigger Overlay")
+        public TriggerOverlay(Plugin plugin)
+            : base("Trigger Overlay")
         {
-            Flags = ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoDocking | ImGuiWindowFlags.NoNavFocus | ImGuiWindowFlags.NoNavInputs | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoInputs;
-            
+            Flags =
+                ImGuiWindowFlags.NoResize
+                | ImGuiWindowFlags.NoCollapse
+                | ImGuiWindowFlags.NoBackground
+                | ImGuiWindowFlags.NoDocking
+                | ImGuiWindowFlags.NoNavFocus
+                | ImGuiWindowFlags.NoNavInputs
+                | ImGuiWindowFlags.NoTitleBar
+                | ImGuiWindowFlags.NoInputs;
+
             this.Plugin = plugin;
-            this.LineStyles = [
-                new Line(plugin),
-                new Dotted(plugin),
-                new DottedLine(plugin)
-            ];
+            this.LineStyles = [new Line(plugin), new Dotted(plugin), new DottedLine(plugin)];
 
-            this.selectedStyle = this.LineStyles.FirstOrDefault(x => x.Name == plugin.Configuration.LineStyle, this.LineStyles[0]);
+            this.selectedStyle = this.LineStyles.FirstOrDefault(
+                x => x.Name == plugin.Configuration.LineStyle,
+                this.LineStyles[0]
+            );
         }
 
-        public void Dispose()
-        {
+        public void Dispose() { }
 
-        }
-
-        public unsafe override void Draw()
+        public override unsafe void Draw()
         {
             ImGuiHelpers.SetWindowPosRelativeMainViewport("Trigger Overlay", new Vector2(0, 0));
 
@@ -65,7 +69,8 @@ namespace Racingway.Windows
 
                 foreach (var trigger in triggers)
                 {
-                    if (trigger == null) continue;
+                    if (trigger == null)
+                        continue;
 
                     draw.DrawCubeFilled(trigger.Cube, trigger.Color, 5.0f);
                 }
@@ -78,7 +83,11 @@ namespace Racingway.Windows
                 {
                     TimedVector3[] raceLine = actor.raceLine.ToArray();
 
-                    selectedStyle.Draw(raceLine, Plugin.Configuration.LineColor.ToByteColor().RGBA, draw);
+                    selectedStyle.Draw(
+                        raceLine,
+                        Plugin.Configuration.LineColor.ToByteColor().RGBA,
+                        draw
+                    );
                 }
             }
 
@@ -86,19 +95,45 @@ namespace Racingway.Windows
             if (Plugin.DisplayedRecord != null)
             {
                 Record displayedRecord = Plugin.DisplayedRecord;
-                TimedVector3[] displayedRecordLine = displayedRecord.Line;
+                Vector3[]? pathPoints = displayedRecord.Line;
 
-                // Resize the array so we only supply the line up till the time offset we want
-                if (Plugin.LocalTimer.IsRunning)
+                if (pathPoints != null && pathPoints.Length > 0)
                 {
-                    int maxIndex = Array.FindIndex(displayedRecordLine, x => x.Offset >= Plugin.LocalTimer.ElapsedMilliseconds);
-                    if (maxIndex > 0)
-                    {
-                        Array.Resize(ref displayedRecordLine, maxIndex - 1);
-                    }
-                }
+                    // Convert Vector3[] to TimedVector3[] for drawing
+                    // Since we don't have timing info in storage, we'll simulate it
+                    TimedVector3[] displayedRecordLine = new TimedVector3[pathPoints.Length];
 
-                selectedStyle.Draw(displayedRecordLine, Plugin.Configuration.HighlightedLineColor.ToByteColor().RGBA, draw);
+                    // Estimate time offsets based on record completion time and path length
+                    double timePerPoint =
+                        displayedRecord.Time.TotalMilliseconds / pathPoints.Length;
+
+                    for (int i = 0; i < pathPoints.Length; i++)
+                    {
+                        displayedRecordLine[i] = new TimedVector3(
+                            pathPoints[i],
+                            (long)(i * timePerPoint)
+                        );
+                    }
+
+                    // Resize the array so we only supply the line up till the time offset we want
+                    if (Plugin.LocalTimer.IsRunning)
+                    {
+                        int maxIndex = Array.FindIndex(
+                            displayedRecordLine,
+                            x => x.Offset >= Plugin.LocalTimer.ElapsedMilliseconds
+                        );
+                        if (maxIndex > 0)
+                        {
+                            Array.Resize(ref displayedRecordLine, maxIndex - 1);
+                        }
+                    }
+
+                    selectedStyle.Draw(
+                        displayedRecordLine,
+                        Plugin.Configuration.HighlightedLineColor.ToByteColor().RGBA,
+                        draw
+                    );
+                }
             }
         }
     }

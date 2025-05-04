@@ -1,13 +1,13 @@
-using Dalamud.Game.ClientState.Objects.SubKinds;
-using Racingway.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Text;
-using Newtonsoft.Json;
 using System.Threading.Tasks;
+using Dalamud.Game.ClientState.Objects.SubKinds;
 using LiteDB;
+using Newtonsoft.Json;
+using Racingway.Utils;
 
 namespace Racingway.Race.Collision.Triggers
 {
@@ -46,7 +46,10 @@ namespace Racingway.Race.Collision.Triggers
                 Touchers.Add(player.id);
                 OnEntered(player);
             }
-            else if ((!inTrigger && Touchers.Contains(player.id)) || (!player.isGrounded && Touchers.Contains(player.id)))
+            else if (
+                (!inTrigger && Touchers.Contains(player.id))
+                || (!player.isGrounded && Touchers.Contains(player.id))
+            )
             {
                 Touchers.Remove(player.id);
                 OnLeft(player);
@@ -80,15 +83,26 @@ namespace Racingway.Race.Collision.Triggers
                 try
                 {
                     IPlayerCharacter actor = (IPlayerCharacter)player.actor;
-                    Record record = new Record(now, actor.Name.ToString(), actor.HomeWorld.Value.Name.ToString(), t, distance, player.raceLine.ToArray(), this.Route);
-                    
+                    Record record = new Record
+                    {
+                        Date = now,
+                        Name = actor.Name.ToString(),
+                        World = actor.HomeWorld.Value.Name.ToString(),
+                        Time = t,
+                        Distance = distance,
+                        Line = player.GetRaceLineAsVectorArray(),
+                        RouteId = this.Route.Id.ToString(),
+                        RouteHash = this.Route.GetHash(),
+                    };
+
                     if (actor == Plugin.ClientState.LocalPlayer)
                     {
                         record.IsClient = true;
                     }
 
                     Route.Finished(player, record);
-                } catch (Exception ex)
+                }
+                catch (Exception ex)
                 {
                     Plugin.Log.Error(ex.ToString());
                 }
@@ -109,10 +123,18 @@ namespace Racingway.Race.Collision.Triggers
             doc["_id"] = Id;
             doc["Type"] = "Finish";
 
-            BsonArray cube = [
-                Cube.Position.X.ToString(), Cube.Position.Y.ToString(), Cube.Position.Z.ToString(),  // Position
-                Cube.Scale.X.ToString(),    Cube.Scale.Y.ToString(),    Cube.Scale.Z.ToString(),     // Scale
-                Cube.Rotation.X.ToString(), Cube.Rotation.Y.ToString(), Cube.Rotation.Z.ToString()]; // Roration
+            BsonArray cube =
+            [
+                Cube.Position.X.ToString(),
+                Cube.Position.Y.ToString(),
+                Cube.Position.Z.ToString(), // Position
+                Cube.Scale.X.ToString(),
+                Cube.Scale.Y.ToString(),
+                Cube.Scale.Z.ToString(), // Scale
+                Cube.Rotation.X.ToString(),
+                Cube.Rotation.Y.ToString(),
+                Cube.Rotation.Z.ToString(),
+            ]; // Roration
 
             doc["Cube"] = cube;
 

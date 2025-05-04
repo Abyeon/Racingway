@@ -4,6 +4,7 @@ using Racingway.Race;
 using Racingway.Race.Collision;
 using Racingway.Race.Collision.Triggers;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -12,6 +13,15 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+<<<<<<< Updated upstream
+=======
+using System.Timers;
+using ImGuiNET;
+using LiteDB;
+using Racingway.Race;
+using Racingway.Race.Collision;
+using Racingway.Race.Collision.Triggers;
+>>>>>>> Stashed changes
 
 namespace Racingway.Utils.Storage
 {
@@ -28,12 +38,34 @@ namespace Racingway.Utils.Storage
 
         public Dictionary<string, Route> RouteCache = new Dictionary<string, Route>();
 
+        private ConcurrentQueue<(Func<object>, TaskCompletionSource<object>)> _writeQueue =
+            new ConcurrentQueue<(Func<object>, TaskCompletionSource<object>)>();
+        private readonly int _maxBatchSize = 10;
+        private bool _processingQueue = false;
+        private readonly System.Timers.Timer _flushTimer;
+
+        private readonly Dictionary<string, List<Record>> _recordCache =
+            new Dictionary<string, List<Record>>();
+        private bool _recordsCached = false;
+
         internal LocalDatabase(Plugin plugin, string path)
         {
             Plugin = plugin;
-            Database = new LiteDatabase($"filename={path};upgrade=true");
+
+            // Optimize connection parameters for performance
+            // - journal=false: Disables journal for better write performance (at the cost of some crash recovery)
+            // - cache size=10000: Increases cache size for better read performance
+            // - connection=shared: Uses shared connections for better concurrency
+            // - flush=false: Reduces immediate disk writes for better performance
+            Database = new LiteDatabase(
+                $"filename={path};journal=false;cache size=20000;connection=shared;upgrade=true;flush=false"
+            );
 
             dbPath = path;
+
+            _flushTimer = new System.Timers.Timer(500);
+            _flushTimer.Elapsed += async (s, e) => await FlushQueueAsync();
+            _flushTimer.Start();
 
             var recordCollection = GetRecords();
             recordCollection.EnsureIndex(r => r.Name);
@@ -41,6 +73,8 @@ namespace Racingway.Utils.Storage
             recordCollection.EnsureIndex(r => r.Date);
             recordCollection.EnsureIndex(r => r.Time);
             recordCollection.EnsureIndex(r => r.Distance);
+            recordCollection.EnsureIndex(r => r.RouteId);
+            recordCollection.EnsureIndex(r => r.IsClient);
             //recordCollection.EnsureIndex(r => r.Line);
 
             try
@@ -156,8 +190,27 @@ namespace Racingway.Utils.Storage
 
         public void Dispose()
         {
-            Database.Dispose();
+            _flushTimer.Stop();
+            _flushTimer.Dispose();
+
+            // Make sure we flush any pending changes
+            FlushQueueAsync().GetAwaiter().GetResult();
+
+            // Clean up resources
+            _recordCache.Clear();
             RouteCache.Clear();
+
+            // Compact database before closing
+            try
+            {
+                Database.Rebuild();
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.Error(ex, "Error compacting database");
+            }
+
+            Database.Dispose();
         }
 
         //// Making this to save people's legacy routes.
@@ -173,6 +226,18 @@ namespace Racingway.Utils.Storage
 
         internal async Task AddRecord(Record record)
         {
+            // Add to cache immediately
+            lock (_recordCache)
+            {
+                if (!_recordCache.ContainsKey(record.RouteId))
+                {
+                    _recordCache[record.RouteId] = new List<Record>();
+                }
+
+                _recordCache[record.RouteId].Add(record);
+            }
+
+            // Queue database write
             await WriteToDatabase(() => GetRecords().Insert(record));
         }
 
@@ -326,16 +391,81 @@ namespace Racingway.Utils.Storage
             }
         }
 
-        private async Task WriteToDatabase(Func<object> action)
+        internal async Task WriteToDatabase(Func<object> action)
         {
+            var tcs = new TaskCompletionSource<object>();
+            _writeQueue.Enqueue((action, tcs));
+
+            // Start processing if not already in progress
+            if (!_processingQueue)
+            {
+                _ = Task.Run(ProcessQueueAsync);
+            }
+
+            await tcs.Task;
+        }
+
+        private async Task ProcessQueueAsync()
+        {
+            if (_processingQueue)
+                return;
+
+            try
+            {
+                _processingQueue = true;
+                await FlushQueueAsync();
+            }
+            finally
+            {
+                _processingQueue = false;
+            }
+        }
+
+        private async Task FlushQueueAsync()
+        {
+            if (_writeQueue.IsEmpty)
+                return;
+
+            // Create a batch of operations
+            var batch = new List<(Func<object>, TaskCompletionSource<object>)>();
+
+            // Dequeue items up to the batch size
+            while (batch.Count < _maxBatchSize && _writeQueue.TryDequeue(out var item))
+            {
+                batch.Add(item);
+            }
+
+            if (batch.Count == 0)
+                return;
+
+            // Execute the batch in a single database operation
             try
             {
                 await dbLock.WaitAsync();
-                action.Invoke();
+
+                // Process each operation
+                foreach (var (action, tcs) in batch)
+                {
+                    try
+                    {
+                        var result = action.Invoke();
+                        tcs.SetResult(result ?? new object());
+                    }
+                    catch (Exception ex)
+                    {
+                        tcs.SetException(ex);
+                    }
+                }
             }
             finally
             {
                 dbLock.Release();
+
+                // If there are more items in the queue, process them
+                if (!_writeQueue.IsEmpty)
+                {
+                    _ = Task.Run(ProcessQueueAsync);
+                }
             }
         }
 
@@ -379,6 +509,207 @@ namespace Racingway.Utils.Storage
             }
 
             return string.Empty;
+        }
+
+        private void EnsureRecordsCached()
+        {
+            if (_recordsCached)
+                return;
+
+            lock (_recordCache)
+            {
+                if (_recordsCached)
+                    return;
+
+                var allRecords = GetRecords().FindAll().ToList();
+                foreach (var record in allRecords)
+                {
+                    if (!_recordCache.ContainsKey(record.RouteId))
+                    {
+                        _recordCache[record.RouteId] = new List<Record>();
+                    }
+
+                    _recordCache[record.RouteId].Add(record);
+                }
+
+                _recordsCached = true;
+            }
+        }
+
+        internal List<Record> GetRecordsForRoute(string routeId)
+        {
+            EnsureRecordsCached();
+
+            lock (_recordCache)
+            {
+                if (_recordCache.ContainsKey(routeId))
+                {
+                    return _recordCache[routeId].ToList();
+                }
+            }
+
+            return new List<Record>();
+        }
+
+        // Update CompactDatabase method to be more aggressive with cleanup
+        internal async Task CompactDatabase()
+        {
+            await WriteToDatabase(() =>
+            {
+                try
+                {
+                    // First ensure we're not holding any connections
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+
+                    // Rebuild the database to reclaim space
+                    Database.Rebuild();
+
+                    // Run a vacuum operation to reclaim space
+                    Database.Execute("VACUUM");
+
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    Plugin.Log.Error(ex, "Error compacting database");
+                    return false;
+                }
+            });
+        }
+
+        // Add this method to handle record cleanup
+        internal async Task CleanupRecords(
+            float minTimeFilter,
+            int maxRecordsPerRoute,
+            bool removeNonClientRecords,
+            bool keepPersonalBestOnly
+        )
+        {
+            await WriteToDatabase(() =>
+            {
+                try
+                {
+                    // Get all routes
+                    var routes = GetRoutes().FindAll().ToList();
+                    int totalRecordsBefore = 0;
+                    int totalRecordsAfter = 0;
+                    int routesProcessed = 0;
+
+                    foreach (var route in routes)
+                    {
+                        if (route.Records == null || route.Records.Count == 0)
+                            continue;
+
+                        // Check if this route has its own cleanup settings enabled
+                        bool useRouteSettings = route.EnableAutoCleanup;
+                        float routeMinTimeFilter = useRouteSettings
+                            ? route.MinTimeFilter
+                            : minTimeFilter;
+                        int routeMaxRecords = useRouteSettings
+                            ? route.MaxRecordsToKeep
+                            : maxRecordsPerRoute;
+                        bool routeRemoveNonClient = useRouteSettings
+                            ? route.RemoveNonClientRecords
+                            : removeNonClientRecords;
+                        bool routeKeepPersonalBest = useRouteSettings
+                            ? route.KeepPersonalBestOnly
+                            : keepPersonalBestOnly;
+
+                        // Skip this route if neither global nor route-specific auto-cleanup is enabled
+                        if (!Plugin.Configuration.EnableAutoCleanup && !route.EnableAutoCleanup)
+                            continue;
+
+                        routesProcessed++;
+                        totalRecordsBefore += route.Records.Count;
+
+                        // Keep a working copy of the records for filtering
+                        var records = new List<Record>(route.Records);
+
+                        // 1. Apply time filter (remove records with completion time less than minTimeFilter)
+                        if (routeMinTimeFilter > 0)
+                        {
+                            records = records
+                                .Where(r => r.Time.TotalSeconds >= routeMinTimeFilter)
+                                .ToList();
+                        }
+
+                        // 2. Apply client-only filter
+                        if (routeRemoveNonClient)
+                        {
+                            records = records.Where(r => r.IsClient).ToList();
+                        }
+
+                        // 3. Apply personal best only filter (only keep the best time per player)
+                        if (routeKeepPersonalBest)
+                        {
+                            // Group by player name and keep only the fastest record per player
+                            records = records
+                                .GroupBy(r => r.Name)
+                                .Select(g => g.OrderBy(r => r.Time.TotalMilliseconds).First())
+                                .ToList();
+                        }
+
+                        // 4. Apply max records per route filter
+                        if (routeMaxRecords > 0 && records.Count > routeMaxRecords)
+                        {
+                            // Sort by time and keep only the best records
+                            records = records
+                                .OrderBy(r => r.Time.TotalMilliseconds)
+                                .Take(routeMaxRecords)
+                                .ToList();
+                        }
+
+                        // Update the route with the filtered records
+                        route.Records = records;
+                        totalRecordsAfter += records.Count;
+
+                        // Update route in database
+                        GetRoutes().Update(route);
+
+                        // Update route cache
+                        if (RouteCache.ContainsKey(route.Id.ToString()))
+                        {
+                            RouteCache[route.Id.ToString()] = route;
+                        }
+                    }
+
+                    // Clear record cache to force refresh
+                    _recordCache.Clear();
+                    _recordsCached = false;
+
+                    // Log results
+                    int recordsRemoved = totalRecordsBefore - totalRecordsAfter;
+                    Plugin.Log.Information(
+                        $"Records cleanup complete: {recordsRemoved} records removed. Routes processed: {routesProcessed}, Records remaining: {totalRecordsAfter}"
+                    );
+
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    Plugin.Log.Error(ex, "Error during records cleanup");
+                    return false;
+                }
+            });
+        }
+
+        // Add this method to handle route operations with better error handling and performance
+        internal async Task OptimizedDatabaseOperation(Action operation, string errorMessage)
+        {
+            await WriteToDatabase(() =>
+            {
+                try
+                {
+                    operation();
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    Plugin.Log.Error(ex, errorMessage);
+                    return false;
+                }
+            });
         }
     }
 }

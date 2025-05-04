@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 using System.Text;
-using Newtonsoft.Json;
 using System.Threading.Tasks;
 using LiteDB;
-using System.Diagnostics;
+using Newtonsoft.Json;
 
 namespace Racingway.Race.Collision.Triggers
 {
@@ -45,7 +45,10 @@ namespace Racingway.Race.Collision.Triggers
                 Touchers.Add(player.id);
                 OnEntered(player);
             }
-            else if ((!inTrigger && Touchers.Contains(player.id)) || (!player.isGrounded && Touchers.Contains(player.id)))
+            else if (
+                (!inTrigger && Touchers.Contains(player.id))
+                || (!player.isGrounded && Touchers.Contains(player.id))
+            )
             {
                 Touchers.Remove(player.id);
                 OnLeft(player);
@@ -61,7 +64,8 @@ namespace Racingway.Race.Collision.Triggers
                 Route.Failed(player);
 
                 int index = Route.PlayersInParkour.FindIndex(x => x.Item1 == player);
-                if (index == -1) return; // return if player is not in parkour
+                if (index == -1)
+                    return; // return if player is not in parkour
 
                 player.inParkour = false;
 
@@ -78,11 +82,17 @@ namespace Racingway.Race.Collision.Triggers
                 Color = InactiveColor;
             }
 
+            // Start the player timer
+            player.timer.Reset();
             player.timer.Start();
             player.inParkour = true;
             player.AddPoint();
 
-            Route.PlayersInParkour.Add((player, Stopwatch.StartNew()));
+            // Create a new stopwatch for this player's parkour session
+            var stopwatch = Stopwatch.StartNew();
+            Route.PlayersInParkour.Add((player, stopwatch));
+
+            // Signal that the player has started the race
             Route.Started(player);
 
             player.raceLine.Clear();
@@ -94,10 +104,18 @@ namespace Racingway.Race.Collision.Triggers
             doc["_id"] = Id;
             doc["Type"] = "Start";
 
-            BsonArray cube = [
-                Cube.Position.X.ToString(), Cube.Position.Y.ToString(), Cube.Position.Z.ToString(),  // Position
-                Cube.Scale.X.ToString(),    Cube.Scale.Y.ToString(),    Cube.Scale.Z.ToString(),     // Scale
-                Cube.Rotation.X.ToString(), Cube.Rotation.Y.ToString(), Cube.Rotation.Z.ToString()]; // Roration
+            BsonArray cube =
+            [
+                Cube.Position.X.ToString(),
+                Cube.Position.Y.ToString(),
+                Cube.Position.Z.ToString(), // Position
+                Cube.Scale.X.ToString(),
+                Cube.Scale.Y.ToString(),
+                Cube.Scale.Z.ToString(), // Scale
+                Cube.Rotation.X.ToString(),
+                Cube.Rotation.Y.ToString(),
+                Cube.Rotation.Z.ToString(),
+            ]; // Roration
 
             doc["Cube"] = cube;
 
