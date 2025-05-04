@@ -1,8 +1,3 @@
-using ImGuiNET;
-using LiteDB;
-using Racingway.Race;
-using Racingway.Race.Collision;
-using Racingway.Race.Collision.Triggers;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -12,6 +7,11 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using ImGuiNET;
+using LiteDB;
+using Racingway.Race;
+using Racingway.Race.Collision;
+using Racingway.Race.Collision.Triggers;
 
 namespace Racingway.Utils.Storage
 {
@@ -45,18 +45,24 @@ namespace Racingway.Utils.Storage
 
             try
             {
-                BsonMapper.Global.RegisterType
-                (
-                    serialize: (vector) => new BsonArray(vector.Select(x => new BsonValue(x.ToString()))),
+                BsonMapper.Global.RegisterType(
+                    serialize: (vector) =>
+                        new BsonArray(vector.Select(x => new BsonValue(x.ToString()))),
                     deserialize: (bson) =>
                     {
                         var values = bson.AsArray.Select(x => x.ToString()).ToArray();
-                        var vectors = values.Select(v =>
-                        {
-                            var trimmed = v.Trim().Substring(2, v.Length - 4);
-                            var values = trimmed.Trim().Split(',').Select(x => float.Parse(x)).ToArray();
-                            return new Vector3(values[0], values[1], values[2]);
-                        }).ToArray();
+                        var vectors = values
+                            .Select(v =>
+                            {
+                                var trimmed = v.Trim().Substring(2, v.Length - 4);
+                                var values = trimmed
+                                    .Trim()
+                                    .Split(',')
+                                    .Select(x => float.Parse(x))
+                                    .ToArray();
+                                return new Vector3(values[0], values[1], values[2]);
+                            })
+                            .ToArray();
 
                         return vectors;
                     }
@@ -81,25 +87,37 @@ namespace Racingway.Utils.Storage
                         uint.Parse(bson["territoryId"]),
                         uint.Parse(bson["mapId"]),
                         bson["locationId"],
-                        bson["readableName"]);
+                        bson["readableName"]
+                    );
 
                     return newAddress;
                 }
             );
 
-            BsonMapper.Global.RegisterType<Route>
-            (
+            BsonMapper.Global.RegisterType<Route>(
                 serialize: (route) => route.GetSerialized(),
                 deserialize: (bson) =>
                 {
                     try
                     {
                         var address = BsonMapper.Global.Deserialize<Address>(bson["address"]);
-                        var newRoute = new Route(bson["name"], address, bson["description"], new(), new(), bson["allowMounts"], bson["enabled"], bson["clientFails"], bson["clientFinishes"]);
+                        var newRoute = new Route(
+                            bson["name"],
+                            address,
+                            bson["description"],
+                            new(),
+                            new(),
+                            bson["allowMounts"],
+                            bson["enabled"],
+                            bson["clientFails"],
+                            bson["clientFinishes"]
+                        );
 
                         try
                         {
-                            var records = BsonMapper.Global.Deserialize<List<Record>>(bson["records"]);
+                            var records = BsonMapper.Global.Deserialize<List<Record>>(
+                                bson["records"]
+                            );
                             newRoute.Records = records;
                             newRoute.Records.Sort((a, b) => a.Time.CompareTo(b.Time));
                         }
@@ -117,9 +135,22 @@ namespace Racingway.Utils.Storage
                             var cubeArray = (BsonArray)trigger["Cube"];
                             string type = trigger["Type"];
                             var cube = new Cube(
-                                new Vector3(float.Parse(cubeArray[0]), float.Parse(cubeArray[1]), float.Parse(cubeArray[2])),
-                                new Vector3(float.Parse(cubeArray[3]), float.Parse(cubeArray[4]), float.Parse(cubeArray[5])),
-                                new Vector3(float.Parse(cubeArray[6]), float.Parse(cubeArray[7]), float.Parse(cubeArray[8])));
+                                new Vector3(
+                                    float.Parse(cubeArray[0]),
+                                    float.Parse(cubeArray[1]),
+                                    float.Parse(cubeArray[2])
+                                ),
+                                new Vector3(
+                                    float.Parse(cubeArray[3]),
+                                    float.Parse(cubeArray[4]),
+                                    float.Parse(cubeArray[5])
+                                ),
+                                new Vector3(
+                                    float.Parse(cubeArray[6]),
+                                    float.Parse(cubeArray[7]),
+                                    float.Parse(cubeArray[8])
+                                )
+                            );
 
                             switch (type)
                             {
@@ -135,8 +166,13 @@ namespace Racingway.Utils.Storage
                                 case "Finish":
                                     newRoute.Triggers.Add(new Finish(newRoute, cube));
                                     break;
+                                case "Loop":
+                                    newRoute.Triggers.Add(new Loop(newRoute, cube));
+                                    break;
                                 default:
-                                    throw new Exception("Attempted to add a trigger type that does not exist!");
+                                    throw new Exception(
+                                        "Attempted to add a trigger type that does not exist!"
+                                    );
                             }
                         }
 
@@ -220,7 +256,8 @@ namespace Racingway.Utils.Storage
 
             foreach (var route in RouteCache.Values)
             {
-                if (!routes.Contains(route)) RouteCache.Remove(route.Id.ToString());
+                if (!routes.Contains(route))
+                    RouteCache.Remove(route.Id.ToString());
             }
         }
 
@@ -254,7 +291,9 @@ namespace Racingway.Utils.Storage
                 // If the route is somehow null, lets log the JSON.
                 if (route == null)
                 {
-                    Plugin.Log.Warning("Imported route was null, printing the uncompressed Base64... ");
+                    Plugin.Log.Warning(
+                        "Imported route was null, printing the uncompressed Base64... "
+                    );
                     Plugin.Log.Warning(Json);
                     throw new NullReferenceException("Route is null. Check /xllog.");
                 }
@@ -302,24 +341,35 @@ namespace Racingway.Utils.Storage
                     if (hash != record.RouteHash)
                     {
                         Plugin.Log.Error(hash + " != " + record.RouteHash);
-                        throw new Exception("Saved version of route may not match the one this record was made in.");
+                        throw new Exception(
+                            "Saved version of route may not match the one this record was made in."
+                        );
                     }
 
                     // Incredibly stupid way to check if a duplicate record exists.. Because my LiteDB implementation was flawed from the start! I might burn it all down..
-                    if (!records.Exists(r => r.Name == record.Name && r.World == record.World && r.Time == record.Time))
+                    if (
+                        !records.Exists(r =>
+                            r.Name == record.Name
+                            && r.World == record.World
+                            && r.Time == record.Time
+                        )
+                    )
                     {
                         route.Records.Add(record);
                         await AddRoute(route);
                         return;
-                    } else
+                    }
+                    else
                     {
                         throw new Exception("Route already contains this record.");
                     }
-                } else
+                }
+                else
                 {
                     throw new Exception("Route that record was intended for does not exist.");
                 }
-            } catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 Plugin.ChatGui.PrintError($"[RACE] Failed to import record. {ex.Message}");
                 Plugin.Log.Error(ex, "Failed to import record");
@@ -340,18 +390,38 @@ namespace Racingway.Utils.Storage
         }
 
         // Grabbed from https://stackoverflow.com/a/14488941
-        static readonly string[] SizeSuffixes = { "bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB" };
+        static readonly string[] SizeSuffixes =
+        {
+            "bytes",
+            "KB",
+            "MB",
+            "GB",
+            "TB",
+            "PB",
+            "EB",
+            "ZB",
+            "YB",
+        };
 
         static string SizeSuffix(long value, int decimalPlaces = 1)
         {
-            if (decimalPlaces < 0) { throw new ArgumentOutOfRangeException("decimalPlaces"); }
-            if (value < 0) { return "-" + SizeSuffix(-value, decimalPlaces); }
-            if (value == 0) { return string.Format("{0:n" + decimalPlaces + "} bytes", 0); }
+            if (decimalPlaces < 0)
+            {
+                throw new ArgumentOutOfRangeException("decimalPlaces");
+            }
+            if (value < 0)
+            {
+                return "-" + SizeSuffix(-value, decimalPlaces);
+            }
+            if (value == 0)
+            {
+                return string.Format("{0:n" + decimalPlaces + "} bytes", 0);
+            }
 
             // mag is 0 for bytes, 1 for KB, 2, for MB, etc.
             var mag = (int)Math.Log(value, 1024);
 
-            // 1L << (mag * 10) == 2 ^ (10 * mag) 
+            // 1L << (mag * 10) == 2 ^ (10 * mag)
             // [i.e. the number of bytes in the unit corresponding to mag]
             var adjustedSize = (decimal)value / (1L << mag * 10);
 
@@ -363,9 +433,7 @@ namespace Racingway.Utils.Storage
                 adjustedSize /= 1024;
             }
 
-            return string.Format("{0:n" + decimalPlaces + "} {1}",
-                adjustedSize,
-                SizeSuffixes[mag]);
+            return string.Format("{0:n" + decimalPlaces + "} {1}", adjustedSize, SizeSuffixes[mag]);
         }
 
         // Return the size of the db file in a string format
