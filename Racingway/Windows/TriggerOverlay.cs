@@ -67,6 +67,14 @@ namespace Racingway.Windows
                 {
                     if (trigger == null) continue;
 
+                    try
+                    {
+                        draw.DrawGizmo(ref trigger.Cube.Position, ref trigger.Cube.Rotation, ref trigger.Cube.Scale, trigger.Id.ToString());
+                    } catch (Exception ex)
+                    {
+                        Plugin.Log.Error(ex.ToString());
+                    }
+
                     draw.DrawCubeFilled(trigger.Cube, trigger.Color, 5.0f);
                 }
             }
