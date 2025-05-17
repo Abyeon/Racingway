@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Text;
-using Newtonsoft.Json;
 using System.Threading.Tasks;
 using LiteDB;
+using Newtonsoft.Json;
 using static Dalamud.Interface.Utility.Raii.ImRaii;
 
 namespace Racingway.Race.Collision.Triggers
@@ -41,13 +41,14 @@ namespace Racingway.Race.Collision.Triggers
             Color = ActiveColor;
 
             int index = Route.PlayersInParkour.FindIndex(x => x.Item1 == player);
-            if (index == -1) return;
+            if (index == -1)
+                return;
 
             Route.Failed(player);
             player.inParkour = false;
             player.timer.Reset();
 
-            player.raceLine.Clear();
+            player.ClearLine();
             Route.PlayersInParkour.RemoveAt(index);
             Touchers.Remove(player.id);
             OnLeft(player);
@@ -67,10 +68,18 @@ namespace Racingway.Race.Collision.Triggers
             doc["_id"] = Id;
             doc["Type"] = "Fail";
 
-            BsonArray cube = [
-                Cube.Position.X.ToString(), Cube.Position.Y.ToString(), Cube.Position.Z.ToString(),  // Position
-                Cube.Scale.X.ToString(),    Cube.Scale.Y.ToString(),    Cube.Scale.Z.ToString(),     // Scale
-                Cube.Rotation.X.ToString(), Cube.Rotation.Y.ToString(), Cube.Rotation.Z.ToString()]; // Roration
+            BsonArray cube =
+            [
+                Cube.Position.X.ToString(),
+                Cube.Position.Y.ToString(),
+                Cube.Position.Z.ToString(), // Position
+                Cube.Scale.X.ToString(),
+                Cube.Scale.Y.ToString(),
+                Cube.Scale.Z.ToString(), // Scale
+                Cube.Rotation.X.ToString(),
+                Cube.Rotation.Y.ToString(),
+                Cube.Rotation.Z.ToString(),
+            ]; // Roration
 
             doc["Cube"] = cube;
 

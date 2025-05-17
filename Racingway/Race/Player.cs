@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Numerics;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.ClientState.Objects.Types;
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
@@ -5,10 +9,6 @@ using FFXIVClientStructs.FFXIV.Client.Graphics;
 using FFXIVClientStructs.FFXIV.Common.Component.BGCollision;
 using Racingway.Race.Collision;
 using Racingway.Utils;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Numerics;
 
 namespace Racingway.Race
 {
@@ -19,14 +19,33 @@ namespace Racingway.Race
         public uint id;
         public ICharacter actor;
         public Vector3 position = Vector3.Zero;
-        public Queue<TimedVector3> raceLine = new Queue<TimedVector3>();
-        public Stopwatch timer = new Stopwatch();
 
+        // Using a bounded collection to limit memory usage
+        private const int DEFAULT_MAX_LINE_POINTS = 1000;
+
+        // Store ONLY raw points - no processing
+        private List<TimedVector3> _rawPoints = new List<TimedVector3>();
+
+        // Store the finalized line segments that never change
+        private List<LineSegment> _finalLine = new List<LineSegment>();
+
+        // Store the last point so we can create a new segment
+        private TimedVector3 _lastFinalPoint;
+        private bool _hasLastPoint = false;
+
+        // Public property to maintain compatibility with existing code
+        public IEnumerable<TimedVector3> RaceLine => _rawPoints;
+
+        public Stopwatch timer = new Stopwatch();
         public int lastSeen;
 
         public bool inParkour = false;
         public bool isGrounded = true;
         public bool inMount = false;
+
+        // Tracking last point to avoid unnecessary additions
+        private Vector3 lastAddedPosition = Vector3.Zero;
+        private const float MIN_DISTANCE_THRESHOLD = 1.5f;
 
         public Player(uint id, ICharacter actor, Plugin plugin)
         {
@@ -34,6 +53,7 @@ namespace Racingway.Race
             this.actor = actor;
             Plugin = plugin;
             lastSeen = 0;
+            _lastFinalPoint = new TimedVector3(Vector3.Zero, 0);
         }
 
         private int delayRaceline = 0;
@@ -60,10 +80,14 @@ namespace Racingway.Race
 
                 this.isGrounded = !character->IsJumping();
                 this.inMount = character->IsMounted();
-            } catch (NullReferenceException e)
+            }
+            catch (NullReferenceException e)
             {
-                Plugin.Log.Error("Error updating player states. " + e.ToString());
-                Plugin.ChatGui.PrintError("Error updating player states. See /xllog");
+                if (Plugin != null)
+                {
+                    Racingway.Plugin.Log.Error("Error updating player states. " + e.ToString());
+                    Racingway.Plugin.ChatGui.PrintError("Error updating player states. See /xllog");
+                }
             }
         }
 
@@ -73,37 +97,146 @@ namespace Racingway.Race
 
             delayRaceline++;
 
-            if (inParkour)
+            if (inParkour && Plugin != null)
             {
                 if (delayRaceline >= Plugin.Configuration.LineQuality)
                 {
-                    AddPoint();
+                    // Only add points if we've moved a sufficient distance
+                    if (
+                        lastAddedPosition == Vector3.Zero
+                        || Vector3.Distance(lastAddedPosition, this.position)
+                            >= MIN_DISTANCE_THRESHOLD
+                    )
+                    {
+                        AddPoint();
+                        lastAddedPosition = this.position;
+                    }
                     delayRaceline = 0;
                 }
             }
 
             //UpdateState();
-            Plugin.CheckCollision(this);
+            if (Plugin != null)
+            {
+                Plugin.CheckCollision(this);
+            }
         }
 
         public void AddPoint()
         {
-            raceLine.Enqueue(new TimedVector3(this.position, timer.ElapsedMilliseconds));
+            // Create the new point
+            TimedVector3 newPoint = new TimedVector3(this.position, timer.ElapsedMilliseconds);
+
+            // Add to raw points list (for distance calculation, etc.)
+            _rawPoints.Add(newPoint);
+
+            // Limit the raw points list size to prevent memory issues
+            int maxPoints = DEFAULT_MAX_LINE_POINTS;
+            if (Plugin != null && Plugin.Configuration.MaxLinePoints > 0)
+            {
+                maxPoints = Plugin.Configuration.MaxLinePoints;
+            }
+
+            if (_rawPoints.Count > maxPoints)
+            {
+                _rawPoints.RemoveAt(0);
+            }
+
+            // If this is our first point, just store it
+            if (!_hasLastPoint)
+            {
+                _lastFinalPoint = newPoint;
+                _hasLastPoint = true;
+                return;
+            }
+
+            // Create a new line segment from last point to this point
+            // This segment will NEVER change once added
+            _finalLine.Add(new LineSegment(_lastFinalPoint, newPoint));
+
+            // Update last point
+            _lastFinalPoint = newPoint;
+
+            // Limit total number of line segments if needed
+            if (_finalLine.Count > maxPoints - 1)
+            {
+                _finalLine.RemoveAt(0);
+
+                // If we removed the first segment, update the source point of the next segment
+                if (_finalLine.Count > 0)
+                {
+                    _lastFinalPoint = _finalLine[0].Source;
+                }
+            }
         }
 
         public float GetDistanceTraveled()
         {
-            var arrayLine = raceLine.ToArray();
             float distance = 0;
 
-            for (var i = 1; i < raceLine.Count; i++)
+            for (var i = 1; i < _rawPoints.Count; i++)
             {
-                if (arrayLine[i - 1].asVector() == Vector3.Zero) continue;
+                if (_rawPoints[i - 1].asVector() == Vector3.Zero)
+                    continue;
 
-                distance += Vector3.Distance(arrayLine[i - 1].asVector(), arrayLine[i].asVector());
+                distance += Vector3.Distance(
+                    _rawPoints[i - 1].asVector(),
+                    _rawPoints[i].asVector()
+                );
             }
 
             return distance;
+        }
+
+        // Get the vector array for drawing - returning an array of points for the line
+        public TimedVector3[] GetLineForDrawing()
+        {
+            if (_finalLine.Count == 0 && !_hasLastPoint)
+                return new TimedVector3[0];
+
+            // Build list of points from our finalized segments
+            List<TimedVector3> points = new List<TimedVector3>();
+
+            // Add first point if we have one
+            if (_finalLine.Count > 0)
+            {
+                points.Add(_finalLine[0].Source);
+            }
+            else if (_hasLastPoint)
+            {
+                points.Add(_lastFinalPoint);
+                return points.ToArray();
+            }
+
+            // Add all destination points from the segments
+            foreach (var segment in _finalLine)
+            {
+                points.Add(segment.Destination);
+            }
+
+            return points.ToArray();
+        }
+
+        // Clear the line and all tracking data
+        public void ClearLine()
+        {
+            _rawPoints.Clear();
+            _finalLine.Clear();
+            _hasLastPoint = false;
+            lastAddedPosition = Vector3.Zero;
+        }
+    }
+
+    // A line segment that never changes once created
+    public struct LineSegment
+    {
+        public TimedVector3 Source { get; }
+        public TimedVector3 Destination { get; }
+
+        public LineSegment(TimedVector3 source, TimedVector3 destination)
+        {
+            Source = source;
+            Destination = destination;
         }
     }
 }

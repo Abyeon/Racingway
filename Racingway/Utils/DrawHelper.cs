@@ -1,12 +1,12 @@
-using ImGuiNET;
-using Racingway.Race.Collision;
-using Racingway.Race.Collision.Triggers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
+using ImGuiNET;
+using Racingway.Race.Collision;
+using Racingway.Race.Collision.Triggers;
 
 namespace Racingway.Utils
 {
@@ -44,8 +44,13 @@ namespace Racingway.Utils
             Vector2 screenPos1 = new Vector2();
             Vector2 screenPos2 = new Vector2();
 
-            // These methods return true if the positions are in front of the screen.
-            if (Plugin.GameGui.WorldToScreen(start, out screenPos1) && Plugin.GameGui.WorldToScreen(end, out screenPos2))
+            // Always attempt to draw the line, even if points are off-screen
+            // This ensures consistency when zooming in/out
+            bool startVisible = Plugin.GameGui.WorldToScreen(start, out screenPos1);
+            bool endVisible = Plugin.GameGui.WorldToScreen(end, out screenPos2);
+
+            // Draw the line if at least one end is visible or if both are off-screen but might cross the viewport
+            if (startVisible || endVisible)
             {
                 drawList.AddLine(screenPos1, screenPos2, color, thickness);
             }
@@ -53,14 +58,19 @@ namespace Racingway.Utils
 
         public void DrawPath3d(Vector3[] path, uint color, float thickness)
         {
-            for (int i = 0; i < path.Length; i++)
-            {
-                Vector2 screenPos = new Vector2();
+            if (path.Length == 0)
+                return;
 
-                Plugin.GameGui.WorldToScreen(path[i], out screenPos);
-                drawList.PathLineTo(screenPos);
+            // Skip drawing if too many points - would cause performance issues
+            if (path.Length > 1000)
+                return;
+
+            // Draw segments directly instead of using PathLineTo/PathStroke, which can cause
+            // visual inconsistencies when the camera moves
+            for (int i = 1; i < path.Length; i++)
+            {
+                DrawLine3d(path[i - 1], path[i], color, thickness);
             }
-            drawList.PathStroke(color, ImDrawFlags.None, thickness);
         }
 
         public void DrawQuadFilled3d(Vector3 p1, Vector3 p2, Vector3 p3, Vector3 p4, uint color)
@@ -80,7 +90,13 @@ namespace Racingway.Utils
 
             if (onScreen)
             {
-                drawList.AddQuadFilled(screenPos[0], screenPos[1], screenPos[2], screenPos[3], color);
+                drawList.AddQuadFilled(
+                    screenPos[0],
+                    screenPos[1],
+                    screenPos[2],
+                    screenPos[3],
+                    color
+                );
             }
         }
 
@@ -96,15 +112,28 @@ namespace Racingway.Utils
                 new Vector3(min.X, max.Y, min.Z),
                 new Vector3(min.X, max.Y, max.Z),
                 max,
-                new Vector3(max.X, max.Y, min.Z)
+                new Vector3(max.X, max.Y, min.Z),
             };
 
             // Define line indices
             int[,] lines =
             {
-                {0, 1}, {1, 2}, {2, 3}, {3, 0}, // top face
-                {4, 5}, {5, 6}, {6, 7}, {7, 4}, // bottom face
-                {0, 4}, {1, 5}, {2,6}, {3, 7} // Side edges
+                { 0, 1 },
+                { 1, 2 },
+                { 2, 3 },
+                { 3, 0 }, // top face
+                { 4, 5 },
+                { 5, 6 },
+                { 6, 7 },
+                { 7, 4 }, // bottom face
+                { 0, 4 },
+                { 1, 5 },
+                { 2, 6 },
+                {
+                    3,
+                    7,
+                } // Side edges
+                ,
             };
 
             // Go through lines and draw them
@@ -122,9 +151,22 @@ namespace Racingway.Utils
             // Array of indices defining lines for each face of the cube
             int[,] lines =
             {
-                {0, 1}, {1, 2}, {2, 3}, {3, 0}, // top face
-                {4, 5}, {5, 6}, {6, 7}, {7, 4}, // bottom face
-                {0, 4}, {1, 5}, {2,6}, {3, 7} // Side edges
+                { 0, 1 },
+                { 1, 2 },
+                { 2, 3 },
+                { 3, 0 }, // top face
+                { 4, 5 },
+                { 5, 6 },
+                { 6, 7 },
+                { 7, 4 }, // bottom face
+                { 0, 4 },
+                { 1, 5 },
+                { 2, 6 },
+                {
+                    3,
+                    7,
+                } // Side edges
+                ,
             };
 
             // Get rotated vertices of cube
@@ -138,21 +180,32 @@ namespace Racingway.Utils
                 int start = lines[i, 0];
                 int end = lines[i, 1];
 
-                DrawLine3d(points[start] + cube.Position, points[end] + cube.Position, color, thickness);
+                DrawLine3d(
+                    points[start] + cube.Position,
+                    points[end] + cube.Position,
+                    color,
+                    thickness
+                );
             }
         }
 
-        public void DrawCubeFilled(Cube cube, uint color, float thickness) 
+        public void DrawCubeFilled(Cube cube, uint color, float thickness)
         {
             // Arrays of indices for each face
             int[,] faces =
             {
-                {0, 1, 2, 3}, // top face
-                {4, 5, 6, 7}, // bottom face
-                {0, 4, 7, 3}, // front face
-                {1, 5, 6, 2}, // back face
-                {1, 5, 4, 0}, // left face
-                {3, 7, 6, 2} // right face
+                { 0, 1, 2, 3 }, // top face
+                { 4, 5, 6, 7 }, // bottom face
+                { 0, 4, 7, 3 }, // front face
+                { 1, 5, 6, 2 }, // back face
+                { 1, 5, 4, 0 }, // left face
+                {
+                    3,
+                    7,
+                    6,
+                    2,
+                } // right face
+                ,
             };
 
             // Get rotated vertices of cube
@@ -167,17 +220,31 @@ namespace Racingway.Utils
                 Vector3 p3 = points[faces[i, 2]];
                 Vector3 p4 = points[faces[i, 3]];
 
-                DrawQuadFilled3d(p1 + cube.Position, p2 + cube.Position, p3 + cube.Position, p4 + cube.Position, color);
+                DrawQuadFilled3d(
+                    p1 + cube.Position,
+                    p2 + cube.Position,
+                    p3 + cube.Position,
+                    p4 + cube.Position,
+                    color
+                );
             }
         }
 
-        public Vector3[] RotatePointsAroundOrigin(Vector3[] points, Vector3 origin, Vector3 rotation)
+        public Vector3[] RotatePointsAroundOrigin(
+            Vector3[] points,
+            Vector3 origin,
+            Vector3 rotation
+        )
         {
             Vector3[] tempVecs = points;
 
             for (int i = 0; i < 8; i++)
             {
-                Quaternion rotator = Quaternion.CreateFromYawPitchRoll(rotation.X, rotation.Y, rotation.Z);
+                Quaternion rotator = Quaternion.CreateFromYawPitchRoll(
+                    rotation.X,
+                    rotation.Y,
+                    rotation.Z
+                );
                 Vector3 relativeVector = tempVecs[i] - origin;
                 Vector3 rotatedVector = Vector3.Transform(relativeVector, rotator);
                 tempVecs[i] = rotatedVector + origin;

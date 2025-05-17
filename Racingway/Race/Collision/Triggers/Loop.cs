@@ -1,17 +1,16 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
-using Dalamud.Game.ClientState.Objects.SubKinds;
 using LiteDB;
 using Newtonsoft.Json;
-using Racingway.Utils;
 
 namespace Racingway.Race.Collision.Triggers
 {
-    public class Finish : ITrigger
+    public class Loop : ITrigger
     {
         public ObjectId Id { get; set; }
         public Route Route { get; set; }
@@ -22,19 +21,16 @@ namespace Racingway.Race.Collision.Triggers
 
         public uint Color { get; set; } = InactiveColor;
         public List<uint> Touchers { get; set; } = new List<uint>();
+        private Dictionary<uint, bool> playerStarted = new Dictionary<uint, bool>();
 
-        // To prevent duplicate finish processing
-        private HashSet<uint> _recentlyProcessed = new HashSet<uint>();
-        private readonly object _processLock = new object();
-
-        public Finish(Route route, Vector3 position, Vector3 scale, Vector3 rotation)
+        public Loop(Route route, Vector3 position, Vector3 scale, Vector3 rotation)
         {
             this.Id = new();
             this.Route = route;
             this.Cube = new Cube(position, scale, rotation);
         }
 
-        public Finish(Route route, Cube cube)
+        public Loop(Route route, Cube cube)
         {
             this.Id = new();
             this.Route = route;
@@ -45,61 +41,27 @@ namespace Racingway.Race.Collision.Triggers
         {
             var inTrigger = Cube.PointInCube(player.position);
 
-            // Fast return if nothing changed
-            if (
-                (!inTrigger && !Touchers.Contains(player.id))
-                || (_recentlyProcessed.Contains(player.id))
-            )
-            {
-                return;
-            }
-
+            // When player enters trigger and wasn't already inside
             if (inTrigger && !Touchers.Contains(player.id))
             {
                 Touchers.Add(player.id);
-
-                // Use Task.Run to handle the finish logic off the main thread
-                Task.Run(() => ProcessPlayerFinish(player));
+                OnEntered(player);
             }
+            // When player leaves trigger and was inside
             else if (!inTrigger && Touchers.Contains(player.id))
             {
                 Touchers.Remove(player.id);
                 OnLeft(player);
-
-                // Clean up recently processed after a short delay
-                Task.Delay(1000)
-                    .ContinueWith(_ =>
-                    {
-                        lock (_processLock)
-                        {
-                            _recentlyProcessed.Remove(player.id);
-                        }
-                    });
             }
         }
 
-        // Required by ITrigger interface
         public void OnEntered(Player player)
         {
-            // This method is required by the interface, but we're using ProcessPlayerFinish instead
-            // Starting the process on a background thread to avoid blocking the main thread
-            Task.Run(() => ProcessPlayerFinish(player));
-        }
+            Color = ActiveColor;
 
-        private void ProcessPlayerFinish(Player player)
-        {
-            // Prevent double-finishing for the same player
-            lock (_processLock)
+            // If the player is returning to the trigger after starting the race
+            if (playerStarted.ContainsKey(player.id) && playerStarted[player.id])
             {
-                if (_recentlyProcessed.Contains(player.id))
-                    return;
-
-                _recentlyProcessed.Add(player.id);
-            }
-
-            try
-            {
-                Color = ActiveColor;
                 DateTime now = DateTime.UtcNow;
                 int index = Route.PlayersInParkour.FindIndex(x => x.Item1 == player);
 
@@ -118,25 +80,35 @@ namespace Racingway.Race.Collision.Triggers
                     player.timer.Stop();
                     player.timer.Reset();
 
+                    // Reset player's status for future races
+                    playerStarted[player.id] = false;
+
                     try
                     {
-                        IPlayerCharacter actor = (IPlayerCharacter)player.actor;
-                        Record record = new Record(
-                            now,
-                            actor.Name.ToString(),
-                            actor.HomeWorld.Value.Name.ToString(),
-                            t,
-                            distance,
-                            player.RaceLine.ToArray(),
-                            this.Route
-                        );
-
-                        if (actor == Plugin.ClientState.LocalPlayer)
+                        var actor = player.actor;
+                        if (
+                            actor != null
+                            && actor
+                                is Dalamud.Game.ClientState.Objects.SubKinds.IPlayerCharacter playerActor
+                        )
                         {
-                            record.IsClient = true;
-                        }
+                            Record record = new Record(
+                                now,
+                                playerActor.Name.ToString(),
+                                playerActor.HomeWorld.Value.Name.ToString(),
+                                t,
+                                distance,
+                                player.RaceLine.ToArray(),
+                                this.Route
+                            );
 
-                        Route.Finished(player, record);
+                            if (playerActor == Plugin.ClientState.LocalPlayer)
+                            {
+                                record.IsClient = true;
+                            }
+
+                            Route.Finished(player, record);
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -144,10 +116,8 @@ namespace Racingway.Race.Collision.Triggers
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                Plugin.Log.Error($"Error processing player finish: {ex}");
-            }
+
+            player.ClearLine();
         }
 
         public void OnLeft(Player player)
@@ -156,13 +126,30 @@ namespace Racingway.Race.Collision.Triggers
             {
                 Color = InactiveColor;
             }
+
+            // Only start the race if this player hasn't already started a race from this trigger
+            // or if they've already completed a race (playerStarted reset to false)
+            if (!playerStarted.ContainsKey(player.id) || !playerStarted[player.id])
+            {
+                // Mark this player as having started the race
+                playerStarted[player.id] = true;
+
+                player.timer.Start();
+                player.inParkour = true;
+                player.AddPoint();
+
+                Route.PlayersInParkour.Add((player, Stopwatch.StartNew()));
+                Route.Started(player);
+
+                player.ClearLine();
+            }
         }
 
         public BsonDocument GetSerialized()
         {
             var doc = new BsonDocument();
             doc["_id"] = Id;
-            doc["Type"] = "Finish";
+            doc["Type"] = "Loop";
 
             BsonArray cube =
             [
