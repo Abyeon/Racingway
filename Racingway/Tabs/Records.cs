@@ -1,14 +1,17 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Numerics;
+using System.Text;
+using System.Threading.Tasks;
+using Dalamud.Interface;
+using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using ImGuiNET;
 using LiteDB;
 using Racingway.Race;
 using Racingway.Utils;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace Racingway.Tabs
@@ -19,17 +22,277 @@ namespace Racingway.Tabs
 
         private Plugin Plugin { get; }
 
+        // Filter settings
+        private bool showFilters = false;
+        private DateTime? filterStartDate = null;
+        private DateTime? filterEndDate = null;
+        private string filterPlayerName = string.Empty;
+        private float? filterTimeMin = null;
+        private float? filterTimeMax = null;
+        private float? filterDistanceMin = null;
+        private float? filterDistanceMax = null;
+
         public Records(Plugin plugin)
         {
             this.Plugin = plugin;
         }
 
-        public void Dispose()
-        {
-
-        }
+        public void Dispose() { }
 
         private List<Record> cachedRecords = new List<Record>();
+        private List<Record> filteredRecords = new List<Record>();
+
+        private bool IsRecordMatchingFilters(Record record)
+        {
+            // Date filter
+            if (filterStartDate.HasValue && record.Date < filterStartDate.Value)
+                return false;
+
+            if (filterEndDate.HasValue && record.Date > filterEndDate.Value)
+                return false;
+
+            // Player name filter (case insensitive)
+            if (
+                !string.IsNullOrEmpty(filterPlayerName)
+                && !record.Name.ToLower().Contains(filterPlayerName.ToLower())
+            )
+                return false;
+
+            // Time filter (in seconds)
+            if (filterTimeMin.HasValue && record.Time.TotalSeconds < filterTimeMin.Value)
+                return false;
+
+            if (filterTimeMax.HasValue && record.Time.TotalSeconds > filterTimeMax.Value)
+                return false;
+
+            // Distance filter
+            if (filterDistanceMin.HasValue && record.Distance < filterDistanceMin.Value)
+                return false;
+
+            if (filterDistanceMax.HasValue && record.Distance > filterDistanceMax.Value)
+                return false;
+
+            return true;
+        }
+
+        private void ApplyFilters()
+        {
+            filteredRecords = cachedRecords.Where(IsRecordMatchingFilters).ToList();
+        }
+
+        private void DrawFilterPopup()
+        {
+            if (!showFilters)
+                return;
+
+            ImGui.SetNextWindowSize(new Vector2(350, 0));
+            if (ImGui.BeginPopup("FiltersPopup"))
+            {
+                ImGui.TextColored(new Vector4(1, 0.8f, 0, 1), "Filter Records");
+                ImGui.Separator();
+
+                // Date range filter
+                if (ImGui.CollapsingHeader("Date Range", ImGuiTreeNodeFlags.DefaultOpen))
+                {
+                    // Start date
+                    bool hasStartDate = filterStartDate.HasValue;
+                    if (ImGui.Checkbox("Start Date", ref hasStartDate))
+                    {
+                        filterStartDate = hasStartDate ? DateTime.Today.AddDays(-7) : null;
+                    }
+
+                    if (hasStartDate && filterStartDate.HasValue)
+                    {
+                        ImGui.SameLine();
+                        int startDay = filterStartDate.Value.Day;
+                        int startMonth = filterStartDate.Value.Month;
+                        int startYear = filterStartDate.Value.Year;
+
+                        if (ImGui.InputInt("Day##StartDay", ref startDay))
+                        {
+                            startDay = Math.Clamp(
+                                startDay,
+                                1,
+                                DateTime.DaysInMonth(startYear, startMonth)
+                            );
+                            filterStartDate = new DateTime(startYear, startMonth, startDay);
+                        }
+
+                        ImGui.SameLine();
+                        if (ImGui.InputInt("Month##StartMonth", ref startMonth))
+                        {
+                            startMonth = Math.Clamp(startMonth, 1, 12);
+                            startDay = Math.Min(
+                                startDay,
+                                DateTime.DaysInMonth(startYear, startMonth)
+                            );
+                            filterStartDate = new DateTime(startYear, startMonth, startDay);
+                        }
+
+                        ImGui.SameLine();
+                        if (ImGui.InputInt("Year##StartYear", ref startYear))
+                        {
+                            startYear = Math.Max(startYear, 2000);
+                            startDay = Math.Min(
+                                startDay,
+                                DateTime.DaysInMonth(startYear, startMonth)
+                            );
+                            filterStartDate = new DateTime(startYear, startMonth, startDay);
+                        }
+                    }
+
+                    // End date
+                    bool hasEndDate = filterEndDate.HasValue;
+                    if (ImGui.Checkbox("End Date", ref hasEndDate))
+                    {
+                        filterEndDate = hasEndDate ? DateTime.Today : null;
+                    }
+
+                    if (hasEndDate && filterEndDate.HasValue)
+                    {
+                        ImGui.SameLine();
+                        int endDay = filterEndDate.Value.Day;
+                        int endMonth = filterEndDate.Value.Month;
+                        int endYear = filterEndDate.Value.Year;
+
+                        if (ImGui.InputInt("Day##EndDay", ref endDay))
+                        {
+                            endDay = Math.Clamp(endDay, 1, DateTime.DaysInMonth(endYear, endMonth));
+                            filterEndDate = new DateTime(endYear, endMonth, endDay);
+                        }
+
+                        ImGui.SameLine();
+                        if (ImGui.InputInt("Month##EndMonth", ref endMonth))
+                        {
+                            endMonth = Math.Clamp(endMonth, 1, 12);
+                            endDay = Math.Min(endDay, DateTime.DaysInMonth(endYear, endMonth));
+                            filterEndDate = new DateTime(endYear, endMonth, endDay);
+                        }
+
+                        ImGui.SameLine();
+                        if (ImGui.InputInt("Year##EndYear", ref endYear))
+                        {
+                            endYear = Math.Max(endYear, 2000);
+                            endDay = Math.Min(endDay, DateTime.DaysInMonth(endYear, endMonth));
+                            filterEndDate = new DateTime(endYear, endMonth, endDay);
+                        }
+                    }
+                }
+
+                // Player name filter
+                if (ImGui.CollapsingHeader("Player Name", ImGuiTreeNodeFlags.DefaultOpen))
+                {
+                    ImGui.InputText("Contains", ref filterPlayerName, 100);
+                }
+
+                // Time filter
+                if (ImGui.CollapsingHeader("Time (seconds)", ImGuiTreeNodeFlags.DefaultOpen))
+                {
+                    // Min Time
+                    bool hasMinTime = filterTimeMin.HasValue;
+                    if (ImGui.Checkbox("Minimum Time", ref hasMinTime))
+                    {
+                        filterTimeMin = hasMinTime ? 0 : null;
+                    }
+
+                    if (hasMinTime && filterTimeMin.HasValue)
+                    {
+                        ImGui.SameLine();
+                        float minTime = filterTimeMin.Value;
+                        if (ImGui.InputFloat("##MinTime", ref minTime, 1.0f, 10.0f, "%.1f s"))
+                        {
+                            filterTimeMin = Math.Max(0, minTime);
+                        }
+                    }
+
+                    // Max Time
+                    bool hasMaxTime = filterTimeMax.HasValue;
+                    if (ImGui.Checkbox("Maximum Time", ref hasMaxTime))
+                    {
+                        filterTimeMax = hasMaxTime ? 300 : null; // Default 5 minutes
+                    }
+
+                    if (hasMaxTime && filterTimeMax.HasValue)
+                    {
+                        ImGui.SameLine();
+                        float maxTime = filterTimeMax.Value;
+                        if (ImGui.InputFloat("##MaxTime", ref maxTime, 1.0f, 10.0f, "%.1f s"))
+                        {
+                            filterTimeMax = Math.Max(0, maxTime);
+                        }
+                    }
+                }
+
+                // Distance filter
+                if (ImGui.CollapsingHeader("Distance", ImGuiTreeNodeFlags.DefaultOpen))
+                {
+                    // Min Distance
+                    bool hasMinDistance = filterDistanceMin.HasValue;
+                    if (ImGui.Checkbox("Minimum Distance", ref hasMinDistance))
+                    {
+                        filterDistanceMin = hasMinDistance ? 0 : null;
+                    }
+
+                    if (hasMinDistance && filterDistanceMin.HasValue)
+                    {
+                        ImGui.SameLine();
+                        float minDist = filterDistanceMin.Value;
+                        if (ImGui.InputFloat("##MinDistance", ref minDist, 1.0f, 10.0f, "%.1f"))
+                        {
+                            filterDistanceMin = Math.Max(0, minDist);
+                        }
+                    }
+
+                    // Max Distance
+                    bool hasMaxDistance = filterDistanceMax.HasValue;
+                    if (ImGui.Checkbox("Maximum Distance", ref hasMaxDistance))
+                    {
+                        filterDistanceMax = hasMaxDistance ? 1000 : null;
+                    }
+
+                    if (hasMaxDistance && filterDistanceMax.HasValue)
+                    {
+                        ImGui.SameLine();
+                        float maxDist = filterDistanceMax.Value;
+                        if (ImGui.InputFloat("##MaxDistance", ref maxDist, 1.0f, 10.0f, "%.1f"))
+                        {
+                            filterDistanceMax = Math.Max(0, maxDist);
+                        }
+                    }
+                }
+
+                ImGui.Separator();
+
+                // Action buttons
+                if (ImGui.Button("Apply Filters", new Vector2(150, 0)))
+                {
+                    ApplyFilters();
+                }
+
+                ImGui.SameLine();
+
+                if (ImGui.Button("Clear Filters", new Vector2(150, 0)))
+                {
+                    // Reset all filters
+                    filterStartDate = null;
+                    filterEndDate = null;
+                    filterPlayerName = string.Empty;
+                    filterTimeMin = null;
+                    filterTimeMax = null;
+                    filterDistanceMin = null;
+                    filterDistanceMax = null;
+
+                    // Reset filtered records to show all records
+                    filteredRecords = cachedRecords;
+                }
+
+                ImGui.EndPopup();
+            }
+            else
+            {
+                showFilters = false;
+            }
+        }
 
         public void Draw()
         {
@@ -42,9 +305,15 @@ namespace Racingway.Tabs
                     foreach (Route route in Plugin.LoadedRoutes)
                     {
                         id++;
-                        if (ImGui.Selectable($"{route.Name}##{id}", route.Id == Plugin.SelectedRoute))
+                        if (
+                            ImGui.Selectable(
+                                $"{route.Name}##{id}",
+                                route.Id == Plugin.SelectedRoute
+                            )
+                        )
                         {
-                            if (route.Id == Plugin.SelectedRoute) return;
+                            if (route.Id == Plugin.SelectedRoute)
+                                return;
                             Plugin.SelectedRoute = route.Id;
                         }
                         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
@@ -61,14 +330,35 @@ namespace Racingway.Tabs
             }
 
             cachedRecords = Plugin.Storage.RouteCache[Plugin.SelectedRoute.ToString()].Records;
-            if (cachedRecords == null) return;
+            if (cachedRecords == null)
+                return;
+
+            // Initialize filteredRecords if it's empty
+            if (
+                filteredRecords.Count == 0
+                || filteredRecords.Count != cachedRecords.Count
+                    && !filterStartDate.HasValue
+                    && !filterEndDate.HasValue
+                    && string.IsNullOrEmpty(filterPlayerName)
+                    && !filterTimeMin.HasValue
+                    && !filterTimeMax.HasValue
+                    && !filterDistanceMin.HasValue
+                    && !filterDistanceMax.HasValue
+            )
+            {
+                filteredRecords = cachedRecords;
+            }
 
             if (!Plugin.Configuration.AllowDuplicateRecords)
             {
                 // Remove duplicates by sort magic
-                cachedRecords = cachedRecords.GroupBy(x => x.Name)
+                cachedRecords = cachedRecords
+                    .GroupBy(x => x.Name)
                     .Select(g => g.OrderByDescending(x => x.Time).Last())
                     .ToList();
+
+                // Re-apply filters after removing duplicates
+                ApplyFilters();
             }
 
             if (ImGui.Button("Copy CSV to clipboard"))
@@ -76,7 +366,8 @@ namespace Racingway.Tabs
                 StringBuilder sb = new StringBuilder();
                 sb.Append("Date,Name,World,Time,Distance\n");
 
-                foreach (Record record in cachedRecords)
+                // Use filteredRecords instead of cachedRecords
+                foreach (Record record in filteredRecords)
                 {
                     sb.Append(record.GetCSV());
                 }
@@ -89,6 +380,20 @@ namespace Racingway.Tabs
             {
                 Plugin.Configuration.Save();
             }
+
+            ImGui.SameLine();
+            if (ImGuiComponents.IconButton(FontAwesomeIcon.Filter))
+            {
+                showFilters = true;
+                ImGui.OpenPopup("FiltersPopup");
+            }
+            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            {
+                ImGui.SetTooltip("Filter Records");
+            }
+
+            // Draw filter popup
+            DrawFilterPopup();
 
             var ctrl = ImGui.GetIO().KeyCtrl;
             using (ImRaii.Disabled(!ctrl))
@@ -107,7 +412,10 @@ namespace Racingway.Tabs
                         records.Sort((record1, record2) => record1.Time.CompareTo(record2.Time));
 
                         // Create an array containing only distinct records
-                        List<Record> distinct = records.GroupBy(r => r.Name).Select(g => g.First()).ToList();
+                        List<Record> distinct = records
+                            .GroupBy(r => r.Name)
+                            .Select(g => g.First())
+                            .ToList();
 
                         // Update the route
                         route.Records = distinct;
@@ -143,6 +451,46 @@ namespace Racingway.Tabs
                 }
             }
 
+            // Show active filter indicator
+            bool hasActiveFilters =
+                filterStartDate.HasValue
+                || filterEndDate.HasValue
+                || !string.IsNullOrEmpty(filterPlayerName)
+                || filterTimeMin.HasValue
+                || filterTimeMax.HasValue
+                || filterDistanceMin.HasValue
+                || filterDistanceMax.HasValue;
+
+            if (hasActiveFilters)
+            {
+                ImGui.SameLine();
+                ImGui.TextColored(
+                    new Vector4(1, 0.8f, 0, 1),
+                    $"({filteredRecords.Count} / {cachedRecords.Count})"
+                );
+
+                if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                {
+                    ImGui.BeginTooltip();
+                    ImGui.Text("Active Filters:");
+                    if (filterStartDate.HasValue)
+                        ImGui.Text($"- After: {filterStartDate.Value.ToShortDateString()}");
+                    if (filterEndDate.HasValue)
+                        ImGui.Text($"- Before: {filterEndDate.Value.ToShortDateString()}");
+                    if (!string.IsNullOrEmpty(filterPlayerName))
+                        ImGui.Text($"- Player: {filterPlayerName}");
+                    if (filterTimeMin.HasValue)
+                        ImGui.Text($"- Min Time: {filterTimeMin.Value} s");
+                    if (filterTimeMax.HasValue)
+                        ImGui.Text($"- Max Time: {filterTimeMax.Value} s");
+                    if (filterDistanceMin.HasValue)
+                        ImGui.Text($"- Min Distance: {filterDistanceMin.Value}");
+                    if (filterDistanceMax.HasValue)
+                        ImGui.Text($"- Max Distance: {filterDistanceMax.Value}");
+                    ImGui.EndTooltip();
+                }
+            }
+
             using (var table = ImRaii.Table("###race-records", 5, ImGuiTableFlags.Sortable))
             {
                 if (table)
@@ -150,7 +498,13 @@ namespace Racingway.Tabs
                     ImGui.TableSetupColumn("Date", ImGuiTableColumnFlags.WidthFixed, 100f);
                     ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthFixed, 100f);
                     ImGui.TableSetupColumn("World", ImGuiTableColumnFlags.WidthFixed, 100f);
-                    ImGui.TableSetupColumn("Time", ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.DefaultSort | ImGuiTableColumnFlags.PreferSortAscending, 100f);
+                    ImGui.TableSetupColumn(
+                        "Time",
+                        ImGuiTableColumnFlags.WidthFixed
+                            | ImGuiTableColumnFlags.DefaultSort
+                            | ImGuiTableColumnFlags.PreferSortAscending,
+                        100f
+                    );
                     ImGui.TableSetupColumn("Distance", ImGuiTableColumnFlags.WidthFixed, 100f);
 
                     ImGui.TableHeadersRow();
@@ -158,46 +512,55 @@ namespace Racingway.Tabs
                     ImGuiTableSortSpecsPtr sortSpecs = ImGui.TableGetSortSpecs();
 
                     // Sort records by ImGui sortspecs.
-                    cachedRecords.Sort((record1, record2) =>
-                    {
-                        short index = sortSpecs.Specs.ColumnIndex; // Sorting column
-                        int comparison = 0;
-
-                        switch (index)
+                    filteredRecords.Sort(
+                        (record1, record2) =>
                         {
-                            case 0: // Date
-                                comparison = record1.Date.CompareTo(record2.Date);
-                                if (comparison == 0) comparison = record1.Time.CompareTo(record2.Time);
-                                break;
-                            case 1: // Name
-                                comparison = string.Compare(record1.Name, record2.Name);
-                                if (comparison == 0) comparison = record1.Time.CompareTo(record2.Time);
-                                break;
-                            case 2: // World
-                                comparison = string.Compare(record1.World, record2.World);
-                                if (comparison == 0) comparison = record1.Time.CompareTo(record2.Time);
-                                break;
-                            case 3: // Time
-                                comparison = record1.Time.CompareTo(record2.Time);
-                                break;
-                            case 4: // Distance
-                                comparison = record1.Distance.CompareTo(record2.Distance);
-                                if (comparison == 0) comparison = record1.Time.CompareTo(record2.Time);
-                                break;
+                            short index = sortSpecs.Specs.ColumnIndex; // Sorting column
+                            int comparison = 0;
+
+                            switch (index)
+                            {
+                                case 0: // Date
+                                    comparison = record1.Date.CompareTo(record2.Date);
+                                    if (comparison == 0)
+                                        comparison = record1.Time.CompareTo(record2.Time);
+                                    break;
+                                case 1: // Name
+                                    comparison = string.Compare(record1.Name, record2.Name);
+                                    if (comparison == 0)
+                                        comparison = record1.Time.CompareTo(record2.Time);
+                                    break;
+                                case 2: // World
+                                    comparison = string.Compare(record1.World, record2.World);
+                                    if (comparison == 0)
+                                        comparison = record1.Time.CompareTo(record2.Time);
+                                    break;
+                                case 3: // Time
+                                    comparison = record1.Time.CompareTo(record2.Time);
+                                    break;
+                                case 4: // Distance
+                                    comparison = record1.Distance.CompareTo(record2.Distance);
+                                    if (comparison == 0)
+                                        comparison = record1.Time.CompareTo(record2.Time);
+                                    break;
+                            }
+
+                            if (comparison != 0)
+                            {
+                                // Check sort direction and return inverse if descending
+                                return
+                                    sortSpecs.Specs.SortDirection == ImGuiSortDirection.Descending
+                                    ? -comparison
+                                    : comparison;
+                            }
+
+                            return comparison;
                         }
+                    );
 
-                        if (comparison != 0)
-                        {
-                            // Check sort direction and return inverse if descending
-                            return sortSpecs.Specs.SortDirection == ImGuiSortDirection.Descending ? -comparison : comparison;
-                        }
-
-                        return comparison;
-                    });
-
-                    for (int i = 0; i < cachedRecords.Count; i++)
+                    for (int i = 0; i < filteredRecords.Count; i++)
                     {
-                        Record record = cachedRecords[i];
+                        Record record = filteredRecords[i];
 
                         ImGui.PushID(i);
 
@@ -205,7 +568,8 @@ namespace Racingway.Tabs
                         if (Plugin.DisplayedRecord == record)
                         {
                             ImGui.PushStyleColor(ImGuiCol.Text, 0xFFF58742);
-                        } else
+                        }
+                        else
                         {
                             ImGui.PushStyleColor(ImGuiCol.Text, 0xFFFFFFFF);
                         }
@@ -213,7 +577,11 @@ namespace Racingway.Tabs
                         bool selected = false;
 
                         ImGui.TableNextColumn();
-                        ImGui.Selectable(record.Date.ToLocalTime().ToString("M/dd/yyyy H:mm:ss"), ref selected, ImGuiSelectableFlags.SpanAllColumns);
+                        ImGui.Selectable(
+                            record.Date.ToLocalTime().ToString("M/dd/yyyy H:mm:ss"),
+                            ref selected,
+                            ImGuiSelectableFlags.SpanAllColumns
+                        );
 
                         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
                         {
@@ -227,10 +595,14 @@ namespace Racingway.Tabs
                             {
                                 if (ImGui.Selectable("Export to Clipboard"))
                                 {
-                                    Plugin.Log.Debug($"{record.Name}: {Time.PrettyFormatTimeSpan(record.Time)}, {record.Distance}");
+                                    Plugin.Log.Debug(
+                                        $"{record.Name}: {Time.PrettyFormatTimeSpan(record.Time)}, {record.Distance}"
+                                    );
 
                                     // update route hash.. because old records probably have a broken hash.. oops!
-                                    record.RouteHash = Plugin.Storage.RouteCache[Plugin.SelectedRoute.ToString()].GetHash();
+                                    record.RouteHash = Plugin
+                                        .Storage.RouteCache[Plugin.SelectedRoute.ToString()]
+                                        .GetHash();
 
                                     var doc = BsonMapper.Global.ToDocument(record);
                                     string json = JsonSerializer.Serialize(doc);
@@ -242,7 +614,9 @@ namespace Racingway.Tabs
                                     }
                                     else
                                     {
-                                        Plugin.ChatGui.PrintError("[RACE] Error exporting record to clipboard.");
+                                        Plugin.ChatGui.PrintError(
+                                            "[RACE] Error exporting record to clipboard."
+                                        );
                                     }
                                 }
 
@@ -250,7 +624,9 @@ namespace Racingway.Tabs
                                 {
                                     Plugin.DataQueue.QueueDataOperation(async () =>
                                     {
-                                        Route route = Plugin.Storage.RouteCache[Plugin.SelectedRoute.ToString()];
+                                        Route route = Plugin.Storage.RouteCache[
+                                            Plugin.SelectedRoute.ToString()
+                                        ];
                                         route.Records.Remove(record);
 
                                         Plugin.Storage.RouteCache[route.Id.ToString()] = route;
