@@ -98,7 +98,7 @@ namespace Racingway.Race.Collision.Triggers
                                 playerActor.HomeWorld.Value.Name.ToString(),
                                 t,
                                 distance,
-                                player.raceLine.ToArray(),
+                                player.RaceLine.ToArray(),
                                 this.Route
                             );
 
@@ -116,6 +116,8 @@ namespace Racingway.Race.Collision.Triggers
                     }
                 }
             }
+
+            player.ClearLine();
         }
 
         public void OnLeft(Player player)
@@ -139,7 +141,7 @@ namespace Racingway.Race.Collision.Triggers
                 Route.PlayersInParkour.Add((player, Stopwatch.StartNew()));
                 Route.Started(player);
 
-                player.raceLine.Clear();
+                player.ClearLine();
             }
         }
 

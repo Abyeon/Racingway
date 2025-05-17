@@ -20,6 +20,9 @@ namespace Racingway.Utils.Storage
         private Plugin Plugin { get; set; }
         private LiteDatabase Database { get; init; }
         private SemaphoreSlim dbLock = new SemaphoreSlim(1, 1);
+        private TaskCompletionSource<bool> pendingWrites = null;
+        private readonly TimeSpan debounceTime = TimeSpan.FromMilliseconds(1000);
+        private CancellationTokenSource cancellationTokenSource;
 
         private const string RecordTable = "record";
         private const string RouteTable = "route";
@@ -32,6 +35,7 @@ namespace Racingway.Utils.Storage
         {
             Plugin = plugin;
             Database = new LiteDatabase($"filename={path};upgrade=true");
+            cancellationTokenSource = new CancellationTokenSource();
 
             dbPath = path;
 
@@ -126,8 +130,30 @@ namespace Racingway.Utils.Storage
                             e.ToString();
                         }
 
-                        //newRoute.AllowMounts = bson["allowMounts"];
-                        //newRoute.Enabled = bson["enabled"];
+                        // Load route cleanup settings if they exist
+                        if (bson.AsDocument.ContainsKey("autoCleanupEnabled"))
+                        {
+                            newRoute.AutoCleanupEnabled = bson["autoCleanupEnabled"];
+                            newRoute.MaxRecordsToKeep = bson["maxRecordsToKeep"];
+                            newRoute.KeepTopNRecords = bson["keepTopNRecords"];
+
+                            // Check for the DeleteOldRecordsEnabled setting
+                            if (bson.AsDocument.ContainsKey("deleteOldRecordsEnabled"))
+                            {
+                                newRoute.DeleteOldRecordsEnabled = bson["deleteOldRecordsEnabled"];
+                            }
+
+                            newRoute.MaxDaysToKeep = bson["maxDaysToKeep"];
+                            newRoute.KeepPersonalBests = bson["keepPersonalBests"];
+
+                            // Load time threshold settings if they exist
+                            if (bson.AsDocument.ContainsKey("filterByTimeEnabled"))
+                            {
+                                newRoute.FilterByTimeEnabled = bson["filterByTimeEnabled"];
+                                newRoute.MinTimeThreshold = (float)(double)bson["minTimeThreshold"];
+                                newRoute.MaxTimeThreshold = (float)(double)bson["maxTimeThreshold"];
+                            }
+                        }
 
                         var arrayOfTriggers = (BsonArray)bson["triggers"];
                         foreach (var trigger in arrayOfTriggers)
@@ -192,6 +218,7 @@ namespace Racingway.Utils.Storage
 
         public void Dispose()
         {
+            cancellationTokenSource.Cancel();
             Database.Dispose();
             RouteCache.Clear();
         }
@@ -207,9 +234,32 @@ namespace Racingway.Utils.Storage
             return Database.GetCollection<Record>(RecordTable);
         }
 
+        /// <summary>
+        /// Adds a record to the database with automatic cleanup if enabled
+        /// </summary>
         internal async Task AddRecord(Record record)
         {
-            await WriteToDatabase(() => GetRecords().Insert(record));
+            // Ensure the record's line is simplified before saving
+            await record.EnsureLineSimplified();
+
+            await WriteToDatabase(() =>
+            {
+                var result = GetRecords().Insert(record);
+
+                // Apply auto-cleanup for the route if enabled
+                if (
+                    RouteCache.TryGetValue(record.RouteId, out Route route)
+                    && route.AutoCleanupEnabled
+                )
+                {
+                    route.ApplyCleanupRules();
+
+                    // Update the route with cleaned records
+                    GetRoutes().Update(route);
+                }
+
+                return result;
+            });
         }
 
         internal ILiteCollection<Route> GetRoutes()
@@ -261,9 +311,21 @@ namespace Racingway.Utils.Storage
             }
         }
 
+        /// <summary>
+        /// Adds or updates a route with debounced writes to prevent performance impact
+        /// </summary>
         internal async Task AddRoute(Route route)
         {
-            await WriteToDatabase(() =>
+            // Ensure all records have simplified lines before saving
+            if (route.Records != null && route.Records.Count > 0)
+            {
+                var simplificationTasks = route
+                    .Records.Select(r => r.EnsureLineSimplified())
+                    .ToArray();
+                await Task.WhenAll(simplificationTasks);
+            }
+
+            await DebouncedWriteToDatabase(() =>
             {
                 if (!GetRoutes().Update(route))
                 {
@@ -376,6 +438,9 @@ namespace Racingway.Utils.Storage
             }
         }
 
+        /// <summary>
+        /// Execute a database write operation with a semaphore to prevent concurrent access
+        /// </summary>
         private async Task WriteToDatabase(Func<object> action)
         {
             try
@@ -389,7 +454,115 @@ namespace Racingway.Utils.Storage
             }
         }
 
-        // Grabbed from https://stackoverflow.com/a/14488941
+        /// <summary>
+        /// Debounced database write to reduce FPS impact when finishing a race
+        /// </summary>
+        private async Task DebouncedWriteToDatabase(Func<object> action)
+        {
+            if (pendingWrites != null)
+            {
+                pendingWrites.TrySetResult(true);
+            }
+
+            pendingWrites = new TaskCompletionSource<bool>();
+            var currentPendingWrites = pendingWrites;
+
+            try
+            {
+                using var cancellationTokenRegistration = cancellationTokenSource.Token.Register(
+                    () => currentPendingWrites.TrySetCanceled()
+                );
+
+                // Wait for debounce period
+                var delayTask = Task.Delay(debounceTime, cancellationTokenSource.Token);
+                var completedTask = await Task.WhenAny(delayTask, currentPendingWrites.Task);
+
+                // If the task was canceled or there's a new pending write, skip this one
+                if (
+                    completedTask == currentPendingWrites.Task
+                    || cancellationTokenSource.Token.IsCancellationRequested
+                )
+                {
+                    return;
+                }
+
+                // Execute the write operation with the semaphore on a background thread
+                // to avoid blocking the main thread
+                await Task.Run(async () =>
+                {
+                    try
+                    {
+                        await WriteToDatabase(action);
+                    }
+                    catch (Exception ex)
+                    {
+                        Plugin.Log.Error($"Error in background database write: {ex}");
+                    }
+                });
+            }
+            catch (TaskCanceledException)
+            {
+                // Handle cancellation
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.Error($"Error in debounced database write: {ex}");
+            }
+        }
+
+        /// <summary>
+        /// Runs auto-cleanup on all routes that have cleanup enabled
+        /// </summary>
+        internal async Task RunRoutesAutoCleanup()
+        {
+            await WriteToDatabase(() =>
+            {
+                int totalRecordsRemoved = 0;
+
+                foreach (var route in RouteCache.Values)
+                {
+                    if (route.AutoCleanupEnabled)
+                    {
+                        int recordsRemoved = route.ApplyCleanupRules();
+                        if (recordsRemoved > 0)
+                        {
+                            GetRoutes().Update(route);
+                            totalRecordsRemoved += recordsRemoved;
+                        }
+                    }
+                }
+
+                if (totalRecordsRemoved > 0)
+                {
+                    Plugin.ChatGui.Print(
+                        $"[RACE] Auto-cleanup removed {totalRecordsRemoved} records from the database."
+                    );
+                }
+
+                return totalRecordsRemoved;
+            });
+        }
+
+        /// <summary>
+        /// Get the current size of the database file
+        /// </summary>
+        public string GetFileSizeString()
+        {
+            if (string.IsNullOrEmpty(dbPath))
+                return "Unknown";
+
+            try
+            {
+                var info = new FileInfo(dbPath);
+                return SizeSuffix(info.Length);
+            }
+            catch
+            {
+                return "Error";
+            }
+        }
+
+        // Size suffix helpers
         static readonly string[] SizeSuffixes =
         {
             "bytes",
@@ -405,48 +578,20 @@ namespace Racingway.Utils.Storage
 
         static string SizeSuffix(long value, int decimalPlaces = 1)
         {
-            if (decimalPlaces < 0)
-            {
-                throw new ArgumentOutOfRangeException("decimalPlaces");
-            }
             if (value < 0)
             {
                 return "-" + SizeSuffix(-value, decimalPlaces);
             }
-            if (value == 0)
+
+            int i = 0;
+            decimal dValue = value;
+            while (Math.Round(dValue, decimalPlaces) >= 1000)
             {
-                return string.Format("{0:n" + decimalPlaces + "} bytes", 0);
+                dValue /= 1024;
+                i++;
             }
 
-            // mag is 0 for bytes, 1 for KB, 2, for MB, etc.
-            var mag = (int)Math.Log(value, 1024);
-
-            // 1L << (mag * 10) == 2 ^ (10 * mag)
-            // [i.e. the number of bytes in the unit corresponding to mag]
-            var adjustedSize = (decimal)value / (1L << mag * 10);
-
-            // make adjustment when the value is large enough that
-            // it would round up to 1000 or more
-            if (Math.Round(adjustedSize, decimalPlaces) >= 1000)
-            {
-                mag += 1;
-                adjustedSize /= 1024;
-            }
-
-            return string.Format("{0:n" + decimalPlaces + "} {1}", adjustedSize, SizeSuffixes[mag]);
-        }
-
-        // Return the size of the db file in a string format
-        public string GetFileSizeString()
-        {
-            var fi = new FileInfo(dbPath);
-
-            if (fi.Exists)
-            {
-                return SizeSuffix(fi.Length);
-            }
-
-            return string.Empty;
+            return string.Format("{0:n" + decimalPlaces + "} {1}", dValue, SizeSuffixes[i]);
         }
     }
 }

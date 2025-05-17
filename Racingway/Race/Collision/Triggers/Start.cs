@@ -64,7 +64,7 @@ namespace Racingway.Race.Collision.Triggers
             player.inParkour = false;
 
             Route.PlayersInParkour.RemoveAt(index);
-            player.raceLine.Clear();
+            player.ClearLine();
             player.timer.Reset();
         }
 
@@ -82,7 +82,7 @@ namespace Racingway.Race.Collision.Triggers
             Route.PlayersInParkour.Add((player, Stopwatch.StartNew()));
             Route.Started(player);
 
-            player.raceLine.Clear();
+            player.ClearLine();
         }
 
         public BsonDocument GetSerialized()

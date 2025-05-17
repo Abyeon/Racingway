@@ -3,9 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
+using Dalamud.Interface;
 using Dalamud.Interface.Components;
+using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
+using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using ImGuiNET;
 using LiteDB;
@@ -94,7 +98,9 @@ namespace Racingway.Tabs
             ImGui.SameLine();
             if (ImGuiComponents.IconButton(Dalamud.Interface.FontAwesomeIcon.FileExport))
             {
-                string input = JsonSerializer.Serialize(selectedRoute.GetEmptySerialized());
+                string input = System.Text.Json.JsonSerializer.Serialize(
+                    selectedRoute.GetEmptySerialized()
+                );
                 string text = Compression.ToCompressedBase64(input);
                 if (text != string.Empty)
                 {
@@ -284,6 +290,202 @@ namespace Racingway.Tabs
             }
 
             ImGui.Spacing();
+
+            // Add database cleanup section
+            if (
+                selectedRoute != null
+                && selectedRoute.Id != ObjectId.Empty
+                && ImGui.CollapsingHeader("Database Cleanup Settings")
+            )
+            {
+                ImGui.Indent();
+
+                bool autoCleanupEnabled = selectedRoute.AutoCleanupEnabled;
+                if (ImGui.Checkbox("Enable Automatic Cleanup", ref autoCleanupEnabled))
+                {
+                    selectedRoute.AutoCleanupEnabled = autoCleanupEnabled;
+                    updateRoute(selectedRoute);
+                }
+
+                if (ImGui.IsItemHovered())
+                {
+                    ImGui.SetTooltip(
+                        "Automatically clean up old records after each race to maintain database size"
+                    );
+                }
+
+                if (autoCleanupEnabled)
+                {
+                    ImGui.Separator();
+
+                    // Number of maximum records to keep
+                    int maxRecordsToKeep = selectedRoute.MaxRecordsToKeep;
+                    if (ImGui.SliderInt("Maximum Records", ref maxRecordsToKeep, 10, 1000))
+                    {
+                        selectedRoute.MaxRecordsToKeep = maxRecordsToKeep;
+                        updateRoute(selectedRoute);
+                    }
+
+                    if (ImGui.IsItemHovered())
+                    {
+                        ImGui.SetTooltip("Maximum number of records to keep for this route");
+                    }
+
+                    // Top N records to always keep
+                    int keepTopNRecords = selectedRoute.KeepTopNRecords;
+                    if (ImGui.SliderInt("Keep Top Records", ref keepTopNRecords, 1, 100))
+                    {
+                        selectedRoute.KeepTopNRecords = keepTopNRecords;
+                        updateRoute(selectedRoute);
+                    }
+
+                    if (ImGui.IsItemHovered())
+                    {
+                        ImGui.SetTooltip(
+                            "Number of top records (fastest times) to always keep regardless of age"
+                        );
+                    }
+
+                    // Keep Personal Bests option (keep at top for importance)
+                    bool keepPersonalBests = selectedRoute.KeepPersonalBests;
+                    if (ImGui.Checkbox("Keep Personal Best Times", ref keepPersonalBests))
+                    {
+                        selectedRoute.KeepPersonalBests = keepPersonalBests;
+                        updateRoute(selectedRoute);
+                    }
+
+                    if (ImGui.IsItemHovered())
+                    {
+                        ImGui.SetTooltip(
+                            "Always keep each player's personal best record, even if it would otherwise be removed by other filters"
+                        );
+                    }
+
+                    ImGui.Separator();
+                    ImGui.Text("Cleanup Filters:");
+
+                    // Delete old records option
+                    bool deleteOldRecordsEnabled = selectedRoute.DeleteOldRecordsEnabled;
+                    if (ImGui.Checkbox("Delete Records Older Than", ref deleteOldRecordsEnabled))
+                    {
+                        selectedRoute.DeleteOldRecordsEnabled = deleteOldRecordsEnabled;
+                        updateRoute(selectedRoute);
+                    }
+
+                    if (ImGui.IsItemHovered())
+                    {
+                        ImGui.SetTooltip(
+                            "Remove records that are older than the specified number of days"
+                        );
+                    }
+
+                    if (deleteOldRecordsEnabled)
+                    {
+                        ImGui.SameLine();
+                        int maxDaysToKeep = selectedRoute.MaxDaysToKeep;
+                        if (ImGui.SliderInt("##DaysToKeep", ref maxDaysToKeep, 1, 365, "%d days"))
+                        {
+                            selectedRoute.MaxDaysToKeep = maxDaysToKeep;
+                            updateRoute(selectedRoute);
+                        }
+                    }
+
+                    // Time threshold filtering
+                    bool filterByTimeEnabled = selectedRoute.FilterByTimeEnabled;
+                    if (ImGui.Checkbox("Filter By Time Range", ref filterByTimeEnabled))
+                    {
+                        selectedRoute.FilterByTimeEnabled = filterByTimeEnabled;
+                        updateRoute(selectedRoute);
+                    }
+
+                    if (ImGui.IsItemHovered())
+                    {
+                        ImGui.SetTooltip(
+                            "Filter out records based on completion time (useful for removing junk/abandoned or unusually long runs)"
+                        );
+                    }
+
+                    if (filterByTimeEnabled)
+                    {
+                        ImGui.Indent();
+
+                        // Minimum time threshold
+                        float minTimeThreshold = selectedRoute.MinTimeThreshold;
+                        if (
+                            ImGui.SliderFloat(
+                                "Minimum Time",
+                                ref minTimeThreshold,
+                                0.0f,
+                                60.0f,
+                                "%.1f seconds"
+                            )
+                        )
+                        {
+                            selectedRoute.MinTimeThreshold = minTimeThreshold;
+                            updateRoute(selectedRoute);
+                        }
+
+                        if (ImGui.IsItemHovered())
+                        {
+                            ImGui.SetTooltip(
+                                "Records with time less than this will be removed (good for filtering out abandoned runs)"
+                            );
+                        }
+
+                        // Maximum time threshold
+                        float maxTimeThreshold = selectedRoute.MaxTimeThreshold;
+                        if (
+                            ImGui.SliderFloat(
+                                "Maximum Time",
+                                ref maxTimeThreshold,
+                                0.0f,
+                                3600.0f,
+                                maxTimeThreshold > 0 ? "%.1f seconds" : "No Limit"
+                            )
+                        )
+                        {
+                            selectedRoute.MaxTimeThreshold = maxTimeThreshold;
+                            updateRoute(selectedRoute);
+                        }
+
+                        if (ImGui.IsItemHovered())
+                        {
+                            ImGui.SetTooltip(
+                                "Records with time greater than this will be removed (set to 0 for no upper limit)"
+                            );
+                        }
+
+                        ImGui.Unindent();
+                    }
+
+                    ImGui.Separator();
+
+                    // Run cleanup manually
+                    if (ImGui.Button("Run Cleanup Now"))
+                    {
+                        int removed = selectedRoute.ApplyCleanupRules();
+                        updateRoute(selectedRoute);
+                        Plugin.ChatGui.Print(
+                            $"[RACE] Removed {removed} records from '{selectedRoute.Name}'"
+                        );
+                    }
+
+                    if (ImGui.IsItemHovered())
+                    {
+                        ImGui.SetTooltip("Manually clean up records based on above settings");
+                    }
+
+                    // Display current record count and stats
+                    int recordCount = selectedRoute.Records?.Count ?? 0;
+                    ImGui.Text($"Current Record Count: {recordCount}");
+
+                    // Show database stats
+                    string dbSize = Plugin.Storage.GetFileSizeString();
+                    ImGui.Text($"Database Size: {dbSize}");
+                }
+
+                ImGui.Unindent();
+            }
         }
 
         private void updateRoute(Route route)
