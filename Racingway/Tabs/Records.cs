@@ -108,7 +108,8 @@ namespace Racingway.Tabs
                         int startMonth = filterStartDate.Value.Month;
                         int startYear = filterStartDate.Value.Year;
 
-                        if (ImGui.InputInt("Day##StartDay", ref startDay))
+                        ImGui.SetNextItemWidth(40);
+                        if (ImGui.DragInt("Day##StartDay", ref startDay, 0.1f, 1, 31))
                         {
                             startDay = Math.Clamp(
                                 startDay,
@@ -119,7 +120,8 @@ namespace Racingway.Tabs
                         }
 
                         ImGui.SameLine();
-                        if (ImGui.InputInt("Month##StartMonth", ref startMonth))
+                        ImGui.SetNextItemWidth(50);
+                        if (ImGui.DragInt("Month##StartMonth", ref startMonth, 0.1f, 1, 12))
                         {
                             startMonth = Math.Clamp(startMonth, 1, 12);
                             startDay = Math.Min(
@@ -130,7 +132,8 @@ namespace Racingway.Tabs
                         }
 
                         ImGui.SameLine();
-                        if (ImGui.InputInt("Year##StartYear", ref startYear))
+                        ImGui.SetNextItemWidth(60);
+                        if (ImGui.DragInt("Year##StartYear", ref startYear, 0.1f, 2000, 2100))
                         {
                             startYear = Math.Max(startYear, 2000);
                             startDay = Math.Min(
@@ -155,14 +158,16 @@ namespace Racingway.Tabs
                         int endMonth = filterEndDate.Value.Month;
                         int endYear = filterEndDate.Value.Year;
 
-                        if (ImGui.InputInt("Day##EndDay", ref endDay))
+                        ImGui.SetNextItemWidth(40);
+                        if (ImGui.DragInt("Day##EndDay", ref endDay, 0.1f, 1, 31))
                         {
                             endDay = Math.Clamp(endDay, 1, DateTime.DaysInMonth(endYear, endMonth));
                             filterEndDate = new DateTime(endYear, endMonth, endDay);
                         }
 
                         ImGui.SameLine();
-                        if (ImGui.InputInt("Month##EndMonth", ref endMonth))
+                        ImGui.SetNextItemWidth(50);
+                        if (ImGui.DragInt("Month##EndMonth", ref endMonth, 0.1f, 1, 12))
                         {
                             endMonth = Math.Clamp(endMonth, 1, 12);
                             endDay = Math.Min(endDay, DateTime.DaysInMonth(endYear, endMonth));
@@ -170,7 +175,8 @@ namespace Racingway.Tabs
                         }
 
                         ImGui.SameLine();
-                        if (ImGui.InputInt("Year##EndYear", ref endYear))
+                        ImGui.SetNextItemWidth(60);
+                        if (ImGui.DragInt("Year##EndYear", ref endYear, 0.1f, 2000, 2100))
                         {
                             endYear = Math.Max(endYear, 2000);
                             endDay = Math.Min(endDay, DateTime.DaysInMonth(endYear, endMonth));
@@ -182,6 +188,7 @@ namespace Racingway.Tabs
                 // Player name filter
                 if (ImGui.CollapsingHeader("Player Name", ImGuiTreeNodeFlags.DefaultOpen))
                 {
+                    ImGui.SetNextItemWidth(200);
                     ImGui.InputText("Contains", ref filterPlayerName, 100);
                 }
 
@@ -199,6 +206,7 @@ namespace Racingway.Tabs
                     {
                         ImGui.SameLine();
                         float minTime = filterTimeMin.Value;
+                        ImGui.SetNextItemWidth(120);
                         if (ImGui.InputFloat("##MinTime", ref minTime, 1.0f, 10.0f, "%.1f s"))
                         {
                             filterTimeMin = Math.Max(0, minTime);
@@ -216,6 +224,7 @@ namespace Racingway.Tabs
                     {
                         ImGui.SameLine();
                         float maxTime = filterTimeMax.Value;
+                        ImGui.SetNextItemWidth(120);
                         if (ImGui.InputFloat("##MaxTime", ref maxTime, 1.0f, 10.0f, "%.1f s"))
                         {
                             filterTimeMax = Math.Max(0, maxTime);
@@ -237,6 +246,7 @@ namespace Racingway.Tabs
                     {
                         ImGui.SameLine();
                         float minDist = filterDistanceMin.Value;
+                        ImGui.SetNextItemWidth(120);
                         if (ImGui.InputFloat("##MinDistance", ref minDist, 1.0f, 10.0f, "%.1f"))
                         {
                             filterDistanceMin = Math.Max(0, minDist);
@@ -254,6 +264,7 @@ namespace Racingway.Tabs
                     {
                         ImGui.SameLine();
                         float maxDist = filterDistanceMax.Value;
+                        ImGui.SetNextItemWidth(120);
                         if (ImGui.InputFloat("##MaxDistance", ref maxDist, 1.0f, 10.0f, "%.1f"))
                         {
                             filterDistanceMax = Math.Max(0, maxDist);
