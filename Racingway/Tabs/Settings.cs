@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Numerics;
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
@@ -7,9 +10,6 @@ using Dalamud.Interface.Utility.Raii;
 using ImGuiNET;
 using Racingway.Race.LineStyles;
 using Racingway.Windows;
-using System;
-using System.Collections.Generic;
-using System.Numerics;
 
 namespace Racingway.Tabs
 {
@@ -25,10 +25,7 @@ namespace Racingway.Tabs
             this.Plugin = plugin;
         }
 
-        public void Dispose()
-        {
-
-        }
+        public void Dispose() { }
 
         private Vector2 spacing = new Vector2(0, 10);
 
@@ -45,21 +42,33 @@ namespace Racingway.Tabs
             #region Display Toggles
             ImGui.Dummy(spacing);
 
-            if (ImGui.Button($"{(Plugin.Configuration.DrawTriggers ? "Disable" : "Enable")} Triggers Display"))
+            if (
+                ImGui.Button(
+                    $"{(Plugin.Configuration.DrawTriggers ? "Disable" : "Enable")} Triggers Display"
+                )
+            )
             {
                 Plugin.Configuration.DrawTriggers = !Plugin.Configuration.DrawTriggers;
                 Plugin.Configuration.Save();
                 Plugin.ShowHideOverlay();
             }
 
-            if (ImGui.Button($"{(Plugin.Configuration.DrawRacingLines ? "Disable" : "Enable")} Racing Lines Display"))
+            if (
+                ImGui.Button(
+                    $"{(Plugin.Configuration.DrawRacingLines ? "Disable" : "Enable")} Racing Lines Display"
+                )
+            )
             {
                 Plugin.Configuration.DrawRacingLines = !Plugin.Configuration.DrawRacingLines;
                 Plugin.Configuration.Save();
                 Plugin.ShowHideOverlay();
             }
 
-            if (ImGui.Button($"{(Plugin.Configuration.DrawTimer ? "Disable" : "Enable")} Timer Display"))
+            if (
+                ImGui.Button(
+                    $"{(Plugin.Configuration.DrawTimer ? "Disable" : "Enable")} Timer Display"
+                )
+            )
             {
                 Plugin.Configuration.DrawTimer = !Plugin.Configuration.DrawTimer;
                 Plugin.Configuration.Save();
@@ -86,7 +95,8 @@ namespace Racingway.Tabs
             }
 
             var bgColor = Plugin.Configuration.TimerColor;
-            if (ImGui.ColorEdit4("Background Color", ref bgColor, ImGuiColorEditFlags.NoInputs)) {
+            if (ImGui.ColorEdit4("Background Color", ref bgColor, ImGuiColorEditFlags.NoInputs))
+            {
                 Plugin.Configuration.TimerColor = bgColor;
                 Plugin.Configuration.Save();
             }
@@ -124,12 +134,16 @@ namespace Racingway.Tabs
                     Plugin.Configuration.Save();
                 }
 
-                ImGuiComponents.HelpMarker("This will display the timer even if you have it toggled off.", FontAwesomeIcon.ExclamationTriangle);
+                ImGuiComponents.HelpMarker(
+                    "This will display the timer even if you have it toggled off.",
+                    FontAwesomeIcon.ExclamationTriangle
+                );
 
                 int secondsShownAfter = Plugin.Configuration.SecondsShownAfter;
                 if (ImGui.InputInt("Hide Delay", ref secondsShownAfter))
                 {
-                    if (secondsShownAfter < 0) secondsShownAfter = 0;
+                    if (secondsShownAfter < 0)
+                        secondsShownAfter = 0;
 
                     Plugin.Configuration.SecondsShownAfter = secondsShownAfter;
                     Plugin.Configuration.Save();
@@ -150,13 +164,16 @@ namespace Racingway.Tabs
             }
 
             bool logStart = Plugin.Configuration.LogStart;
-            if(ImGui.Checkbox("Log Starts In Chat", ref logStart))
+            if (ImGui.Checkbox("Log Starts In Chat", ref logStart))
             {
                 Plugin.Configuration.LogStart = logStart;
                 Plugin.Configuration.Save();
             }
 
-            ImGuiComponents.HelpMarker("This will likely spam your chat window.", FontAwesomeIcon.ExclamationTriangle);
+            ImGuiComponents.HelpMarker(
+                "This will likely spam your chat window.",
+                FontAwesomeIcon.ExclamationTriangle
+            );
 
             bool logFails = Plugin.Configuration.LogFails;
             if (ImGui.Checkbox("Log Fails In Chat", ref logFails))
@@ -165,7 +182,10 @@ namespace Racingway.Tabs
                 Plugin.Configuration.Save();
             }
 
-            ImGuiComponents.HelpMarker("This will likely spam your chat window.", FontAwesomeIcon.ExclamationTriangle);
+            ImGuiComponents.HelpMarker(
+                "This will likely spam your chat window.",
+                FontAwesomeIcon.ExclamationTriangle
+            );
 
             bool logFinish = Plugin.Configuration.LogFinish;
             if (ImGui.Checkbox("Log Finishes In Chat", ref logFinish))
@@ -187,7 +207,9 @@ namespace Racingway.Tabs
                     Plugin.Configuration.Save();
                 }
 
-                ImGuiComponents.HelpMarker("How many frames between line points. 1 line quality = 1 point per frame.");
+                ImGuiComponents.HelpMarker(
+                    "How many frames between line points. 1 line quality = 1 point per frame."
+                );
 
                 // Combo box for selecting the desired line style
                 using (var child = ImRaii.Combo("Line Style", Plugin.Configuration.LineStyle))
@@ -234,11 +256,27 @@ namespace Racingway.Tabs
                 }
 
                 var highlightedLineColor = Plugin.Configuration.HighlightedLineColor;
-                if (ImGui.ColorEdit4("Highlighted Line Color", ref highlightedLineColor, ImGuiColorEditFlags.NoInputs))
+                if (
+                    ImGui.ColorEdit4(
+                        "Highlighted Line Color",
+                        ref highlightedLineColor,
+                        ImGuiColorEditFlags.NoInputs
+                    )
+                )
                 {
                     Plugin.Configuration.HighlightedLineColor = highlightedLineColor;
                     Plugin.Configuration.Save();
                 }
+
+                int maxLinePoints = Plugin.Configuration.MaxLinePoints;
+                if (ImGui.SliderInt("Max Line Points", ref maxLinePoints, 50, 2000))
+                {
+                    Plugin.Configuration.MaxLinePoints = maxLinePoints;
+                    Plugin.Configuration.Save();
+                }
+                ImGuiComponents.HelpMarker(
+                    "Maximum number of points to store for each player's path. Lower values improve performance."
+                );
             }
             #endregion
 
@@ -256,7 +294,7 @@ namespace Racingway.Tabs
             {
                 foreach (var actor in Plugin.trackedPlayers.Values)
                 {
-                    actor.raceLine.Clear();
+                    actor.ClearLine();
                 }
             }
 
@@ -271,18 +309,22 @@ namespace Racingway.Tabs
                 {
                     try
                     {
-                        Plugin.Log.Debug(route.Name + ": " + route.Records.Count.ToString() + " records.");
+                        Plugin.Log.Debug(
+                            route.Name + ": " + route.Records.Count.ToString() + " records."
+                        );
                         foreach (var record in route.Records)
                         {
                             try
                             {
                                 Plugin.Log.Debug(record.GetCSV());
-                            } catch (Exception ex)
+                            }
+                            catch (Exception ex)
                             {
                                 Plugin.Log.Error(ex.ToString());
                             }
                         }
-                    } catch (Exception ex)
+                    }
+                    catch (Exception ex)
                     {
                         Plugin.Log.Error(ex.ToString());
                     }
@@ -293,7 +335,9 @@ namespace Racingway.Tabs
 
         private void DisplayFontSelector()
         {
-            var chooser = SingleFontChooserDialog.CreateAuto((UiBuilder)Plugin.PluginInterface.UiBuilder);
+            var chooser = SingleFontChooserDialog.CreateAuto(
+                (UiBuilder)Plugin.PluginInterface.UiBuilder
+            );
             if (Plugin.Configuration.TimerFont is SingleFontSpec font)
             {
                 chooser.SelectedFont = font;
@@ -304,7 +348,9 @@ namespace Racingway.Tabs
         private void Chooser_SelectedFontSpecChanged(SingleFontSpec font)
         {
             Plugin.Configuration.TimerFont = font;
-            Plugin.FontManager.Handle = Plugin.Configuration.TimerFont.CreateFontHandle(Plugin.PluginInterface.UiBuilder.FontAtlas);
+            Plugin.FontManager.Handle = Plugin.Configuration.TimerFont.CreateFontHandle(
+                Plugin.PluginInterface.UiBuilder.FontAtlas
+            );
             Plugin.Configuration.Save();
         }
     }
