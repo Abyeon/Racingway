@@ -1,10 +1,10 @@
-using LiteDB;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using LiteDB;
 
 namespace Racingway.Race.Collision.Triggers
 {
@@ -19,7 +19,6 @@ namespace Racingway.Race.Collision.Triggers
         public void CheckCollision(Player player)
         {
             var inTrigger = Cube.PointInCube(player.position);
-
             if (inTrigger && !Touchers.Contains(player.id))
             {
                 Touchers.Add(player.id);

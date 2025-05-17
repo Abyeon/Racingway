@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 using System.Text;
-using Newtonsoft.Json;
 using System.Threading.Tasks;
 using LiteDB;
-using System.Diagnostics;
+using Newtonsoft.Json;
 
 namespace Racingway.Race.Collision.Triggers
 {
@@ -39,13 +39,12 @@ namespace Racingway.Race.Collision.Triggers
         public void CheckCollision(Player player)
         {
             var inTrigger = Cube.PointInCube(player.position);
-
-            if (inTrigger && !Touchers.Contains(player.id) && player.isGrounded)
+            if (inTrigger && !Touchers.Contains(player.id))
             {
                 Touchers.Add(player.id);
                 OnEntered(player);
             }
-            else if ((!inTrigger && Touchers.Contains(player.id)) || (!player.isGrounded && Touchers.Contains(player.id)))
+            else if (!inTrigger && Touchers.Contains(player.id))
             {
                 Touchers.Remove(player.id);
                 OnLeft(player);
@@ -54,21 +53,19 @@ namespace Racingway.Race.Collision.Triggers
 
         public void OnEntered(Player player)
         {
-            if (player.isGrounded)
-            {
-                Color = ActiveColor;
+            Color = ActiveColor;
 
-                Route.Failed(player);
+            Route.Failed(player);
 
-                int index = Route.PlayersInParkour.FindIndex(x => x.Item1 == player);
-                if (index == -1) return; // return if player is not in parkour
+            int index = Route.PlayersInParkour.FindIndex(x => x.Item1 == player);
+            if (index == -1)
+                return; // return if player is not in parkour
 
-                player.inParkour = false;
+            player.inParkour = false;
 
-                Route.PlayersInParkour.RemoveAt(index);
-                player.raceLine.Clear();
-                player.timer.Reset();
-            }
+            Route.PlayersInParkour.RemoveAt(index);
+            player.raceLine.Clear();
+            player.timer.Reset();
         }
 
         public void OnLeft(Player player)
@@ -94,10 +91,18 @@ namespace Racingway.Race.Collision.Triggers
             doc["_id"] = Id;
             doc["Type"] = "Start";
 
-            BsonArray cube = [
-                Cube.Position.X.ToString(), Cube.Position.Y.ToString(), Cube.Position.Z.ToString(),  // Position
-                Cube.Scale.X.ToString(),    Cube.Scale.Y.ToString(),    Cube.Scale.Z.ToString(),     // Scale
-                Cube.Rotation.X.ToString(), Cube.Rotation.Y.ToString(), Cube.Rotation.Z.ToString()]; // Roration
+            BsonArray cube =
+            [
+                Cube.Position.X.ToString(),
+                Cube.Position.Y.ToString(),
+                Cube.Position.Z.ToString(), // Position
+                Cube.Scale.X.ToString(),
+                Cube.Scale.Y.ToString(),
+                Cube.Scale.Z.ToString(), // Scale
+                Cube.Rotation.X.ToString(),
+                Cube.Rotation.Y.ToString(),
+                Cube.Rotation.Z.ToString(),
+            ]; // Roration
 
             doc["Cube"] = cube;
 

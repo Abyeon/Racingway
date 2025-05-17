@@ -1,3 +1,9 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Numerics;
+using System.Text;
+using System.Threading.Tasks;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
@@ -8,12 +14,6 @@ using Racingway.Race;
 using Racingway.Race.Collision;
 using Racingway.Race.Collision.Triggers;
 using Racingway.Utils;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Racingway.Tabs
 {
@@ -32,10 +32,7 @@ namespace Racingway.Tabs
             updateStartFinishBools();
         }
 
-        public void Dispose()
-        {
-
-        }
+        public void Dispose() { }
 
         public void Draw()
         {
@@ -50,9 +47,15 @@ namespace Racingway.Tabs
                     foreach (Route route in Plugin.LoadedRoutes)
                     {
                         id++;
-                        if (ImGui.Selectable($"{route.Name}##{id}", route.Id == Plugin.SelectedRoute))
+                        if (
+                            ImGui.Selectable(
+                                $"{route.Name}##{id}",
+                                route.Id == Plugin.SelectedRoute
+                            )
+                        )
                         {
-                            if (route.Id == Plugin.SelectedRoute) return;
+                            if (route.Id == Plugin.SelectedRoute)
+                                return;
                             Plugin.SelectedRoute = route.Id;
                         }
                         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
@@ -63,7 +66,16 @@ namespace Racingway.Tabs
                 }
             }
 
-            Route? selectedRoute = Plugin.LoadedRoutes.FirstOrDefault(x => x.Id == Plugin.SelectedRoute, new Route(string.Empty, Plugin.CurrentAddress, string.Empty, new List<ITrigger>(), new List<Record>()));
+            Route? selectedRoute = Plugin.LoadedRoutes.FirstOrDefault(
+                x => x.Id == Plugin.SelectedRoute,
+                new Route(
+                    string.Empty,
+                    Plugin.CurrentAddress,
+                    string.Empty,
+                    new List<ITrigger>(),
+                    new List<Record>()
+                )
+            );
 
             if (ImGuiComponents.IconButton(Dalamud.Interface.FontAwesomeIcon.FileImport))
             {
@@ -87,7 +99,8 @@ namespace Racingway.Tabs
                 if (text != string.Empty)
                 {
                     ImGui.SetClipboardText(text);
-                } else
+                }
+                else
                 {
                     Plugin.ChatGui.PrintError("[RACE] No route selected.");
                 }
@@ -113,13 +126,17 @@ namespace Racingway.Tabs
             if (ImGui.InputText("Name", ref name, 64) && name != selectedRoute.Name)
             {
                 // Something
-                if (name == string.Empty) return;
+                if (name == string.Empty)
+                    return;
                 selectedRoute.Name = name;
                 updateRoute(selectedRoute);
             }
 
             string description = selectedRoute.Description;
-            if (ImGui.InputText("Description", ref description, 256) && description != selectedRoute.Description)
+            if (
+                ImGui.InputText("Description", ref description, 256)
+                && description != selectedRoute.Description
+            )
             {
                 selectedRoute.Description = description;
                 updateRoute(selectedRoute);
@@ -128,7 +145,12 @@ namespace Racingway.Tabs
             if (ImGui.Button("Add Trigger"))
             {
                 // We set the trigger position slightly below the player due to SE position jank.
-                Checkpoint newTrigger = new Checkpoint(selectedRoute, Plugin.ClientState.LocalPlayer.Position - new Vector3(0, 0.1f, 0), Vector3.One, Vector3.Zero);
+                Checkpoint newTrigger = new Checkpoint(
+                    selectedRoute,
+                    Plugin.ClientState.LocalPlayer.Position - new Vector3(0, 0.1f, 0),
+                    Vector3.One,
+                    Vector3.Zero
+                );
                 selectedRoute.Triggers.Add(newTrigger);
                 updateRoute(selectedRoute);
             }
@@ -155,7 +177,8 @@ namespace Racingway.Tabs
                 if (ImGuiComponents.IconButton(id, Dalamud.Interface.FontAwesomeIcon.ArrowsToDot))
                 {
                     // We set the trigger position slightly below the player due to SE position jank.
-                    selectedRoute.Triggers[i].Cube.Position = Plugin.ClientState.LocalPlayer.Position - new Vector3(0, 0.1f, 0);
+                    selectedRoute.Triggers[i].Cube.Position =
+                        Plugin.ClientState.LocalPlayer.Position - new Vector3(0, 0.1f, 0);
                     Plugin.ChatGui.Print($"[RACE] Trigger position set to {trigger.Cube.Position}");
 
                     updateRoute(selectedRoute);
@@ -172,12 +195,16 @@ namespace Racingway.Tabs
 
                     if (ImGui.Selectable("Start", trigger is Start))
                     {
-                        if (trigger is Start) return;
+                        if (trigger is Start)
+                            return;
 
                         if (hasStart)
                         {
-                            Plugin.ChatGui.PrintError("[RACE] There is already a start trigger in this route.");
-                        } else
+                            Plugin.ChatGui.PrintError(
+                                "[RACE] There is already a start trigger in this route."
+                            );
+                        }
+                        else
                         {
                             selectedRoute.Triggers[i] = new Start(trigger.Route, trigger.Cube);
                             updateRoute(selectedRoute);
@@ -186,31 +213,43 @@ namespace Racingway.Tabs
 
                     if (ImGui.Selectable("Checkpoint", trigger is Checkpoint))
                     {
-                        if (trigger is Checkpoint) return;
+                        if (trigger is Checkpoint)
+                            return;
                         selectedRoute.Triggers[i] = new Checkpoint(trigger.Route, trigger.Cube);
                         updateRoute(selectedRoute);
                     }
 
                     if (ImGui.Selectable("Fail", trigger is Fail))
                     {
-                        if (trigger is Fail) return;
+                        if (trigger is Fail)
+                            return;
                         selectedRoute.Triggers[i] = new Fail(trigger.Route, trigger.Cube);
                         updateRoute(selectedRoute);
                     }
 
                     if (ImGui.Selectable("Finish", trigger is Finish))
                     {
-                        if (trigger is Finish) return;
-
+                        if (trigger is Finish)
+                            return;
                         if (hasFinish)
                         {
-                            Plugin.ChatGui.PrintError("[RACE] There is already a finish trigger in this route.");
+                            Plugin.ChatGui.PrintError(
+                                "[RACE] There is already a finish trigger in this route."
+                            );
                         }
                         else
                         {
                             selectedRoute.Triggers[i] = new Finish(trigger.Route, trigger.Cube);
                             updateRoute(selectedRoute);
                         }
+                    }
+
+                    if (ImGui.Selectable("Loop", trigger is Loop))
+                    {
+                        if (trigger is Loop)
+                            return;
+                        selectedRoute.Triggers[i] = new Loop(trigger.Route, trigger.Cube);
+                        updateRoute(selectedRoute);
                     }
 
                     ImGui.Unindent();
@@ -249,7 +288,8 @@ namespace Racingway.Tabs
 
         private void updateRoute(Route route)
         {
-            if (route == null) return;
+            if (route == null)
+                return;
 
             int index = Plugin.LoadedRoutes.FindIndex(x => x.Id == Plugin.SelectedRoute);
             if (index == -1)
@@ -260,7 +300,8 @@ namespace Racingway.Tabs
             if (index != -1)
             {
                 Plugin.LoadedRoutes[index] = route;
-            } else
+            }
+            else
             {
                 Plugin.LoadedRoutes.Add(route);
             }
@@ -281,7 +322,8 @@ namespace Racingway.Tabs
         {
             try
             {
-                if (Plugin.LoadedRoutes.Count == 0) return;
+                if (Plugin.LoadedRoutes.Count == 0)
+                    return;
 
                 Route selectedRoute = Plugin.LoadedRoutes.First(x => x.Id == Plugin.SelectedRoute);
 
@@ -299,7 +341,8 @@ namespace Racingway.Tabs
                         hasFinish = true;
                     }
                 }
-            } catch (Exception e)
+            }
+            catch (Exception e)
             {
                 Plugin.Log.Error(e.ToString());
             }
