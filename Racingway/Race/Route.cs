@@ -27,6 +27,8 @@ namespace Racingway.Race
         public Address Address { get; set; }
         public string Description { get; set; }
         public bool AllowMounts { get; set; }
+        public bool RequireGroundedStart { get; set; }
+        public bool RequireGroundedFinish { get; set; }
         public bool Enabled { get; set; }
         public List<ITrigger> Triggers { get; set; }
         public List<Record> Records { get; set; }
@@ -79,6 +81,10 @@ namespace Racingway.Race
             this.Triggers = triggers;
             this.Records = records;
             this.AllowMounts = allowMounts;
+
+            this.RequireGroundedStart = true;
+            this.RequireGroundedFinish = true;
+
             this.Enabled = enabled;
             this.ClientFails = clientFails;
             this.ClientFinishes = clientFinishes;
@@ -122,6 +128,9 @@ namespace Racingway.Race
 
             doc["allowMounts"] = AllowMounts;
             doc["enabled"] = Enabled;
+
+            doc["requireGroundedStart"] = RequireGroundedStart;
+            doc["requireGroundedFinish"] = RequireGroundedFinish;
 
             doc["clientFails"] = ClientFails;
             doc["clientFinishes"] = ClientFinishes;
@@ -167,6 +176,9 @@ namespace Racingway.Race
 
             doc["allowMounts"] = AllowMounts;
             doc["enabled"] = Enabled;
+
+            doc["requireGroundedStart"] = RequireGroundedStart;
+            doc["requireGroundedFinish"] = RequireGroundedFinish;
 
             doc["clientFails"] = 0;
             doc["clientFinishes"] = 0;
@@ -223,7 +235,7 @@ namespace Racingway.Race
 
         public void CheckCollision(Player player)
         {
-            // If player is not in parkour, only check collision with start trigger
+            // Dont check if there's no triggers
             if (Triggers.Count == 0)
                 return;
 
@@ -240,10 +252,10 @@ namespace Racingway.Race
                 return;
             }
 
+            // If player is not in parkour, only check collision with start trigger
             if (index == -1 && Triggers.Exists(x => x is Start))
             {
                 // There shouldnt be more than one start trigger.
-                // Only check start trigger if player is not in parkour
                 ITrigger start = Triggers.First(x => x is Start);
                 start.CheckCollision(player);
             }
@@ -274,7 +286,9 @@ namespace Racingway.Race
                         return;
                 }
 
-                // Skip checking start trigger for players already in parkour
+                // Finally check the start collision, in case player needs to restart their run.
+                ITrigger start = Triggers.First(x => x is Start);
+                start.CheckCollision(player);
             }
         }
 

@@ -2,20 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
 using Dalamud.Interface;
 using Dalamud.Interface.Components;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
-using Dalamud.Plugin.Services;
-using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using ImGuiNET;
 using LiteDB;
-//using Newtonsoft.Json;
 using Racingway.Race;
-using Racingway.Race.Collision;
 using Racingway.Race.Collision.Triggers;
 using Racingway.Utils;
 
@@ -40,7 +32,8 @@ namespace Racingway.Tabs
 
         public void Draw()
         {
-            ImGui.Text($"Current position: {Plugin.ClientState.LocalPlayer.Position.ToString()}");
+            if (Plugin.ClientState.LocalPlayer != null)
+                ImGui.Text($"Current position: {Plugin.ClientState.LocalPlayer.Position.ToString()}");
 
             int id = 0;
 
@@ -81,7 +74,7 @@ namespace Racingway.Tabs
                 )
             );
 
-            if (ImGuiComponents.IconButton(Dalamud.Interface.FontAwesomeIcon.FileImport))
+            if (ImGuiComponents.IconButton(FontAwesomeIcon.FileImport))
             {
                 string data = ImGui.GetClipboardText();
 
@@ -96,7 +89,7 @@ namespace Racingway.Tabs
             }
 
             ImGui.SameLine();
-            if (ImGuiComponents.IconButton(Dalamud.Interface.FontAwesomeIcon.FileExport))
+            if (ImGuiComponents.IconButton(FontAwesomeIcon.FileExport))
             {
                 string input = System.Text.Json.JsonSerializer.Serialize(
                     selectedRoute.GetEmptySerialized()
@@ -117,7 +110,7 @@ namespace Racingway.Tabs
             }
 
             ImGui.SameLine();
-            if (ImGuiComponents.IconButton(Dalamud.Interface.FontAwesomeIcon.Recycle))
+            if (ImGuiComponents.IconButton(FontAwesomeIcon.Recycle))
             {
                 Plugin.territoryHelper.GetLocationID();
             }
@@ -147,6 +140,31 @@ namespace Racingway.Tabs
                 selectedRoute.Description = description;
                 updateRoute(selectedRoute);
             }
+
+            bool allowMounts = selectedRoute.AllowMounts;
+            if (ImGui.Checkbox("Allow Mounts", ref allowMounts))
+            {
+                selectedRoute.AllowMounts = allowMounts;
+                updateRoute(selectedRoute);
+            }
+
+            bool requireGroundedStart = selectedRoute.RequireGroundedStart;
+            if (ImGui.Checkbox("Start when not grounded", ref requireGroundedStart))
+            {
+                selectedRoute.RequireGroundedStart = requireGroundedStart;
+                updateRoute(selectedRoute);
+            }
+
+            bool requireGroundedFinish = selectedRoute.RequireGroundedFinish;
+            if (ImGui.Checkbox("Finish when grounded", ref requireGroundedFinish))
+            {
+                selectedRoute.RequireGroundedFinish = requireGroundedFinish;
+                updateRoute(selectedRoute);
+            }
+
+            DrawAutocleanupSettings(selectedRoute);
+
+            ImGui.Spacing();
 
             if (ImGui.Button("Add Trigger"))
             {
@@ -195,7 +213,7 @@ namespace Racingway.Tabs
                 }
 
                 ImGui.SameLine();
-                if (ImGui.TreeNode($"Type##{id}"))
+                if (ImGui.TreeNode($"{trigger.GetType().Name}##{id}"))
                 {
                     ImGui.Indent();
 
@@ -288,7 +306,10 @@ namespace Racingway.Tabs
                     updateRoute(selectedRoute);
                 }
             }
+        }
 
+        public void DrawAutocleanupSettings(Route selectedRoute)
+        {
             ImGui.Spacing();
 
             // Add database cleanup section

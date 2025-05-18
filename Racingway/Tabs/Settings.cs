@@ -79,6 +79,13 @@ namespace Racingway.Tabs
             SectionSeparator("Timer Style");
             #region Timer Style
 
+            bool showTimerButtons = Plugin.Configuration.DrawTimerButtons;
+            if (ImGui.Checkbox("Draw Timer Buttons", ref showTimerButtons))
+            {
+                Plugin.Configuration.DrawTimerButtons = showTimerButtons;
+                Plugin.Configuration.Save();
+            }
+
             if (ImGui.Button("Change Font"))
             {
                 DisplayFontSelector();

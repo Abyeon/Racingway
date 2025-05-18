@@ -66,66 +66,55 @@ namespace Racingway.Windows
 
             ImGui.Text(timerText);
 
-            // Add better spacing between timer and buttons
-            ImGui.SameLine(0, 12);
-
-            // Add padding to ensure enough space between timer and buttons
-            float btnSize = 22; // Fixed size for buttons
-
-            // Vertical alignment adjustment
-            ImGui.SetCursorPosY(startPos.Y + (ImGui.GetTextLineHeight() - btnSize) * 0.5f);
-
-            // Apply consistent button styling
-            ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 3.0f);
-            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.3f, 0.3f, 0.3f, 0.6f));
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.4f, 0.4f, 0.4f, 0.8f));
-
-            // Main window button
-            if (
-                ImGuiComponents.IconButton(
-                    "##openMain",
-                    FontAwesomeIcon.ExternalLinkAlt,
-                    new Vector2(btnSize, btnSize)
-                )
-            )
+            if (Plugin.Configuration.DrawTimerButtons)
             {
-                Plugin.ToggleMainUI();
-            }
-            if (ImGui.IsItemHovered())
-            {
-                ImGui.SetTooltip("Open Main Window");
-            }
+                // Add better spacing between timer and buttons
+                ImGui.SameLine(0, 12);
 
-            // Clear racing lines button
-            ImGui.SameLine(0, 25); // Increased spacing between buttons from 4 to 9 pixels
+                // Add padding to ensure enough space between timer and buttons
+                float btnSize = 22; // Fixed size for buttons
 
-            // Adjust vertical position for trash button (15% lower)
-            float trashButtonOffset = ImGui.GetTextLineHeight() * 0.05f;
-            ImGui.SetCursorPosY(
-                startPos.Y + (ImGui.GetTextLineHeight() - btnSize) * 0.5f + trashButtonOffset
-            );
+                // Vertical alignment adjustment
+                ImGui.SetCursorPosY(startPos.Y + (ImGui.GetTextLineHeight() - btnSize) * 0.5f);
 
-            if (
-                ImGuiComponents.IconButton(
-                    "##clearLines",
-                    FontAwesomeIcon.Trash,
-                    new Vector2(btnSize, btnSize)
-                )
-            )
-            {
-                foreach (var actor in Plugin.trackedPlayers.Values)
+                // Apply consistent button styling
+                ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 3.0f);
+                ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.3f, 0.3f, 0.3f, 0.6f));
+                ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.4f, 0.4f, 0.4f, 0.8f));
+
+                // Main window button
+                if (ImGuiComponents.IconButton("##openMain", FontAwesomeIcon.ExternalLinkAlt, new Vector2(btnSize, btnSize)))
                 {
-                    actor.ClearLine();
+                    Plugin.ToggleMainUI();
                 }
-            }
-            if (ImGui.IsItemHovered())
-            {
-                ImGui.SetTooltip("Clear Racing Lines");
-            }
+                if (ImGui.IsItemHovered())
+                {
+                    ImGui.SetTooltip("Open Main Window");
+                }
 
-            // Restore original style
-            ImGui.PopStyleColor(2);
-            ImGui.PopStyleVar();
+                // Clear racing lines button
+                ImGui.SameLine(0, 25); // Increased spacing between buttons from 4 to 9 pixels
+
+                // Adjust vertical position for trash button (15% lower)
+                float trashButtonOffset = ImGui.GetTextLineHeight() * 0.05f;
+                ImGui.SetCursorPosY(startPos.Y + (ImGui.GetTextLineHeight() - btnSize) * 0.5f + trashButtonOffset);
+
+                if (ImGuiComponents.IconButton("##clearLines", FontAwesomeIcon.Trash, new Vector2(btnSize, btnSize)))
+                {
+                    foreach (var actor in Plugin.trackedPlayers.Values)
+                    {
+                        actor.ClearLine();
+                    }
+                }
+                if (ImGui.IsItemHovered())
+                {
+                    ImGui.SetTooltip("Clear Racing Lines");
+                }
+
+                // Restore original style
+                ImGui.PopStyleColor(2);
+                ImGui.PopStyleVar();
+            }
 
             ImGui.SetWindowFontScale(1.0f);
         }

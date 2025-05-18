@@ -24,6 +24,7 @@ public class Configuration : IPluginConfiguration
     public bool DrawTriggers { get; set; } = false;
     public bool DrawRacingLines { get; set; } = false;
     public bool DrawTimer { get; set; } = false;
+    public bool DrawTimerButtons {  get; set; } = true;
 
     // Timer Style
     public float TimerSize { get; set; } = 2f;

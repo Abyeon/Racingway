@@ -54,27 +54,16 @@ namespace Racingway.Race.Collision.Triggers
                 return;
             }
 
-            if (inTrigger && !Touchers.Contains(player.id))
+            bool grounded = (player.isGrounded && Route.RequireGroundedFinish) || !Route.RequireGroundedFinish;
+
+            if (inTrigger && !Touchers.Contains(player.id) && grounded)
             {
                 Touchers.Add(player.id);
-
-                // Use Task.Run to handle the finish logic off the main thread
-                Task.Run(() => ProcessPlayerFinish(player));
+                OnEntered(player);
             }
             else if (!inTrigger && Touchers.Contains(player.id))
             {
-                Touchers.Remove(player.id);
-                OnLeft(player);
-
-                // Clean up recently processed after a short delay
-                Task.Delay(1000)
-                    .ContinueWith(_ =>
-                    {
-                        lock (_processLock)
-                        {
-                            _recentlyProcessed.Remove(player.id);
-                        }
-                    });
+                KickOut(player);
             }
         }
 
@@ -82,11 +71,19 @@ namespace Racingway.Race.Collision.Triggers
         public void OnEntered(Player player)
         {
             // This method is required by the interface, but we're using ProcessPlayerFinish instead
+            // Steal some values from the playercharacter class before going off thread
+            IPlayerCharacter playerCharacter = (IPlayerCharacter)player.actor;
+
+            bool isClient = playerCharacter == Plugin.ClientState.LocalPlayer;
+
+            string name = playerCharacter.Name.ToString();
+            string world = playerCharacter.HomeWorld.Value.Name.ToString();
+
             // Starting the process on a background thread to avoid blocking the main thread
-            Task.Run(() => ProcessPlayerFinish(player));
+            Task.Run(() => ProcessPlayerFinish(player, name, world, isClient));
         }
 
-        private void ProcessPlayerFinish(Player player)
+        private void ProcessPlayerFinish(Player player, string name, string world, bool isClient)
         {
             // Prevent double-finishing for the same player
             lock (_processLock)
@@ -111,6 +108,8 @@ namespace Racingway.Race.Collision.Triggers
                     player.AddPoint();
                     player.inParkour = false;
 
+                    KickOut(player);
+
                     Route.PlayersInParkour.RemoveAt(index);
 
                     var distance = player.GetDistanceTraveled();
@@ -120,18 +119,17 @@ namespace Racingway.Race.Collision.Triggers
 
                     try
                     {
-                        IPlayerCharacter actor = (IPlayerCharacter)player.actor;
                         Record record = new Record(
                             now,
-                            actor.Name.ToString(),
-                            actor.HomeWorld.Value.Name.ToString(),
+                            name,
+                            world,
                             t,
                             distance,
                             player.RaceLine.ToArray(),
                             this.Route
                         );
 
-                        if (actor == Plugin.ClientState.LocalPlayer)
+                        if (isClient)
                         {
                             record.IsClient = true;
                         }
@@ -158,6 +156,23 @@ namespace Racingway.Race.Collision.Triggers
             }
         }
 
+        // Kick the player "out" of the trigger.
+        public void KickOut(Player player)
+        {
+            Touchers.Remove(player.id);
+            OnLeft(player);
+
+            // Clean up recently processed after a short delay
+            Task.Delay(1000)
+            .ContinueWith(_ =>
+            {
+                lock (_processLock)
+                {
+                    _recentlyProcessed.Remove(player.id);
+                }
+            });
+        }
+
         public BsonDocument GetSerialized()
         {
             var doc = new BsonDocument();
@@ -174,8 +189,8 @@ namespace Racingway.Race.Collision.Triggers
                 Cube.Scale.Z.ToString(), // Scale
                 Cube.Rotation.X.ToString(),
                 Cube.Rotation.Y.ToString(),
-                Cube.Rotation.Z.ToString(),
-            ]; // Roration
+                Cube.Rotation.Z.ToString(), // Rotation
+            ];
 
             doc["Cube"] = cube;
 

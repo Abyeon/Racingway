@@ -39,12 +39,21 @@ namespace Racingway.Race.Collision.Triggers
         public void CheckCollision(Player player)
         {
             var inTrigger = Cube.PointInCube(player.position);
-            if (inTrigger && !Touchers.Contains(player.id))
+
+            // Quick return if not in trigger and not a toucher
+            if (!inTrigger && !Touchers.Contains(player.id))
+                return;
+
+            bool grounded = (player.isGrounded && Route.RequireGroundedStart) || !Route.RequireGroundedStart;
+
+            if (inTrigger && !Touchers.Contains(player.id) && grounded) // Only "enter" trigger if on the ground
             {
                 Touchers.Add(player.id);
                 OnEntered(player);
             }
-            else if (!inTrigger && Touchers.Contains(player.id))
+            else if (
+                (!inTrigger && Touchers.Contains(player.id)) || 
+                (!grounded && Touchers.Contains(player.id))) // Player "left" start trigger if they're not on the ground
             {
                 Touchers.Remove(player.id);
                 OnLeft(player);

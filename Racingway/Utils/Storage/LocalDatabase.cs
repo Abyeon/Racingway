@@ -130,6 +130,13 @@ namespace Racingway.Utils.Storage
                             e.ToString();
                         }
 
+                        // Load start/finish behaviour bools if they exist
+                        if (bson.AsDocument.ContainsKey("requireGroundedStart"))
+                        {
+                            newRoute.RequireGroundedStart = bson["requireGroundedStart"];
+                            newRoute.RequireGroundedFinish = bson["requireGroundedFinish"];
+                        }
+
                         // Load route cleanup settings if they exist
                         if (bson.AsDocument.ContainsKey("autoCleanupEnabled"))
                         {

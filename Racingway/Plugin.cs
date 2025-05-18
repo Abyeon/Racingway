@@ -196,19 +196,19 @@ public sealed class Plugin : IDalamudPlugin
         if (LoadedRoutes == null || LoadedRoutes.Count == 0)
             return;
 
+        // Disabling this for now
+        // TODO: Add toggle for inaccurate but performant collision checking
+
         // Skip collision check if we just did one very recently
-        if (DateTime.UtcNow - _lastCollisionCheck < _collisionCheckInterval)
-            return;
+        //if (DateTime.UtcNow - _lastCollisionCheck < _collisionCheckInterval)
+        //    return;
 
-        _lastCollisionCheck = DateTime.UtcNow;
+        //_lastCollisionCheck = DateTime.UtcNow;
 
-        foreach (Route route in LoadedRoutes)
+        Parallel.For(0, LoadedRoutes.Count, index =>
         {
-            Parallel.Invoke(() =>
-            {
-                route.CheckCollision(player);
-            });
-        }
+            LoadedRoutes[index].CheckCollision(player);
+        });
     }
 
     private void OnFrameworkTick(IFramework framework)
