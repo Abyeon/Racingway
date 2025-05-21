@@ -48,3 +48,9 @@ Racingway assumes all the following prerequisites are met:
     * Explanations for each trigger can be found in the ``About`` tab.
     * Make sure to have a start/finish trigger (or a singular Loop trigger)
     * Put fail triggers wherever you feel necessary to avoid cheating your route
+
+## Acknowledgements
+- [Dalamud](https://github.com/goatcorp/Dalamud) maintainers for the amazing platform
+- [TrainerHol](https://github.com/TrainerHol) for lots of good improvements (optimizations, looping trigger type, etc!)
+- [Strange Housing](https://strangehousing.ju.mp/) for being an awesome community!
+      - There's a racing league happening _right now_, go check it out!
