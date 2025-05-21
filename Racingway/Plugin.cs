@@ -207,10 +207,13 @@ public sealed class Plugin : IDalamudPlugin
 
         //_lastCollisionCheck = DateTime.UtcNow;
 
-        Parallel.For(0, LoadedRoutes.Count, index =>
+
+        // TODO: Get rid of LocalPlayer and IPlayerCharacter calls and store the values we need in Player class.
+        // That way this can all be multithreaded
+        foreach (var route in LoadedRoutes)
         {
-            LoadedRoutes[index].CheckCollision(player);
-        });
+            route.CheckCollision(player);
+        }
     }
 
     private void OnFrameworkTick(IFramework framework)
