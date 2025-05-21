@@ -74,7 +74,8 @@ namespace Racingway.Windows
 
                     try
                     {
-                        draw.DrawGizmo(ref trigger.Cube.Position, ref trigger.Cube.Rotation, ref trigger.Cube.Scale, trigger.Id.ToString());
+                        if (trigger.Equals(Plugin.SelectedTrigger))
+                            draw.DrawGizmo(ref trigger.Cube.Position, ref trigger.Cube.Rotation, ref trigger.Cube.Scale, trigger.Id.ToString());
                     } catch (Exception ex)
                     {
                         Plugin.Log.Error(ex.ToString());

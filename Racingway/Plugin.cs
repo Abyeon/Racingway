@@ -15,6 +15,7 @@ using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using LiteDB;
 using Racingway.Race;
+using Racingway.Race.Collision.Triggers;
 using Racingway.Utils;
 using Racingway.Utils.Storage;
 using Racingway.Windows;
@@ -75,6 +76,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public Record DisplayedRecord { get; set; }
     public ObjectId? SelectedRoute { get; set; }
+    public ITrigger? SelectedTrigger {  get; set; }
     public Stopwatch LocalTimer { get; set; }
 
     public Address CurrentAddress { get; set; }

@@ -79,6 +79,11 @@ namespace Racingway.Tabs
                         " Make sure to cover anywhere a player could feasibly land at the end of your route!");
                 }
 
+                using (var child = ImRaii.TreeNode("Loop", ImGuiTreeNodeFlags.DefaultOpen))
+                {
+                    if (child.Success) ImGui.TextWrapped("Timer starts when the player exits and ends when they enter again");
+                }
+                
                 ImGui.Dummy(new Vector2(0, 10));
 
                 if (ImGui.Button("GitHub"))
