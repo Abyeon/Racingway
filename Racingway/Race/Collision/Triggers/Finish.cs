@@ -1,13 +1,13 @@
-using Dalamud.Game.ClientState.Objects.SubKinds;
-using Racingway.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Text;
-using Newtonsoft.Json;
 using System.Threading.Tasks;
+using Dalamud.Game.ClientState.Objects.SubKinds;
 using LiteDB;
+using Newtonsoft.Json;
+using Racingway.Utils;
 
 namespace Racingway.Race.Collision.Triggers
 {
@@ -22,6 +22,10 @@ namespace Racingway.Race.Collision.Triggers
 
         public uint Color { get; set; } = InactiveColor;
         public List<uint> Touchers { get; set; } = new List<uint>();
+
+        // To prevent duplicate finish processing
+        private HashSet<uint> _recentlyProcessed = new HashSet<uint>();
+        private readonly object _processLock = new object();
 
         public Finish(Route route, Vector3 position, Vector3 scale, Vector3 rotation)
         {
@@ -41,57 +45,106 @@ namespace Racingway.Race.Collision.Triggers
         {
             var inTrigger = Cube.PointInCube(player.position);
 
-            if (inTrigger && !Touchers.Contains(player.id) && player.isGrounded)
+            // Fast return if nothing changed
+            if (
+                (!inTrigger && !Touchers.Contains(player.id))
+                || (_recentlyProcessed.Contains(player.id))
+            )
+            {
+                return;
+            }
+
+            bool grounded = (player.isGrounded && Route.RequireGroundedFinish) || !Route.RequireGroundedFinish;
+
+            if (inTrigger && !Touchers.Contains(player.id) && grounded)
             {
                 Touchers.Add(player.id);
                 OnEntered(player);
             }
-            else if ((!inTrigger && Touchers.Contains(player.id)) || (!player.isGrounded && Touchers.Contains(player.id)))
+            else if (!inTrigger && Touchers.Contains(player.id))
             {
-                Touchers.Remove(player.id);
-                OnLeft(player);
+                KickOut(player);
             }
         }
 
+        // Required by ITrigger interface
         public void OnEntered(Player player)
         {
-            Color = ActiveColor;
-            DateTime now = DateTime.UtcNow;
-            int index = Route.PlayersInParkour.FindIndex(x => x.Item1 == player);
+            // This method is required by the interface, but we're using ProcessPlayerFinish instead
+            // Steal some values from the playercharacter class before going off thread
+            IPlayerCharacter playerCharacter = (IPlayerCharacter)player.actor;
 
-            if (index != -1)
+            bool isClient = playerCharacter == Plugin.ClientState.LocalPlayer;
+
+            string name = playerCharacter.Name.ToString();
+            string world = playerCharacter.HomeWorld.Value.Name.ToString();
+
+            // Starting the process on a background thread to avoid blocking the main thread
+            Task.Run(() => ProcessPlayerFinish(player, name, world, isClient));
+        }
+
+        private void ProcessPlayerFinish(Player player, string name, string world, bool isClient)
+        {
+            // Prevent double-finishing for the same player
+            lock (_processLock)
             {
-                var elapsedTime = Route.PlayersInParkour[index].Item2.ElapsedMilliseconds;
-                var t = TimeSpan.FromMilliseconds(elapsedTime);
+                if (_recentlyProcessed.Contains(player.id))
+                    return;
 
-                player.AddPoint();
-                player.inParkour = false;
+                _recentlyProcessed.Add(player.id);
+            }
 
-                Touchers.Remove(player.id);
-                OnLeft(player);
+            try
+            {
+                Color = ActiveColor;
+                DateTime now = DateTime.UtcNow;
+                int index = Route.PlayersInParkour.FindIndex(x => x.Item1 == player);
 
-                Route.PlayersInParkour.RemoveAt(index);
-
-                var distance = player.GetDistanceTraveled();
-
-                player.timer.Stop();
-                player.timer.Reset();
-
-                try
+                if (index != -1)
                 {
-                    IPlayerCharacter actor = (IPlayerCharacter)player.actor;
-                    Record record = new Record(now, actor.Name.ToString(), actor.HomeWorld.Value.Name.ToString(), t, distance, player.raceLine.ToArray(), this.Route);
-                    
-                    if (actor == Plugin.ClientState.LocalPlayer)
+                    var elapsedTime = Route.PlayersInParkour[index].Item2.ElapsedMilliseconds;
+                    var t = TimeSpan.FromMilliseconds(elapsedTime);
+
+                    player.AddPoint();
+                    player.inParkour = false;
+
+                    KickOut(player);
+
+                    Route.PlayersInParkour.RemoveAt(index);
+
+                    var distance = player.GetDistanceTraveled();
+
+                    player.timer.Stop();
+                    player.timer.Reset();
+
+                    try
                     {
-                        record.IsClient = true;
-                    }
+                        Record record = new Record(
+                            now,
+                            name,
+                            world,
+                            t,
+                            distance,
+                            player.RaceLine.ToArray(),
+                            this.Route
+                        );
 
-                    Route.Finished(player, record);
-                } catch (Exception ex)
-                {
-                    Plugin.Log.Error(ex.ToString());
+                        if (isClient)
+                        {
+                            record.IsClient = true;
+                        }
+
+                        Route.Finished(player, record);
+                    }
+                    catch (Exception ex)
+                    {
+                        Plugin.Log.Error(ex.ToString());
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.Error($"Error processing player finish: {ex}");
             }
         }
 
@@ -103,16 +156,41 @@ namespace Racingway.Race.Collision.Triggers
             }
         }
 
+        // Kick the player "out" of the trigger.
+        public void KickOut(Player player)
+        {
+            Touchers.Remove(player.id);
+            OnLeft(player);
+
+            // Clean up recently processed after a short delay
+            Task.Delay(1000)
+            .ContinueWith(_ =>
+            {
+                lock (_processLock)
+                {
+                    _recentlyProcessed.Remove(player.id);
+                }
+            });
+        }
+
         public BsonDocument GetSerialized()
         {
             var doc = new BsonDocument();
             doc["_id"] = Id;
             doc["Type"] = "Finish";
 
-            BsonArray cube = [
-                Cube.Position.X.ToString(), Cube.Position.Y.ToString(), Cube.Position.Z.ToString(),  // Position
-                Cube.Scale.X.ToString(),    Cube.Scale.Y.ToString(),    Cube.Scale.Z.ToString(),     // Scale
-                Cube.Rotation.X.ToString(), Cube.Rotation.Y.ToString(), Cube.Rotation.Z.ToString()]; // Roration
+            BsonArray cube =
+            [
+                Cube.Position.X.ToString(),
+                Cube.Position.Y.ToString(),
+                Cube.Position.Z.ToString(), // Position
+                Cube.Scale.X.ToString(),
+                Cube.Scale.Y.ToString(),
+                Cube.Scale.Z.ToString(), // Scale
+                Cube.Rotation.X.ToString(),
+                Cube.Rotation.Y.ToString(),
+                Cube.Rotation.Z.ToString(), // Rotation
+            ];
 
             doc["Cube"] = cube;
 

@@ -1,38 +1,60 @@
-using Dalamud.Game.Command;
-using Dalamud.IoC;
-using Dalamud.Plugin;
-using Dalamud.Interface.Windowing;
-using Dalamud.Plugin.Services;
-using Racingway.Windows;
 using System;
 using System.Collections.Generic;
-using Dalamud.Game.ClientState.Objects.Types;
-using System.Linq;
-using Dalamud.Game.ClientState.Objects.SubKinds;
-using Racingway.Utils;
-using LiteDB;
-using System.Threading.Tasks;
 using System.Diagnostics;
-using Racingway.Race;
-using Dalamud.Game.Text.SeStringHandling.Payloads;
+using System.Linq;
+using System.Threading.Tasks;
+using Dalamud.Game.ClientState.Objects.SubKinds;
+using Dalamud.Game.ClientState.Objects.Types;
+using Dalamud.Game.Command;
 using Dalamud.Game.Text.SeStringHandling;
+using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Interface.ManagedFontAtlas;
+using Dalamud.Interface.Windowing;
+using Dalamud.IoC;
+using Dalamud.Plugin;
+using Dalamud.Plugin.Services;
+using LiteDB;
+using Racingway.Race;
+using Racingway.Utils;
 using Racingway.Utils.Storage;
+using Racingway.Windows;
+
 namespace Racingway;
 
 public sealed class Plugin : IDalamudPlugin
 {
-    [PluginService] public static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
-    [PluginService] internal static ITextureProvider TextureProvider { get; private set; } = null!;
-    [PluginService] internal static ICommandManager CommandManager { get; private set; } = null!;
-    [PluginService] internal static IObjectTable ObjectTable { get; private set; } = null!;
-    [PluginService] internal static IPluginLog Log { get; private set; } = null!;
-    [PluginService] internal static IFramework Framework { get; private set; } = null!;
-    [PluginService] internal static IGameNetwork GameNetwork { get; private set; } = null!;
-    [PluginService] internal static IClientState ClientState { get; private set; } = null!;
-    [PluginService] internal static IChatGui ChatGui { get; private set; } = null!;
-    [PluginService] internal static IGameGui GameGui { get; private set; } = null!;
-    [PluginService] internal static IDataManager DataManager { get; private set; } = null!;
+    [PluginService]
+    public static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
+
+    [PluginService]
+    internal static ITextureProvider TextureProvider { get; private set; } = null!;
+
+    [PluginService]
+    internal static ICommandManager CommandManager { get; private set; } = null!;
+
+    [PluginService]
+    internal static IObjectTable ObjectTable { get; private set; } = null!;
+
+    [PluginService]
+    internal static IPluginLog Log { get; private set; } = null!;
+
+    [PluginService]
+    internal static IFramework Framework { get; private set; } = null!;
+
+    [PluginService]
+    internal static IGameNetwork GameNetwork { get; private set; } = null!;
+
+    [PluginService]
+    internal static IClientState ClientState { get; private set; } = null!;
+
+    [PluginService]
+    internal static IChatGui ChatGui { get; private set; } = null!;
+
+    [PluginService]
+    internal static IGameGui GameGui { get; private set; } = null!;
+
+    [PluginService]
+    internal static IDataManager DataManager { get; private set; } = null!;
 
     internal LocalDatabase Storage { get; init; }
     public DataQueue DataQueue { get; init; }
@@ -57,6 +79,17 @@ public sealed class Plugin : IDalamudPlugin
 
     public Address CurrentAddress { get; set; }
 
+    private IPlayerCharacter? localPlayer = null;
+    private DateTime lastAutoCleanupTime = DateTime.MinValue;
+    private readonly TimeSpan autoCleanupInterval = TimeSpan.FromHours(1); // Run cleanup once per hour
+
+    public Dictionary<uint, Player> trackedPlayers = new();
+    public IGameObject[] trackedNPCs;
+
+    // Add throttling for collision checks - we don't need to check every frame
+    private DateTime _lastCollisionCheck = DateTime.MinValue;
+    private readonly TimeSpan _collisionCheckInterval = TimeSpan.FromMilliseconds(16); // ~60 checks per second
+
     public Plugin()
     {
         try
@@ -64,7 +97,8 @@ public sealed class Plugin : IDalamudPlugin
             LocalTimer = new Stopwatch();
             territoryHelper = new TerritoryHelper(this);
 
-            Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+            Configuration =
+                PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
             FontManager = new FontManager(this);
 
             DataQueue = new DataQueue();
@@ -80,7 +114,9 @@ public sealed class Plugin : IDalamudPlugin
                     Storage.GetRecords().DeleteAll();
                     Storage.GetRoutes().DeleteAll();
 
-                    Plugin.ChatGui.PrintError($"[RACE] Due to changes in the database, Racingway has wiped your previous data.. Apologies for this!");
+                    Plugin.ChatGui.PrintError(
+                        $"[RACE] Due to changes in the database, Racingway has wiped your previous data.. Apologies for this!"
+                    );
 
                     Configuration.Version = 1;
                     Configuration.Save();
@@ -103,10 +139,10 @@ public sealed class Plugin : IDalamudPlugin
 
             LoadedRoutes = new List<Route>();
 
-            CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
-            {
-                HelpMessage = "Open the main UI"
-            });
+            CommandManager.AddHandler(
+                CommandName,
+                new CommandInfo(OnCommand) { HelpMessage = "Open the main UI" }
+            );
 
             Framework.Update += OnFrameworkTick;
             ClientState.TerritoryChanged += OnTerritoryChange;
@@ -124,22 +160,22 @@ public sealed class Plugin : IDalamudPlugin
 
             // Update our address when plugin first loads
             territoryHelper.GetLocationID();
-        } catch (Exception ex)
+        }
+        catch (Exception ex)
         {
             Log.Error(ex.ToString());
         }
-        
     }
 
-    public Dictionary<uint, Player> trackedPlayers = new();
-    public IGameObject[] trackedNPCs;
+    public List<(Func<bool>, Stopwatch)> polls = new();
 
     public void ShowHideOverlay()
     {
         if (Configuration.DrawTimer)
         {
             TimerWindow.IsOpen = true;
-        } else
+        }
+        else
         {
             if (!(Configuration.ShowWhenInParkour && LocalTimer.IsRunning))
                 TimerWindow.IsOpen = false;
@@ -148,33 +184,56 @@ public sealed class Plugin : IDalamudPlugin
         if (Configuration.DrawRacingLines || Configuration.DrawTriggers || DisplayedRecord != null)
         {
             TriggerOverlay.IsOpen = true;
-        } else
+        }
+        else
         {
             TriggerOverlay.IsOpen = false;
         }
     }
 
-    public List<(Func<bool>, Stopwatch)> polls = new();
-
     public void CheckCollision(Player player)
     {
-        if (LoadedRoutes == null || LoadedRoutes.Count == 0) return;
+        if (LoadedRoutes == null || LoadedRoutes.Count == 0)
+            return;
 
-        foreach(Route route in LoadedRoutes)
+        // Disabling this for now
+        // TODO: Add toggle for inaccurate but performant collision checking
+
+        // Skip collision check if we just did one very recently
+        //if (DateTime.UtcNow - _lastCollisionCheck < _collisionCheckInterval)
+        //    return;
+
+        //_lastCollisionCheck = DateTime.UtcNow;
+
+        Parallel.For(0, LoadedRoutes.Count, index =>
         {
-            Parallel.Invoke(() =>
-            {
-                route.CheckCollision(player);
-            });
-        }
+            LoadedRoutes[index].CheckCollision(player);
+        });
     }
-
-    private IPlayerCharacter? localPlayer = null;
 
     private void OnFrameworkTick(IFramework framework)
     {
-        if (!ClientState.IsLoggedIn || ClientState.IsPvP) return;
+        if (!ClientState.IsLoggedIn || ClientState.IsPvP)
+            return;
         localPlayer = ClientState.LocalPlayer;
+
+        // Check if it's time to run auto-cleanup
+        if (DateTime.Now - lastAutoCleanupTime > autoCleanupInterval)
+        {
+            // Run cleanup in the background to avoid impacting FPS
+            Task.Run(async () =>
+            {
+                try
+                {
+                    await Storage.RunRoutesAutoCleanup();
+                    lastAutoCleanupTime = DateTime.Now;
+                }
+                catch (Exception ex)
+                {
+                    Log.Error($"Error during auto-cleanup: {ex}");
+                }
+            });
+        }
 
         if (polls != null && polls.Count > 0)
         {
@@ -187,7 +246,8 @@ public sealed class Plugin : IDalamudPlugin
                 {
                     bool result = poll.Item1.Invoke();
 
-                    if (result == true || poll.Item2.ElapsedMilliseconds > 1000) toRemove.Add(poll);
+                    if (result == true || poll.Item2.ElapsedMilliseconds > 1000)
+                        toRemove.Add(poll);
                 }
                 catch (Exception ex)
                 {
@@ -246,7 +306,10 @@ public sealed class Plugin : IDalamudPlugin
                             bool lastGrounded = trackedPlayers[id].isGrounded;
                             trackedPlayers[id].UpdateState();
 
-                            if (player.Position != trackedPlayers[id].position || lastGrounded != trackedPlayers[id].isGrounded)
+                            if (
+                                player.Position != trackedPlayers[id].position
+                                || lastGrounded != trackedPlayers[id].isGrounded
+                            )
                             {
                                 trackedPlayers[id].Moved(player.Position);
                             }
@@ -275,7 +338,10 @@ public sealed class Plugin : IDalamudPlugin
                             bool lastGrounded = trackedPlayers[id].isGrounded;
                             trackedPlayers[id].UpdateState();
 
-                            if (localPlayer.Position != trackedPlayers[id].position || lastGrounded != trackedPlayers[id].isGrounded)
+                            if (
+                                localPlayer.Position != trackedPlayers[id].position
+                                || lastGrounded != trackedPlayers[id].isGrounded
+                            )
                             {
                                 trackedPlayers[id].Moved(localPlayer.Position);
                             }
@@ -284,7 +350,8 @@ public sealed class Plugin : IDalamudPlugin
                         }
                     }
                 }
-            } catch (Exception e)
+            }
+            catch (Exception e)
             {
                 Log.Error(e.ToString());
             }
@@ -325,9 +392,11 @@ public sealed class Plugin : IDalamudPlugin
         try
         {
             Storage.UpdateRouteCache();
-            LoadedRoutes = Storage.RouteCache.Values.Where(r => r.Address.LocationId == address.LocationId).ToList();
+            LoadedRoutes = Storage
+                .RouteCache.Values.Where(r => r.Address.LocationId == address.LocationId)
+                .ToList();
 
-            foreach (Route route in LoadedRoutes) 
+            foreach (Route route in LoadedRoutes)
             {
                 if (route.Records == null)
                 {
@@ -341,7 +410,7 @@ public sealed class Plugin : IDalamudPlugin
             foreach (var player in trackedPlayers)
             {
                 player.Value.inParkour = false;
-                player.Value.raceLine.Clear();
+                player.Value.ClearLine();
             }
 
             if (LoadedRoutes.Count() > 0 && Configuration.AnnounceLoadedRoutes)
@@ -351,11 +420,11 @@ public sealed class Plugin : IDalamudPlugin
 
             if (LoadedRoutes.Count > 0)
                 SelectedRoute = LoadedRoutes.First().Id;
-        } catch (Exception ex)
+        }
+        catch (Exception ex)
         {
             Log.Error(ex.ToString());
         }
-        
 
         SubscribeToRouteEvents();
     }
@@ -406,49 +475,77 @@ public sealed class Plugin : IDalamudPlugin
     // Triggered whenever a player finished any loaded route
     private void OnFinish(object? sender, (Player, Record) e)
     {
+        Route? route = sender as Route;
+        if (route == null)
+        {
+            Plugin.ChatGui.PrintError("[RACE] Route is null.");
+            return;
+        }
+
+        // Immediately handle UI updates and local player actions
+        if (localPlayer != null && e.Item1.actor.EntityId == localPlayer.EntityId)
+        {
+            LocalTimer.Stop();
+            HideTimer();
+            route.ClientFinishes++;
+        }
+
+        // Show finish message if enabled, without waiting for database operations
+        if (Configuration.LogFinish)
+        {
+            var prettyPrint = Time.PrettyFormatTimeSpan(e.Item2.Time);
+            PayloadedChat(
+                (IPlayerCharacter)e.Item1.actor,
+                $" just finished {route.Name} in {prettyPrint} and {e.Item2.Distance} units."
+            );
+        }
+
+        // Create a local copy of the record to avoid working with the original object
+        // to reduce chances of blocking the main thread
+        Record recordCopy = new Record(
+            e.Item2.Date,
+            e.Item2.Name,
+            e.Item2.World,
+            e.Item2.Time,
+            e.Item2.Distance,
+            e.Item2.Line,
+            route
+        );
+
+        // Store reference to route ID to avoid potential race conditions
+        var routeId = route.Id.ToString();
+
+        // Use debounced write for database operations to minimize FPS impact
         DataQueue.QueueDataOperation(async () =>
         {
-            if (localPlayer != null && e.Item1.actor.EntityId == localPlayer.EntityId)
+            try
             {
-                LocalTimer.Stop();
-                HideTimer();
+                // Perform all in-memory and database operations on background thread
+                if (Storage.RouteCache.TryGetValue(routeId, out Route? cachedRoute))
+                {
+                    // Update in-memory route data
+                    cachedRoute.Records.Add(recordCopy);
+                    cachedRoute.Records = cachedRoute
+                        .Records.OrderBy(r => r.Time.TotalNanoseconds)
+                        .ToList();
+
+                    // Persist to database (using debounced write)
+                    await Storage.AddRoute(cachedRoute);
+                }
             }
-
-            var prettyPrint = Time.PrettyFormatTimeSpan(e.Item2.Time);
-
-            Route? route = sender as Route;
-
-            if (route == null)
+            catch (Exception ex)
             {
-                Plugin.ChatGui.PrintError("[RACE] Route is null.");
-                return;
+                Log.Error($"Error saving record: {ex.Message}");
             }
-
-            if (Configuration.LogFinish)
-            {
-                PayloadedChat((IPlayerCharacter)e.Item1.actor, $" just finished {route.Name} in {prettyPrint} and {e.Item2.Distance} units.");
-            }
-
-            route.Records.Add(e.Item2 as Record);
-            route.Records = route.Records.OrderBy(r => r.Time.TotalNanoseconds).ToList();
-
-            if (localPlayer != null && e.Item1.actor.EntityId == localPlayer.EntityId)
-            {
-                route.ClientFinishes++;
-            }
-
-
-            Storage.RouteCache[route.Id.ToString()] = route;
-            await Storage.AddRoute(route); // Update the entry for this route
         });
     }
-
 
     // Triggered when a player fails any loaded route
     private void OnFailed(object? sender, Player e)
     {
         Route? route = sender as Route;
-        if (route == null) return;
+        if (route == null)
+            return;
 
         if (localPlayer != null && e.actor.EntityId == localPlayer.EntityId)
         {
@@ -457,10 +554,25 @@ public sealed class Plugin : IDalamudPlugin
 
             route.ClientFails++;
 
+            // Store reference to route ID to avoid potential race conditions
+            var routeId = route.Id.ToString();
+            var failCount = route.ClientFails;
+
             DataQueue.QueueDataOperation(async () =>
             {
-                Storage.RouteCache[route.Id.ToString()].ClientFails = route.ClientFails;
-                await Storage.AddRoute(route);
+                try
+                {
+                    // Perform all database operations on background thread
+                    if (Storage.RouteCache.TryGetValue(routeId, out Route? cachedRoute))
+                    {
+                        cachedRoute.ClientFails = failCount;
+                        await Storage.AddRoute(cachedRoute);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Error($"Error updating fails count: {ex.Message}");
+                }
             });
         }
 
@@ -481,16 +593,21 @@ public sealed class Plugin : IDalamudPlugin
 
     private void HideTimer()
     {
-        if (Configuration.DrawTimer) return;
-        if (!Configuration.ShowWhenInParkour) return;
-        if (!TimerWindow.IsOpen) return;
+        if (Configuration.DrawTimer)
+            return;
+        if (!Configuration.ShowWhenInParkour)
+            return;
+        if (!TimerWindow.IsOpen)
+            return;
 
         // Disable after set time
-        Task.Delay(Configuration.SecondsShownAfter * 1000).ContinueWith(_ =>
-        {
-            if (LocalTimer.IsRunning) return; // Dont disable if we're back in parkour.
-            TimerWindow.IsOpen = false;
-        });
+        Task.Delay(Configuration.SecondsShownAfter * 1000)
+            .ContinueWith(_ =>
+            {
+                if (LocalTimer.IsRunning)
+                    return; // Dont disable if we're back in parkour.
+                TimerWindow.IsOpen = false;
+            });
     }
 
     public void AddRoute(Route route)
@@ -515,7 +632,10 @@ public sealed class Plugin : IDalamudPlugin
 
     public void PayloadedChat(IPlayerCharacter player, string message)
     {
-        PlayerPayload payload = new PlayerPayload(player.Name.ToString(), player.HomeWorld.Value.RowId);
+        PlayerPayload payload = new PlayerPayload(
+            player.Name.ToString(),
+            player.HomeWorld.Value.RowId
+        );
         TextPayload text = new TextPayload(message);
         SeString chat = new SeString(new Payload[] { payload, text });
 
@@ -531,7 +651,8 @@ public sealed class Plugin : IDalamudPlugin
 
     public IPlayerCharacter GetPlayer(IEnumerable<IGameObject> gameObjects, uint actorId)
     {
-        return (IPlayerCharacter)gameObjects.Where(obj => obj is IPlayerCharacter && obj.EntityId == actorId).First();
+        return (IPlayerCharacter)
+            gameObjects.Where(obj => obj is IPlayerCharacter && obj.EntityId == actorId).First();
     }
 
     public void Dispose()
@@ -565,6 +686,8 @@ public sealed class Plugin : IDalamudPlugin
     private void DrawUI() => WindowSystem.Draw();
 
     public void ToggleMainUI() => MainWindow.Toggle();
+
     public void ToggleConfigUI() => MainWindow.Toggle();
+
     public void ToggleTriggerUI() => TriggerOverlay.Toggle();
 }

@@ -1,9 +1,12 @@
-# Racingway
+> [!WARNING]  
+> Racingway is still in Testing. This means that bugs, crashes, and breaking changes may occur!
+> If you encounter any issues, please use the "Send Feedback" button or [submit an issue](https://github.com/Abyeon/Racingway/issues) in this repository.
 
+# Racingway
 
 Time your jumping puzzles!
 
-A simple plugin for timing, logging, and ranking players times for your jumping puzzles.
+A Dalamud plugin for timing, logging, and ranking player times for your jumping puzzles.
 
 ## Main Points
 
@@ -17,13 +20,31 @@ A simple plugin for timing, logging, and ranking players times for your jumping 
 * Export
   * Export configs to your clipboard!
 
-## How To Use
+## How to Use
 
 ### Prerequisites
 
 Racingway assumes all the following prerequisites are met:
 
 * XIVLauncher, FINAL FANTASY XIV, and Dalamud have all been installed and the game has been run with Dalamud at least once.
-* XIVLauncher is installed to its default directories and configurations.
-  * If a custom path is required for Dalamud's dev directory, it must be set with the `DALAMUD_HOME` environment variable.
-* A .NET Core 8 SDK has been installed and configured, or is otherwise available. (In most cases, the IDE will take care of this.)
+* You have "Get plugin testing builds" enabled in ``/xlsettings``
+
+### Getting started
+
+* Install Racingway through the ``/xlplugins`` menu
+* Open the Racingway menu ``/race``
+
+#### Importing a Route
+* Copy a route from the ~~Wiki~~ (not yet made) or elsewhere
+    * The [Strange Housing](https://strangehousing.ju.mp/) discord server also has a few routes for existing jump puzzles.
+* Press the ``Import Route`` button in the ``Explore`` tab
+* Enjoy!
+
+#### Creating a Route
+* Make sure you have enabled the ``Trigger Display`` in the ``Settings Tab``
+* Open the ``Routes`` tab
+* Type a name for your route
+* Add your triggers
+    * Explanations for each trigger can be found in the ``About`` tab.
+    * Make sure to have a start/finish trigger (or a singular Loop trigger)
+    * Put fail triggers wherever you feel necessary to avoid cheating your route

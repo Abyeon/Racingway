@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 using System.Text;
-using Newtonsoft.Json;
 using System.Threading.Tasks;
 using LiteDB;
-using System.Diagnostics;
+using Newtonsoft.Json;
 
 namespace Racingway.Race.Collision.Triggers
 {
@@ -40,12 +40,20 @@ namespace Racingway.Race.Collision.Triggers
         {
             var inTrigger = Cube.PointInCube(player.position);
 
-            if (inTrigger && !Touchers.Contains(player.id) && player.isGrounded)
+            // Quick return if not in trigger and not a toucher
+            if (!inTrigger && !Touchers.Contains(player.id))
+                return;
+
+            bool grounded = (player.isGrounded && Route.RequireGroundedStart) || !Route.RequireGroundedStart;
+
+            if (inTrigger && !Touchers.Contains(player.id) && grounded) // Only "enter" trigger if on the ground
             {
                 Touchers.Add(player.id);
                 OnEntered(player);
             }
-            else if ((!inTrigger && Touchers.Contains(player.id)) || (!player.isGrounded && Touchers.Contains(player.id)))
+            else if (
+                (!inTrigger && Touchers.Contains(player.id)) || 
+                (!grounded && Touchers.Contains(player.id))) // Player "left" start trigger if they're not on the ground
             {
                 Touchers.Remove(player.id);
                 OnLeft(player);
@@ -54,21 +62,19 @@ namespace Racingway.Race.Collision.Triggers
 
         public void OnEntered(Player player)
         {
-            if (player.isGrounded)
-            {
-                Color = ActiveColor;
+            Color = ActiveColor;
 
-                Route.Failed(player);
+            Route.Failed(player);
 
-                int index = Route.PlayersInParkour.FindIndex(x => x.Item1 == player);
-                if (index == -1) return; // return if player is not in parkour
+            int index = Route.PlayersInParkour.FindIndex(x => x.Item1 == player);
+            if (index == -1)
+                return; // return if player is not in parkour
 
-                player.inParkour = false;
+            player.inParkour = false;
 
-                Route.PlayersInParkour.RemoveAt(index);
-                player.raceLine.Clear();
-                player.timer.Reset();
-            }
+            Route.PlayersInParkour.RemoveAt(index);
+            player.ClearLine();
+            player.timer.Reset();
         }
 
         public void OnLeft(Player player)
@@ -85,7 +91,7 @@ namespace Racingway.Race.Collision.Triggers
             Route.PlayersInParkour.Add((player, Stopwatch.StartNew()));
             Route.Started(player);
 
-            player.raceLine.Clear();
+            player.ClearLine();
         }
 
         public BsonDocument GetSerialized()
@@ -94,10 +100,18 @@ namespace Racingway.Race.Collision.Triggers
             doc["_id"] = Id;
             doc["Type"] = "Start";
 
-            BsonArray cube = [
-                Cube.Position.X.ToString(), Cube.Position.Y.ToString(), Cube.Position.Z.ToString(),  // Position
-                Cube.Scale.X.ToString(),    Cube.Scale.Y.ToString(),    Cube.Scale.Z.ToString(),     // Scale
-                Cube.Rotation.X.ToString(), Cube.Rotation.Y.ToString(), Cube.Rotation.Z.ToString()]; // Roration
+            BsonArray cube =
+            [
+                Cube.Position.X.ToString(),
+                Cube.Position.Y.ToString(),
+                Cube.Position.Z.ToString(), // Position
+                Cube.Scale.X.ToString(),
+                Cube.Scale.Y.ToString(),
+                Cube.Scale.Z.ToString(), // Scale
+                Cube.Rotation.X.ToString(),
+                Cube.Rotation.Y.ToString(),
+                Cube.Rotation.Z.ToString(),
+            ]; // Roration
 
             doc["Cube"] = cube;
 
