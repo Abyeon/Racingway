@@ -369,18 +369,47 @@ namespace Racingway.Tabs
 
         private void DrawTriggerSettings(ref int id, ref Route selectedRoute)
         {
-            if (ImGui.Button("Add Trigger"))
+            using (ImRaii.ItemWidth(50))
             {
-                // We set the trigger position slightly below the player due to SE position jank.
-                Checkpoint newTrigger = new Checkpoint(
-                    selectedRoute,
-                    Plugin.ClientState.LocalPlayer.Position - new Vector3(0, 0.1f, 0),
-                    Vector3.One,
-                    Vector3.Zero
-                );
-                selectedRoute.Triggers.Add(newTrigger);
-                updateRoute(selectedRoute);
+                if (ImGui.Button("Add Trigger"))
+                {
+                    // We set the trigger position slightly below the player due to SE position jank.
+                    Checkpoint newTrigger = new Checkpoint(
+                        selectedRoute,
+                        Plugin.ClientState.LocalPlayer.Position - new Vector3(0, 0.1f, 0),
+                        Vector3.One,
+                        Vector3.Zero
+                    );
+                    selectedRoute.Triggers.Add(newTrigger);
+                    updateRoute(selectedRoute);
+                }
+
+                if (Plugin.SelectedTrigger != null)
+                {
+                    ImGui.SameLine();
+                    if (ImGui.Button("Stop Editing Trigger"))
+                    {
+                        Plugin.SelectedTrigger = null;
+                    }
+                }
+
+                ImGui.SameLine();
+                bool useSnap = Plugin.Configuration.UseSnapping;
+                if (ImGui.Checkbox("Use Snap", ref useSnap))
+                {
+                    Plugin.Configuration.UseSnapping = useSnap;
+                    Plugin.Configuration.Save();
+                }
+
+                ImGui.SameLine();
+                float snapDistance = Plugin.Configuration.SnapDistance;
+                if (ImGui.DragFloat("Snap Distance", ref snapDistance))
+                {
+                    Plugin.Configuration.SnapDistance = snapDistance;
+                    Plugin.Configuration.Save();
+                }
             }
+
             ImGui.Separator();
 
             using (var child = ImRaii.Child("###triggerChildren")) 

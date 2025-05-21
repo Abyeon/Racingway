@@ -74,8 +74,15 @@ namespace Racingway.Windows
 
                     try
                     {
+                        float snapDistance = Plugin.Configuration.UseSnapping ? Plugin.Configuration.SnapDistance : 0f;
+
                         if (trigger.Equals(Plugin.SelectedTrigger))
-                            draw.DrawGizmo(ref trigger.Cube.Position, ref trigger.Cube.Rotation, ref trigger.Cube.Scale, trigger.Id.ToString());
+                            draw.DrawGizmo(
+                                ref trigger.Cube.Position,
+                                ref trigger.Cube.Rotation,
+                                ref trigger.Cube.Scale,
+                                trigger.Id.ToString(),
+                                snapDistance);
                     } catch (Exception ex)
                     {
                         Plugin.Log.Error(ex.ToString());

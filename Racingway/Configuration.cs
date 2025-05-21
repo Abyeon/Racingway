@@ -20,6 +20,10 @@ public class Configuration : IPluginConfiguration
     public bool AllowDuplicateRecords = true;
     public bool AnnounceLoadedRoutes = true;
 
+    // Gizmo Options
+    public bool UseSnapping = false;
+    public float SnapDistance = 0.25f;
+
     // Display Toggles
     public bool DrawTriggers { get; set; } = false;
     public bool DrawRacingLines { get; set; } = false;
@@ -33,6 +37,12 @@ public class Configuration : IPluginConfiguration
     public Vector4 NormalColor { get; set; } = new Vector4(1, 1, 1, 1);
     public Vector4 FinishColor { get; set; } = new Vector4(0, 1, 1, 1);
     public Vector4 FailColor { get; set; } = new Vector4(1, 0, 0, 1);
+
+    // Trigger Style
+    public Vector4 ActivatedColor { get; set; } = new Vector4(0, 1, 0, 0.5f);
+    public Vector4 StartColor { get; set; } = new Vector4(1, 1, 1, 0.5f);
+    public Vector4 FailTriggerColor { get; set; } = new Vector4(1, 0, 0, 0.05f);
+    public Vector4 FinishTriggerColor { get; set; } = new Vector4(0, 0, 1, 0.5f);
 
     // Timer Behavior
     public bool ShowWhenInParkour { get; set; } = true;

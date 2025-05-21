@@ -24,7 +24,7 @@ namespace Racingway.Utils
             this.drawList = drawListPtr;
         }
 
-        public unsafe void DrawGizmo(ref Vector3 pos, ref Vector3 rotation, ref Vector3 scale, string id)
+        public unsafe void DrawGizmo(ref Vector3 pos, ref Vector3 rotation, ref Vector3 scale, string id, float snapDistance)
         {
             ImGuizmo.BeginFrame();
 
@@ -53,7 +53,7 @@ namespace Racingway.Utils
             Matrix4x4 matrix = Matrix4x4.Identity;
             ImGuizmo.RecomposeMatrixFromComponents(ref pos.X, ref rotation.X, ref scale.X, ref matrix.M11);
 
-            Vector3 snap = Vector3.Zero;
+            Vector3 snap = Vector3.One * snapDistance;
 
             OPERATION op = OPERATION.TRANSLATE;
 
