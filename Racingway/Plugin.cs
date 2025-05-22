@@ -19,6 +19,7 @@ using Racingway.Race.Collision.Triggers;
 using Racingway.Utils;
 using Racingway.Utils.Storage;
 using Racingway.Windows;
+using ZLinq;
 
 namespace Racingway;
 
@@ -156,7 +157,6 @@ public sealed class Plugin : IDalamudPlugin
             // This adds a button to the plugin installer entry of this plugin which allows
             // to toggle the display status of the main ui
             PluginInterface.UiBuilder.OpenMainUi += ToggleMainUI;
-            PluginInterface.UiBuilder.OpenConfigUi += ToggleConfigUI;
 
             // Enable overlay if config calls for it
             ShowHideOverlay();
@@ -650,7 +650,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public ICharacter[] GetPlayers(IEnumerable<IGameObject> gameObjects)
     {
-        IGameObject[] objects = gameObjects.Where(obj => obj is IPlayerCharacter).ToArray();
+        IGameObject[] objects = gameObjects.AsValueEnumerable().Where(obj => obj is IPlayerCharacter).ToArray();
         ICharacter[] players = objects.Cast<ICharacter>().ToArray();
         return players;
     }
@@ -658,7 +658,7 @@ public sealed class Plugin : IDalamudPlugin
     public IPlayerCharacter GetPlayer(IEnumerable<IGameObject> gameObjects, uint actorId)
     {
         return (IPlayerCharacter)
-            gameObjects.Where(obj => obj is IPlayerCharacter && obj.EntityId == actorId).First();
+            gameObjects.AsValueEnumerable().Where(obj => obj is IPlayerCharacter && obj.EntityId == actorId).First();
     }
 
     public void Dispose()
@@ -692,8 +692,6 @@ public sealed class Plugin : IDalamudPlugin
     private void DrawUI() => WindowSystem.Draw();
 
     public void ToggleMainUI() => MainWindow.Toggle();
-
-    public void ToggleConfigUI() => MainWindow.Toggle();
 
     public void ToggleTriggerUI() => TriggerOverlay.Toggle();
 }

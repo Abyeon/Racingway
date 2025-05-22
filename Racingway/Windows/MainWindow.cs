@@ -74,26 +74,6 @@ public class MainWindow : Window, IDisposable
                 for (var i = 0; i < Tabs.Count; i++)
                 {
                     var tab = Tabs[i];
-                    
-                    //var isSelected = string.Equals(SelectedTab, tab.Name, StringComparison.Ordinal);
-                    //if (isSelected)
-                    //{
-                    //    SelectedTab = null;
-                    //    var open = true;
-                    //    ImGui.BeginTabItem(tab.Name, ref open, ImGuiTabItemFlags.SetSelected);
-                    //} else
-                    //{
-                    //    ImGui.BeginTabItem(tab.Name);
-                    //}
-
-                    //// Doing this so that if a tab requires a scrollbar, the tabbar stays on top.
-                    //using (var tabChild = ImRaii.Child($"###{tab.Name}-child"))
-                    //{
-                    //    if (!tabChild.Success) continue;
-                    //    tab.Draw();
-                    //}
-
-                    //ImGui.EndTabItem();
 
                     using (var child = TabItem(tab.Name))
                     {

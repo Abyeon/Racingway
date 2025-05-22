@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using Dalamud.Interface;
+using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
 using ImGuiNET;
@@ -422,16 +423,22 @@ namespace Racingway.Tabs
 
                     ITrigger trigger = selectedRoute.Triggers[i];
 
-                    if (ImGuiComponents.IconButton(id, FontAwesomeIcon.Eraser))
+                    var ctrl = ImGui.GetIO().KeyCtrl;
+
+                    // Disable delete button if not holding ctrl
+                    using (_ = ImRaii.Disabled(!ctrl))
                     {
-                        updateStartFinishBools();
-                        selectedRoute.Triggers.Remove(trigger);
-                        updateRoute(selectedRoute);
-                        continue;
-                    }
-                    if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-                    {
-                        ImGui.SetTooltip("Erase this trigger.");
+                        if (ImGuiComponents.IconButton(id, FontAwesomeIcon.Eraser))
+                        {
+                            updateStartFinishBools();
+                            selectedRoute.Triggers.Remove(trigger);
+                            updateRoute(selectedRoute);
+                            continue;
+                        }
+                        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                        {
+                            ImGui.SetTooltip("Ctrl + Click to erase this trigger.");
+                        }
                     }
 
                     id++;
@@ -461,65 +468,75 @@ namespace Racingway.Tabs
                         ImGui.SetTooltip("Edit using the gizmo");
                     }
 
-                    ImGui.SameLine();
-                    if (ImGui.TreeNode($"{trigger.GetType().Name}##{id}"))
+                    using (ImRaii.ItemWidth(50))
                     {
-                        ImGui.Indent();
-
-                        if (ImGui.Selectable("Start", trigger is Start))
+                        id++;
+                        ImGui.SameLine();
+                        if (ImGui.Selectable($"{trigger.GetType().Name}##{id}"))
                         {
-                            if (trigger is Start)
-                                return;
+                            ImGui.OpenPopup($"TriggerPopup##{id}");
+                        }
+                        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                        {
+                            ImGui.SetTooltip("Change trigger type");
+                        }
+                    }
 
-                            if (hasStart)
+                    using (var popup = ImRaii.Popup($"TriggerPopup##{id}"))
+                    {
+                        if (popup.Success)
+                        {
+                            if (ImGui.Selectable("Start", trigger is Start))
                             {
-                                Plugin.ChatGui.PrintError(
-                                    "[RACE] There is already a start trigger in this route."
-                                );
+                                if (trigger is Start)
+                                    return;
+
+                                if (hasStart)
+                                {
+                                    Plugin.ChatGui.PrintError(
+                                        "[RACE] There is already a start trigger in this route."
+                                    );
+                                }
+                                else
+                                {
+                                    selectedRoute.Triggers[i] = new Start(trigger.Route, trigger.Cube);
+                                    updateRoute(selectedRoute);
+                                }
                             }
-                            else
+
+                            if (ImGui.Selectable("Checkpoint", trigger is Checkpoint))
                             {
-                                selectedRoute.Triggers[i] = new Start(trigger.Route, trigger.Cube);
+                                if (trigger is Checkpoint)
+                                    return;
+                                selectedRoute.Triggers[i] = new Checkpoint(trigger.Route, trigger.Cube);
+                                updateRoute(selectedRoute);
+                            }
+
+                            if (ImGui.Selectable("Fail", trigger is Fail))
+                            {
+                                if (trigger is Fail)
+                                    return;
+                                selectedRoute.Triggers[i] = new Fail(trigger.Route, trigger.Cube);
+                                updateRoute(selectedRoute);
+                            }
+
+                            if (ImGui.Selectable("Finish", trigger is Finish))
+                            {
+                                if (trigger is Finish)
+                                    return;
+
+                                selectedRoute.Triggers[i] = new Finish(trigger.Route, trigger.Cube);
+                                updateRoute(selectedRoute);
+                            }
+
+                            if (ImGui.Selectable("Loop", trigger is Loop))
+                            {
+                                if (trigger is Loop)
+                                    return;
+                                selectedRoute.Triggers[i] = new Loop(trigger.Route, trigger.Cube);
                                 updateRoute(selectedRoute);
                             }
                         }
-
-                        if (ImGui.Selectable("Checkpoint", trigger is Checkpoint))
-                        {
-                            if (trigger is Checkpoint)
-                                return;
-                            selectedRoute.Triggers[i] = new Checkpoint(trigger.Route, trigger.Cube);
-                            updateRoute(selectedRoute);
-                        }
-
-                        if (ImGui.Selectable("Fail", trigger is Fail))
-                        {
-                            if (trigger is Fail)
-                                return;
-                            selectedRoute.Triggers[i] = new Fail(trigger.Route, trigger.Cube);
-                            updateRoute(selectedRoute);
-                        }
-
-                        if (ImGui.Selectable("Finish", trigger is Finish))
-                        {
-                            if (trigger is Finish)
-                                return;
-
-                            selectedRoute.Triggers[i] = new Finish(trigger.Route, trigger.Cube);
-                            updateRoute(selectedRoute);
-                        }
-
-                        if (ImGui.Selectable("Loop", trigger is Loop))
-                        {
-                            if (trigger is Loop)
-                                return;
-                            selectedRoute.Triggers[i] = new Loop(trigger.Route, trigger.Cube);
-                            updateRoute(selectedRoute);
-                        }
-
-                        ImGui.Unindent();
-
-                        ImGui.TreePop();
                     }
 
                     id++;
@@ -528,6 +545,25 @@ namespace Racingway.Tabs
                     {
                         selectedRoute.Triggers[i].Cube.Position = position;
                         updateRoute(selectedRoute);
+                    }
+
+                    // Move trigger UP button
+                    if (i > 0)
+                    {
+                        ImGui.SameLine();
+                        ImGui.Dummy(new Vector2(ImGui.GetContentRegionAvail().X - 50f, 0f));
+                        ImGui.SameLine();
+                        id++;
+
+                        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0, 0, 0, 0));
+                        if (ImGui.ArrowButton($"arrowUp##{id}", ImGuiDir.Up))
+                        {
+                            ITrigger currTrigger = selectedRoute.Triggers[i];
+                            selectedRoute.Triggers.RemoveAt(i);
+                            selectedRoute.Triggers.Insert(i - 1, currTrigger);
+                            updateRoute(selectedRoute);
+                        }
+                        ImGui.PopStyleColor();
                     }
 
                     id++;
@@ -545,6 +581,25 @@ namespace Racingway.Tabs
                     {
                         selectedRoute.Triggers[i].Cube.Rotation = rotation;
                         updateRoute(selectedRoute);
+                    }
+
+                    // Move trigger DOWN button
+                    if (i < selectedRoute.Triggers.Count - 1)
+                    {
+                        ImGui.SameLine();
+                        ImGui.Dummy(new Vector2(ImGui.GetContentRegionAvail().X - 50f, 0f));
+                        ImGui.SameLine();
+                        id++;
+
+                        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0, 0, 0, 0));
+                        if (ImGui.ArrowButton($"arrowDown##{id}", ImGuiDir.Down))
+                        {
+                            ITrigger currTrigger = selectedRoute.Triggers[i];
+                            selectedRoute.Triggers.RemoveAt(i);
+                            selectedRoute.Triggers.Insert(i + 1, currTrigger);
+                            updateRoute(selectedRoute);
+                        }
+                        ImGui.PopStyleColor();
                     }
 
                     var afterPos = ImGui.GetCursorPos();

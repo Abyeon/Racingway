@@ -11,6 +11,7 @@ using Newtonsoft.Json;
 using Racingway.Race.Collision;
 using Racingway.Race.Collision.Triggers;
 using Racingway.Utils;
+using ZLinq;
 
 namespace Racingway.Race
 {
@@ -263,7 +264,7 @@ namespace Racingway.Race
             {
                 // If player is in parkour, only check relevant triggers
                 // First, check fail triggers as they're most important for race integrity
-                foreach (ITrigger trigger in Triggers.Where(t => t is Fail))
+                foreach (ITrigger trigger in Triggers.AsValueEnumerable().Where(t => t is Fail))
                 {
                     trigger.CheckCollision(player);
 
@@ -274,7 +275,7 @@ namespace Racingway.Race
 
                 // Then check finish and checkpoint triggers (higher priority)
                 foreach (
-                    ITrigger trigger in Triggers.Where(t =>
+                    ITrigger trigger in Triggers.AsValueEnumerable().Where(t =>
                         t is Finish || t is Checkpoint || t is Loop
                     )
                 )
