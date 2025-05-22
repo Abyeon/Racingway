@@ -287,6 +287,49 @@ namespace Racingway.Tabs
             }
             #endregion
 
+            SectionSeparator("Trigger Style");
+            #region Trigger Style
+
+            using (ImRaii.ItemWidth(200f))
+            {
+                var activatedColor = Plugin.Configuration.ActivatedColor;
+                if (ImGui.ColorEdit4("Active Color", ref activatedColor, ImGuiColorEditFlags.NoInputs))
+                {
+                    Plugin.Configuration.ActivatedColor = activatedColor;
+                    Plugin.Configuration.Save();
+                }
+
+                var startColor = Plugin.Configuration.StartTriggerColor;
+                if (ImGui.ColorEdit4("Start Color", ref startColor, ImGuiColorEditFlags.NoInputs))
+                {
+                    Plugin.Configuration.StartTriggerColor = startColor;
+                    Plugin.Configuration.Save();
+                }
+
+                var failColor = Plugin.Configuration.FailTriggerColor;
+                if (ImGui.ColorEdit4("Fail Color", ref failColor, ImGuiColorEditFlags.NoInputs))
+                {
+                    Plugin.Configuration.FailTriggerColor = failColor;
+                    Plugin.Configuration.Save();
+                }
+
+                var checkpointColor = Plugin.Configuration.CheckpointTriggerColor;
+                if (ImGui.ColorEdit4("Checkpoint Color", ref checkpointColor, ImGuiColorEditFlags.NoInputs))
+                {
+                    Plugin.Configuration.CheckpointTriggerColor = checkpointColor;
+                    Plugin.Configuration.Save();
+                }
+
+                var finishColor = Plugin.Configuration.FinishTriggerColor;
+                if (ImGui.ColorEdit4("Finish Color", ref finishColor, ImGuiColorEditFlags.NoInputs))
+                {
+                    Plugin.Configuration.FinishTriggerColor = finishColor;
+                    Plugin.Configuration.Save();
+                }
+            }
+
+            #endregion
+
             SectionSeparator("Misc. Settings");
             #region Misc Settings
 

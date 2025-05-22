@@ -88,7 +88,34 @@ namespace Racingway.Windows
                         Plugin.Log.Error(ex.ToString());
                     }
 
-                    draw.DrawCubeFilled(trigger.Cube, trigger.Color, 5.0f);
+                    uint color = trigger.Color;
+                    if (trigger.Active)
+                    {
+                        color = Plugin.Configuration.ActivatedColor.ToByteColor().RGBA;
+                    }
+                    else
+                    {
+                        switch (trigger)
+                        {
+                            case Start:
+                                color = Plugin.Configuration.StartTriggerColor.ToByteColor().RGBA;
+                                break;
+                            case Loop:
+                                color = Plugin.Configuration.StartTriggerColor.ToByteColor().RGBA;
+                                break;
+                            case Checkpoint:
+                                color = Plugin.Configuration.CheckpointTriggerColor.ToByteColor().RGBA;
+                                break;
+                            case Fail:
+                                color = Plugin.Configuration.FailTriggerColor.ToByteColor().RGBA;
+                                break;
+                            case Finish:
+                                color = Plugin.Configuration.FinishTriggerColor.ToByteColor().RGBA;
+                                break;
+                        }
+                    }
+
+                    draw.DrawCubeFilled(trigger.Cube, color, 5.0f);
                 }
             }
 

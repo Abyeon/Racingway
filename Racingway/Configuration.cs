@@ -39,10 +39,11 @@ public class Configuration : IPluginConfiguration
     public Vector4 FailColor { get; set; } = new Vector4(1, 0, 0, 1);
 
     // Trigger Style
-    public Vector4 ActivatedColor { get; set; } = new Vector4(0, 1, 0, 0.5f);
-    public Vector4 StartColor { get; set; } = new Vector4(1, 1, 1, 0.5f);
-    public Vector4 FailTriggerColor { get; set; } = new Vector4(1, 0, 0, 0.05f);
-    public Vector4 FinishTriggerColor { get; set; } = new Vector4(0, 0, 1, 0.5f);
+    public Vector4 ActivatedColor { get; set; } = new Vector4(0.479f, 1, 0.451f, 0.235f);
+    public Vector4 StartTriggerColor { get; set; } = new Vector4(1, 1, 1, 0.176f);
+    public Vector4 CheckpointTriggerColor { get; set; } = new Vector4(0.4f, 0.626f, 1, 0.176f);
+    public Vector4 FailTriggerColor { get; set; } = new Vector4(1, 0, 0, 0.176f);
+    public Vector4 FinishTriggerColor { get; set; } = new Vector4(0.573f, 0.286f, 1, 0.176f);
 
     // Timer Behavior
     public bool ShowWhenInParkour { get; set; } = true;

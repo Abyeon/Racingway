@@ -14,6 +14,7 @@ namespace Racingway.Race.Collision.Triggers
         public Route Route { get; set; }
         public Cube Cube { get; set; }
         public uint Color { get; set; }
+        public bool Active { get; set; }
         public List<uint> Touchers { get; set; }
 
         public void CheckCollision(Player player)
