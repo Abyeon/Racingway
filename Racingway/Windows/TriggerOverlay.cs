@@ -117,6 +117,12 @@ namespace Racingway.Windows
 
                     draw.DrawCubeFilled(trigger.Cube, color, 5.0f);
                 }
+
+                // Draw hovered trigger
+                if (Plugin.HoveredTrigger != null)
+                {
+                    draw.DrawCube(Plugin.HoveredTrigger.Cube, 0xFF00FF00, 2f);
+                }
             }
 
             // Display player racing lines

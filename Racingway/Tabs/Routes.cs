@@ -403,7 +403,7 @@ namespace Racingway.Tabs
 
                 ImGui.SameLine();
                 float snapDistance = Plugin.Configuration.SnapDistance;
-                if (ImGui.DragFloat("Snap Distance", ref snapDistance))
+                if (ImGui.DragFloat("Snap Distance", ref snapDistance, 0.001f))
                 {
                     Plugin.Configuration.SnapDistance = snapDistance;
                     Plugin.Configuration.Save();
@@ -414,8 +414,12 @@ namespace Racingway.Tabs
 
             using (var child = ImRaii.Child("###triggerChildren")) 
             {
+                bool hoveredATrigger = false;
+
                 for (int i = 0; i < selectedRoute.Triggers.Count; i++)
                 {
+                    var cursorPos = ImGui.GetCursorPos();
+
                     ITrigger trigger = selectedRoute.Triggers[i];
 
                     if (ImGuiComponents.IconButton(id, FontAwesomeIcon.Eraser))
@@ -543,7 +547,33 @@ namespace Racingway.Tabs
                         updateRoute(selectedRoute);
                     }
 
+                    var afterPos = ImGui.GetCursorPos();
+
+                    id++;
+                    using (_ = ImRaii.PushColor(ImGuiCol.HeaderHovered, new Vector4(1, 1, 1, 0.05f)))
+                    {
+                        using (_ = ImRaii.PushColor(ImGuiCol.HeaderActive, new Vector4(1, 1, 1, 0.07f)))
+                        {
+                            ImGui.SetCursorPos(cursorPos);
+
+                            using (ImRaii.Disabled())
+                                ImGui.Selectable($"###{id}", false, ImGuiSelectableFlags.AllowItemOverlap, afterPos - cursorPos);
+
+                            ImGui.SetCursorPos(afterPos);
+                            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                            {
+                                Plugin.HoveredTrigger = trigger;
+                                hoveredATrigger = true;
+                            }
+                        }
+                    }
+                    
                     ImGui.Separator();
+                }
+
+                if (!hoveredATrigger)
+                {
+                    Plugin.HoveredTrigger = null;
                 }
             }
         }

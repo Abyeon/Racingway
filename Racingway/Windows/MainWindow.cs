@@ -15,7 +15,7 @@ public class MainWindow : Window, IDisposable
     private List<ITab> Tabs { get; }
 
     public MainWindow(Plugin plugin)
-        : base("Race Setup##race")
+        : base("Racingway##race")
     {
         SizeConstraints = new WindowSizeConstraints
         {

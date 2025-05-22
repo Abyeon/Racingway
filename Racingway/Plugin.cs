@@ -76,7 +76,8 @@ public sealed class Plugin : IDalamudPlugin
 
     public Record DisplayedRecord { get; set; }
     public ObjectId? SelectedRoute { get; set; }
-    public ITrigger? SelectedTrigger {  get; set; }
+    public ITrigger? SelectedTrigger { get; set; }
+    public ITrigger? HoveredTrigger { get; set; }
     public Stopwatch LocalTimer { get; set; }
 
     public Address CurrentAddress { get; set; }

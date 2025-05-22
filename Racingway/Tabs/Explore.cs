@@ -51,7 +51,12 @@ namespace Racingway.Tabs
 
         public void Draw()
         {
-            using (var child = ImRaii.Child("###race-exploreL", new Vector2(ImGui.GetContentRegionAvail().X * 0.33f, ImGui.GetContentRegionAvail().Y), true))
+            Vector2 contentAvailable = ImGui.GetContentRegionAvail();
+
+            float maxWidth = 175;
+
+            Vector2 size = new Vector2(contentAvailable.X * .33f > maxWidth ? maxWidth : contentAvailable.X * 0.33f, contentAvailable.Y);
+            using (var child = ImRaii.Child("###race-exploreL", size, true))
             {
                 if (child.Success)
                 {
