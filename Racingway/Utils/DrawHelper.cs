@@ -24,6 +24,8 @@ namespace Racingway.Utils
             this.drawList = drawListPtr;
         }
 
+
+        // Basically yoinked from https://github.com/LeonBlade/BDTHPlugin
         public unsafe void DrawGizmo(ref Vector3 pos, ref Vector3 rotation, ref Vector3 scale, string id, float snapDistance)
         {
             ImGuizmo.BeginFrame();
@@ -79,15 +81,15 @@ namespace Racingway.Utils
                         fixed (float* native_snap = &snap)
                         {
                             return ImGuizmoNative.ImGuizmo_Manipulate(
-                              native_view,
-                              native_proj,
-                              op,
-                              mode,
-                              native_matrix,
-                              null,
-                              native_snap,
-                              null,
-                              null
+                                native_view,
+                                native_proj,
+                                op,
+                                mode,
+                                native_matrix,
+                                null,
+                                native_snap,
+                                null,
+                                null
                             ) != 0;
                         }
                     }
