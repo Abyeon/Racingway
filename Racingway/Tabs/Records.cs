@@ -606,29 +606,7 @@ namespace Racingway.Tabs
                             {
                                 if (ImGui.Selectable("Export to Clipboard"))
                                 {
-                                    Plugin.Log.Debug(
-                                        $"{record.Name}: {Time.PrettyFormatTimeSpan(record.Time)}, {record.Distance}"
-                                    );
-
-                                    // update route hash.. because old records probably have a broken hash.. oops!
-                                    record.RouteHash = Plugin
-                                        .Storage.RouteCache[Plugin.SelectedRoute.ToString()]
-                                        .GetHash();
-
-                                    var doc = BsonMapper.Global.ToDocument(record);
-                                    string json = JsonSerializer.Serialize(doc);
-                                    string text = Compression.ToCompressedBase64(json);
-
-                                    if (text != string.Empty)
-                                    {
-                                        ImGui.SetClipboardText(text);
-                                    }
-                                    else
-                                    {
-                                        Plugin.ChatGui.PrintError(
-                                            "[RACE] Error exporting record to clipboard."
-                                        );
-                                    }
+                                    ShareHelper.ExportRecordToClipboard(record, Plugin);
                                 }
 
                                 if (ImGui.Selectable("Delete"))

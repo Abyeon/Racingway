@@ -1,22 +1,98 @@
+using FFXIVClientStructs.FFXIV.Client.Graphics.Scene;
+using CameraManager = FFXIVClientStructs.FFXIV.Client.Game.Control.CameraManager;
+using ImGuiNET;
+using ImGuizmoNET;
+using Racingway.Race.Collision;
+using Racingway.Race.Collision.Triggers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
-using ImGuiNET;
-using Racingway.Race.Collision;
-using Racingway.Race.Collision.Triggers;
+using System.Runtime.CompilerServices;
 
 namespace Racingway.Utils
 {
     public class DrawHelper
     {
         private ImDrawListPtr drawList;
+        private unsafe Camera* Camera => &CameraManager.Instance()->GetActiveCamera()->CameraBase.SceneCamera;
 
         public DrawHelper(ImDrawListPtr drawListPtr)
         {
             this.drawList = drawListPtr;
+        }
+
+        public unsafe void DrawGizmo(ref Vector3 pos, ref Vector3 rotation, ref Vector3 scale, string id, float snapDistance)
+        {
+            ImGuizmo.BeginFrame();
+
+            var cam = Camera->RenderCamera;
+            var view = Camera->ViewMatrix;
+            var proj = cam->ProjectionMatrix;
+
+            var far = cam->FarPlane;
+            var near = cam->NearPlane;
+            var clip = far / (far - near);
+
+            proj.M43 = -(clip * near);
+            proj.M33 = -((far + near) / (far - near));
+            view.M44 = 1.0f;
+
+            ImGuizmo.SetDrawlist();
+            ImGuizmo.Enable(true);
+            ImGuizmo.SetID((int)ImGui.GetID("Gizmo" + id));
+            ImGuizmo.SetOrthographic(false);
+
+            Vector2 windowPos = ImGui.GetWindowPos();
+            ImGuiIOPtr Io = ImGui.GetIO();
+
+            ImGuizmo.SetRect(windowPos.X, windowPos.Y, Io.DisplaySize.X, Io.DisplaySize.Y);
+
+            Matrix4x4 matrix = Matrix4x4.Identity;
+            ImGuizmo.RecomposeMatrixFromComponents(ref pos.X, ref rotation.X, ref scale.X, ref matrix.M11);
+
+            Vector3 snap = Vector3.One * snapDistance;
+
+            OPERATION op = OPERATION.TRANSLATE;
+
+            if (Io.KeyCtrl)
+            {
+                op = OPERATION.SCALE;
+            }
+
+            if (Manipulate(ref view.M11, ref proj.M11, op, MODE.LOCAL, ref matrix.M11, ref snap.X))
+            {
+                ImGuizmo.DecomposeMatrixToComponents(ref matrix.M11, ref pos.X, ref rotation.X, ref scale.X);
+            }
+        }
+
+        private unsafe bool Manipulate(ref float view, ref float proj, OPERATION op, MODE mode, ref float matrix, ref float snap)
+        {
+            fixed (float* native_view = &view)
+            {
+                fixed (float* native_proj = &proj)
+                {
+                    fixed (float* native_matrix = &matrix)
+                    {
+                        fixed (float* native_snap = &snap)
+                        {
+                            return ImGuizmoNative.ImGuizmo_Manipulate(
+                              native_view,
+                              native_proj,
+                              op,
+                              mode,
+                              native_matrix,
+                              null,
+                              native_snap,
+                              null,
+                              null
+                            ) != 0;
+                        }
+                    }
+                }
+            }
         }
 
         public void DrawText3d(string text, Vector3 position, uint color)

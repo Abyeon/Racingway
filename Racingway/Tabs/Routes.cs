@@ -10,6 +10,7 @@ using LiteDB;
 using Racingway.Race;
 using Racingway.Race.Collision.Triggers;
 using Racingway.Utils;
+using static Dalamud.Interface.Utility.Raii.ImRaii;
 
 namespace Racingway.Tabs
 {
@@ -76,12 +77,7 @@ namespace Racingway.Tabs
 
             if (ImGuiComponents.IconButton(FontAwesomeIcon.FileImport))
             {
-                string data = ImGui.GetClipboardText();
-
-                Plugin.DataQueue.QueueDataOperation(async () =>
-                {
-                    await Plugin.Storage.ImportRouteFromBase64(data);
-                });
+                ShareHelper.ImportRouteFromClipboard(Plugin);
             }
             if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
             {
@@ -91,18 +87,7 @@ namespace Racingway.Tabs
             ImGui.SameLine();
             if (ImGuiComponents.IconButton(FontAwesomeIcon.FileExport))
             {
-                string input = System.Text.Json.JsonSerializer.Serialize(
-                    selectedRoute.GetEmptySerialized()
-                );
-                string text = Compression.ToCompressedBase64(input);
-                if (text != string.Empty)
-                {
-                    ImGui.SetClipboardText(text);
-                }
-                else
-                {
-                    Plugin.ChatGui.PrintError("[RACE] No route selected.");
-                }
+                ShareHelper.ExportRouteToClipboard(selectedRoute);
             }
             if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
             {
@@ -121,12 +106,21 @@ namespace Racingway.Tabs
                 return;
             }
 
+            DrawRouteSettings(ref selectedRoute);
+
+            ImGui.Spacing();
+
+            DrawTriggerSettings(ref id, ref selectedRoute);
+        }
+
+        public void DrawRouteSettings(ref Route selectedRoute)
+        {
             string name = selectedRoute.Name;
             if (ImGui.InputText("Name", ref name, 64) && name != selectedRoute.Name)
             {
-                // Something
                 if (name == string.Empty)
                     return;
+
                 selectedRoute.Name = name;
                 updateRoute(selectedRoute);
             }
@@ -141,177 +135,41 @@ namespace Racingway.Tabs
                 updateRoute(selectedRoute);
             }
 
-            bool allowMounts = selectedRoute.AllowMounts;
-            if (ImGui.Checkbox("Allow Mounts", ref allowMounts))
+            if (selectedRoute != null && selectedRoute.Id != ObjectId.Empty &&
+                ImGui.CollapsingHeader("Behavior Settings"))
             {
-                selectedRoute.AllowMounts = allowMounts;
-                updateRoute(selectedRoute);
-            }
+                ImGui.Indent();
 
-            bool requireGroundedStart = selectedRoute.RequireGroundedStart;
-            if (ImGui.Checkbox("Start when not grounded", ref requireGroundedStart))
-            {
-                selectedRoute.RequireGroundedStart = requireGroundedStart;
-                updateRoute(selectedRoute);
-            }
-
-            bool requireGroundedFinish = selectedRoute.RequireGroundedFinish;
-            if (ImGui.Checkbox("Finish when grounded", ref requireGroundedFinish))
-            {
-                selectedRoute.RequireGroundedFinish = requireGroundedFinish;
-                updateRoute(selectedRoute);
-            }
-
-            DrawAutocleanupSettings(selectedRoute);
-
-            ImGui.Spacing();
-
-            if (ImGui.Button("Add Trigger"))
-            {
-                // We set the trigger position slightly below the player due to SE position jank.
-                Checkpoint newTrigger = new Checkpoint(
-                    selectedRoute,
-                    Plugin.ClientState.LocalPlayer.Position - new Vector3(0, 0.1f, 0),
-                    Vector3.One,
-                    Vector3.Zero
-                );
-                selectedRoute.Triggers.Add(newTrigger);
-                updateRoute(selectedRoute);
-            }
-
-            for (int i = 0; i < selectedRoute.Triggers.Count; i++)
-            {
-                ITrigger trigger = selectedRoute.Triggers[i];
-
-                ImGui.Separator();
-                if (ImGuiComponents.IconButton(id, Dalamud.Interface.FontAwesomeIcon.Eraser))
+                bool allowMounts = selectedRoute.AllowMounts;
+                if (ImGui.Checkbox("Allow Mounts", ref allowMounts))
                 {
-                    updateStartFinishBools();
-                    selectedRoute.Triggers.Remove(trigger);
-                    updateRoute(selectedRoute);
-                    continue;
-                }
-                if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-                {
-                    ImGui.SetTooltip("Erase this trigger.");
-                }
-
-                id++;
-                ImGui.SameLine();
-                if (ImGuiComponents.IconButton(id, Dalamud.Interface.FontAwesomeIcon.ArrowsToDot))
-                {
-                    // We set the trigger position slightly below the player due to SE position jank.
-                    selectedRoute.Triggers[i].Cube.Position =
-                        Plugin.ClientState.LocalPlayer.Position - new Vector3(0, 0.1f, 0);
-                    Plugin.ChatGui.Print($"[RACE] Trigger position set to {trigger.Cube.Position}");
-
-                    updateRoute(selectedRoute);
-                }
-                if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-                {
-                    ImGui.SetTooltip("Set trigger position to your characters position.");
-                }
-
-                ImGui.SameLine();
-                if (ImGui.TreeNode($"{trigger.GetType().Name}##{id}"))
-                {
-                    ImGui.Indent();
-
-                    if (ImGui.Selectable("Start", trigger is Start))
-                    {
-                        if (trigger is Start)
-                            return;
-
-                        if (hasStart)
-                        {
-                            Plugin.ChatGui.PrintError(
-                                "[RACE] There is already a start trigger in this route."
-                            );
-                        }
-                        else
-                        {
-                            selectedRoute.Triggers[i] = new Start(trigger.Route, trigger.Cube);
-                            updateRoute(selectedRoute);
-                        }
-                    }
-
-                    if (ImGui.Selectable("Checkpoint", trigger is Checkpoint))
-                    {
-                        if (trigger is Checkpoint)
-                            return;
-                        selectedRoute.Triggers[i] = new Checkpoint(trigger.Route, trigger.Cube);
-                        updateRoute(selectedRoute);
-                    }
-
-                    if (ImGui.Selectable("Fail", trigger is Fail))
-                    {
-                        if (trigger is Fail)
-                            return;
-                        selectedRoute.Triggers[i] = new Fail(trigger.Route, trigger.Cube);
-                        updateRoute(selectedRoute);
-                    }
-
-                    if (ImGui.Selectable("Finish", trigger is Finish))
-                    {
-                        if (trigger is Finish)
-                            return;
-                        if (hasFinish)
-                        {
-                            Plugin.ChatGui.PrintError(
-                                "[RACE] There is already a finish trigger in this route."
-                            );
-                        }
-                        else
-                        {
-                            selectedRoute.Triggers[i] = new Finish(trigger.Route, trigger.Cube);
-                            updateRoute(selectedRoute);
-                        }
-                    }
-
-                    if (ImGui.Selectable("Loop", trigger is Loop))
-                    {
-                        if (trigger is Loop)
-                            return;
-                        selectedRoute.Triggers[i] = new Loop(trigger.Route, trigger.Cube);
-                        updateRoute(selectedRoute);
-                    }
-
-                    ImGui.Unindent();
-
-                    ImGui.TreePop();
-                }
-
-                id++;
-                Vector3 position = trigger.Cube.Position;
-                if (ImGui.DragFloat3($"Position##{id}", ref position, 0.1f))
-                {
-                    selectedRoute.Triggers[i].Cube.Position = position;
+                    selectedRoute.AllowMounts = allowMounts;
                     updateRoute(selectedRoute);
                 }
 
-                id++;
-                Vector3 scale = trigger.Cube.Scale;
-                if (ImGui.DragFloat3($"Scale##{id}", ref scale, 0.1f))
+                bool requireGroundedStart = selectedRoute.RequireGroundedStart;
+                if (ImGui.Checkbox("Start when not grounded", ref requireGroundedStart))
                 {
-                    selectedRoute.Triggers[i].Cube.Scale = scale;
-                    selectedRoute.Triggers[i].Cube.UpdateVerts();
+                    selectedRoute.RequireGroundedStart = requireGroundedStart;
                     updateRoute(selectedRoute);
                 }
 
-                id++;
-                Vector3 rotation = trigger.Cube.Rotation;
-                if (ImGui.DragFloat3($"Rotation##{id}", ref rotation, 0.1f))
+                bool requireGroundedFinish = selectedRoute.RequireGroundedFinish;
+                if (ImGui.Checkbox("Finish when grounded", ref requireGroundedFinish))
                 {
-                    selectedRoute.Triggers[i].Cube.Rotation = rotation;
+                    selectedRoute.RequireGroundedFinish = requireGroundedFinish;
                     updateRoute(selectedRoute);
                 }
+
+                ImGui.Unindent();
             }
+
+            if (selectedRoute != null)
+                DrawAutocleanupSettings(ref selectedRoute);
         }
 
-        public void DrawAutocleanupSettings(Route selectedRoute)
+        public void DrawAutocleanupSettings(ref Route selectedRoute)
         {
-            ImGui.Spacing();
-
             // Add database cleanup section
             if (
                 selectedRoute != null
@@ -506,6 +364,217 @@ namespace Racingway.Tabs
                 }
 
                 ImGui.Unindent();
+            }
+        }
+
+        private void DrawTriggerSettings(ref int id, ref Route selectedRoute)
+        {
+            using (ImRaii.ItemWidth(50))
+            {
+                if (ImGui.Button("Add Trigger"))
+                {
+                    // We set the trigger position slightly below the player due to SE position jank.
+                    Checkpoint newTrigger = new Checkpoint(
+                        selectedRoute,
+                        Plugin.ClientState.LocalPlayer.Position - new Vector3(0, 0.1f, 0),
+                        Vector3.One,
+                        Vector3.Zero
+                    );
+                    selectedRoute.Triggers.Add(newTrigger);
+                    updateRoute(selectedRoute);
+                }
+
+                if (Plugin.SelectedTrigger != null)
+                {
+                    ImGui.SameLine();
+                    if (ImGui.Button("Stop Editing Trigger"))
+                    {
+                        Plugin.SelectedTrigger = null;
+                    }
+                }
+
+                ImGui.SameLine();
+                bool useSnap = Plugin.Configuration.UseSnapping;
+                if (ImGui.Checkbox("Use Snap", ref useSnap))
+                {
+                    Plugin.Configuration.UseSnapping = useSnap;
+                    Plugin.Configuration.Save();
+                }
+
+                ImGui.SameLine();
+                float snapDistance = Plugin.Configuration.SnapDistance;
+                if (ImGui.DragFloat("Snap Distance", ref snapDistance, 0.001f))
+                {
+                    Plugin.Configuration.SnapDistance = snapDistance;
+                    Plugin.Configuration.Save();
+                }
+            }
+
+            ImGui.Separator();
+
+            using (var child = ImRaii.Child("###triggerChildren")) 
+            {
+                bool hoveredATrigger = false;
+
+                for (int i = 0; i < selectedRoute.Triggers.Count; i++)
+                {
+                    var cursorPos = ImGui.GetCursorPos();
+
+                    ITrigger trigger = selectedRoute.Triggers[i];
+
+                    if (ImGuiComponents.IconButton(id, FontAwesomeIcon.Eraser))
+                    {
+                        updateStartFinishBools();
+                        selectedRoute.Triggers.Remove(trigger);
+                        updateRoute(selectedRoute);
+                        continue;
+                    }
+                    if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                    {
+                        ImGui.SetTooltip("Erase this trigger.");
+                    }
+
+                    id++;
+                    ImGui.SameLine();
+                    if (ImGuiComponents.IconButton(id, FontAwesomeIcon.ArrowsToDot))
+                    {
+                        // We set the trigger position slightly below the player due to SE position jank.
+                        selectedRoute.Triggers[i].Cube.Position =
+                            Plugin.ClientState.LocalPlayer.Position - new Vector3(0, 0.1f, 0);
+                        Plugin.ChatGui.Print($"[RACE] Trigger position set to {trigger.Cube.Position}");
+
+                        updateRoute(selectedRoute);
+                    }
+                    if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                    {
+                        ImGui.SetTooltip("Set trigger position to your characters position.");
+                    }
+
+                    id++;
+                    ImGui.SameLine();
+                    if (ImGuiComponents.IconButton(id, FontAwesomeIcon.RulerCombined))
+                    {
+                        Plugin.SelectedTrigger = trigger;
+                    }
+                    if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                    {
+                        ImGui.SetTooltip("Edit using the gizmo");
+                    }
+
+                    ImGui.SameLine();
+                    if (ImGui.TreeNode($"{trigger.GetType().Name}##{id}"))
+                    {
+                        ImGui.Indent();
+
+                        if (ImGui.Selectable("Start", trigger is Start))
+                        {
+                            if (trigger is Start)
+                                return;
+
+                            if (hasStart)
+                            {
+                                Plugin.ChatGui.PrintError(
+                                    "[RACE] There is already a start trigger in this route."
+                                );
+                            }
+                            else
+                            {
+                                selectedRoute.Triggers[i] = new Start(trigger.Route, trigger.Cube);
+                                updateRoute(selectedRoute);
+                            }
+                        }
+
+                        if (ImGui.Selectable("Checkpoint", trigger is Checkpoint))
+                        {
+                            if (trigger is Checkpoint)
+                                return;
+                            selectedRoute.Triggers[i] = new Checkpoint(trigger.Route, trigger.Cube);
+                            updateRoute(selectedRoute);
+                        }
+
+                        if (ImGui.Selectable("Fail", trigger is Fail))
+                        {
+                            if (trigger is Fail)
+                                return;
+                            selectedRoute.Triggers[i] = new Fail(trigger.Route, trigger.Cube);
+                            updateRoute(selectedRoute);
+                        }
+
+                        if (ImGui.Selectable("Finish", trigger is Finish))
+                        {
+                            if (trigger is Finish)
+                                return;
+
+                            selectedRoute.Triggers[i] = new Finish(trigger.Route, trigger.Cube);
+                            updateRoute(selectedRoute);
+                        }
+
+                        if (ImGui.Selectable("Loop", trigger is Loop))
+                        {
+                            if (trigger is Loop)
+                                return;
+                            selectedRoute.Triggers[i] = new Loop(trigger.Route, trigger.Cube);
+                            updateRoute(selectedRoute);
+                        }
+
+                        ImGui.Unindent();
+
+                        ImGui.TreePop();
+                    }
+
+                    id++;
+                    Vector3 position = trigger.Cube.Position;
+                    if (ImGui.DragFloat3($"Position##{id}", ref position, 0.1f))
+                    {
+                        selectedRoute.Triggers[i].Cube.Position = position;
+                        updateRoute(selectedRoute);
+                    }
+
+                    id++;
+                    Vector3 scale = trigger.Cube.Scale;
+                    if (ImGui.DragFloat3($"Scale##{id}", ref scale, 0.1f))
+                    {
+                        selectedRoute.Triggers[i].Cube.Scale = scale;
+                        selectedRoute.Triggers[i].Cube.UpdateVerts();
+                        updateRoute(selectedRoute);
+                    }
+
+                    id++;
+                    Vector3 rotation = trigger.Cube.Rotation;
+                    if (ImGui.DragFloat3($"Rotation##{id}", ref rotation, 0.1f))
+                    {
+                        selectedRoute.Triggers[i].Cube.Rotation = rotation;
+                        updateRoute(selectedRoute);
+                    }
+
+                    var afterPos = ImGui.GetCursorPos();
+
+                    id++;
+                    using (_ = ImRaii.PushColor(ImGuiCol.HeaderHovered, new Vector4(1, 1, 1, 0.05f)))
+                    {
+                        using (_ = ImRaii.PushColor(ImGuiCol.HeaderActive, new Vector4(1, 1, 1, 0.07f)))
+                        {
+                            ImGui.SetCursorPos(cursorPos);
+
+                            using (ImRaii.Disabled())
+                                ImGui.Selectable($"###{id}", false, ImGuiSelectableFlags.AllowItemOverlap, afterPos - cursorPos);
+
+                            ImGui.SetCursorPos(afterPos);
+                            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                            {
+                                Plugin.HoveredTrigger = trigger;
+                                hoveredATrigger = true;
+                            }
+                        }
+                    }
+                    
+                    ImGui.Separator();
+                }
+
+                if (!hoveredATrigger)
+                {
+                    Plugin.HoveredTrigger = null;
+                }
             }
         }
 

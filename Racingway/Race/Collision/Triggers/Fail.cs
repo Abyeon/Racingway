@@ -20,6 +20,7 @@ namespace Racingway.Race.Collision.Triggers
         private static readonly uint ActiveColor = 0x2200FF00;
 
         public uint Color { get; set; } = InactiveColor;
+        public bool Active { get; set; } = false;
         public List<uint> Touchers { get; set; } = new List<uint>();
 
         public Fail(Route route, Vector3 position, Vector3 scale, Vector3 rotation)
@@ -38,6 +39,7 @@ namespace Racingway.Race.Collision.Triggers
 
         public void OnEntered(Player player)
         {
+            Active = true;
             Color = ActiveColor;
 
             int index = Route.PlayersInParkour.FindIndex(x => x.Item1 == player);
@@ -58,6 +60,7 @@ namespace Racingway.Race.Collision.Triggers
         {
             if (Touchers.Count == 0)
             {
+                Active = false;
                 Color = InactiveColor;
             }
         }

@@ -72,7 +72,56 @@ namespace Racingway.Windows
                     if (trigger == null)
                         continue;
 
-                    draw.DrawCubeFilled(trigger.Cube, trigger.Color, 5.0f);
+                    try
+                    {
+                        float snapDistance = Plugin.Configuration.UseSnapping ? Plugin.Configuration.SnapDistance : 0f;
+
+                        if (trigger.Equals(Plugin.SelectedTrigger))
+                            draw.DrawGizmo(
+                                ref trigger.Cube.Position,
+                                ref trigger.Cube.Rotation,
+                                ref trigger.Cube.Scale,
+                                trigger.Id.ToString(),
+                                snapDistance);
+                    } catch (Exception ex)
+                    {
+                        Plugin.Log.Error(ex.ToString());
+                    }
+
+                    uint color = trigger.Color;
+                    if (trigger.Active)
+                    {
+                        color = Plugin.Configuration.ActivatedColor.ToByteColor().RGBA;
+                    }
+                    else
+                    {
+                        switch (trigger)
+                        {
+                            case Start:
+                                color = Plugin.Configuration.StartTriggerColor.ToByteColor().RGBA;
+                                break;
+                            case Loop:
+                                color = Plugin.Configuration.StartTriggerColor.ToByteColor().RGBA;
+                                break;
+                            case Checkpoint:
+                                color = Plugin.Configuration.CheckpointTriggerColor.ToByteColor().RGBA;
+                                break;
+                            case Fail:
+                                color = Plugin.Configuration.FailTriggerColor.ToByteColor().RGBA;
+                                break;
+                            case Finish:
+                                color = Plugin.Configuration.FinishTriggerColor.ToByteColor().RGBA;
+                                break;
+                        }
+                    }
+
+                    draw.DrawCubeFilled(trigger.Cube, color, 5.0f);
+                }
+
+                // Draw hovered trigger
+                if (Plugin.HoveredTrigger != null)
+                {
+                    draw.DrawCube(Plugin.HoveredTrigger.Cube, 0xFF00FF00, 2f);
                 }
             }
 

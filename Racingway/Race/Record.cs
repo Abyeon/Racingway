@@ -164,24 +164,8 @@ namespace Racingway.Race
             return 100f * (1f - ((float)simplifiedPointCount / originalPointCount));
         }
 
-        /// Optimal output for sharing a route?
-        /// Only need:
-        ///     Name
-        ///     World
-        ///     Date
-        ///     Time
-        ///     Splits
-        ///     Line
-        ///         Can derive distance
-        ///         Can also optimize this to be doubles instead of longs by getting the difference from previous point
-        ///     Hash
-        ///
-
         public string GetCSV()
         {
-            // TODO: Research line simplification algos, or some other way to compress player lines... They BIG!
-            //string compressedLine = Compression.ToCompressedBase64(Line);
-
             return $"{Date.ToString("M/dd/yyyy H:mm:ss")},{Name},{World},{Utils.Time.PrettyFormatTimeSpan(Time)},{Distance.ToString()},{RouteName}\n";
         }
     }

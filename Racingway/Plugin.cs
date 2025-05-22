@@ -15,6 +15,7 @@ using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using LiteDB;
 using Racingway.Race;
+using Racingway.Race.Collision.Triggers;
 using Racingway.Utils;
 using Racingway.Utils.Storage;
 using Racingway.Windows;
@@ -75,6 +76,8 @@ public sealed class Plugin : IDalamudPlugin
 
     public Record DisplayedRecord { get; set; }
     public ObjectId? SelectedRoute { get; set; }
+    public ITrigger? SelectedTrigger { get; set; }
+    public ITrigger? HoveredTrigger { get; set; }
     public Stopwatch LocalTimer { get; set; }
 
     public Address CurrentAddress { get; set; }
@@ -205,10 +208,13 @@ public sealed class Plugin : IDalamudPlugin
 
         //_lastCollisionCheck = DateTime.UtcNow;
 
-        Parallel.For(0, LoadedRoutes.Count, index =>
+
+        // TODO: Get rid of LocalPlayer and IPlayerCharacter calls and store the values we need in Player class.
+        // That way this can all be multithreaded
+        foreach (var route in LoadedRoutes)
         {
-            LoadedRoutes[index].CheckCollision(player);
-        });
+            route.CheckCollision(player);
+        }
     }
 
     private void OnFrameworkTick(IFramework framework)

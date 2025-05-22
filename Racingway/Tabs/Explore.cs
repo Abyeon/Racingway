@@ -51,7 +51,12 @@ namespace Racingway.Tabs
 
         public void Draw()
         {
-            using (var child = ImRaii.Child("###race-exploreL", new Vector2(ImGui.GetContentRegionAvail().X * 0.33f, ImGui.GetContentRegionAvail().Y), true))
+            Vector2 contentAvailable = ImGui.GetContentRegionAvail();
+
+            float maxWidth = 175;
+
+            Vector2 size = new Vector2(contentAvailable.X * .33f > maxWidth ? maxWidth : contentAvailable.X * 0.33f, contentAvailable.Y);
+            using (var child = ImRaii.Child("###race-exploreL", size, true))
             {
                 if (child.Success)
                 {
@@ -84,12 +89,7 @@ namespace Racingway.Tabs
                     ImGui.SameLine();
                     if (ImGui.Button("Import Route"))
                     {
-                        string data = ImGui.GetClipboardText();
-
-                        Plugin.DataQueue.QueueDataOperation(async () =>
-                        {
-                            await Plugin.Storage.ImportRouteFromBase64(data);
-                        });
+                        ShareHelper.ImportRouteFromClipboard(Plugin);
                     }
                     if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
                     {
@@ -99,18 +99,7 @@ namespace Racingway.Tabs
                     ImGui.SameLine();
                     if (ImGui.Button("Import Record"))
                     {
-                        string data = ImGui.GetClipboardText();
-
-                        Plugin.DataQueue.QueueDataOperation(async () =>
-                        {
-                            try
-                            {
-                                await Plugin.Storage.ImportRecordFromBase64(data);
-                            } catch (Exception ex)
-                            {
-                                Plugin.Log.Error(ex.ToString());
-                            }
-                        });
+                        ShareHelper.ImportRecordFromClipboard(Plugin);
                     }
                     if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
                     {
@@ -184,17 +173,7 @@ namespace Racingway.Tabs
                                     }
                                     if (ImGui.Selectable("Export to Clipboard"))
                                     {
-                                        string input = JsonSerializer.Serialize(route.GetEmptySerialized());
-                                        string text = Compression.ToCompressedBase64(input);
-
-                                        if (text != string.Empty)
-                                        {
-                                            ImGui.SetClipboardText(text);
-                                        }
-                                        else
-                                        {
-                                            Plugin.ChatGui.PrintError("[RACE] Error exporting route to clipboard.");
-                                        }
+                                        ShareHelper.ExportRouteToClipboard(route);
                                     }
 
                                     if (selectedSearch == Search.Loaded) // Hide this button unless it's a loaded route for now
