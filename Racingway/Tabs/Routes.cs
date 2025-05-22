@@ -532,7 +532,7 @@ namespace Racingway.Tabs
 
                     id++;
                     Vector3 scale = trigger.Cube.Scale;
-                    if (ImGui.DragFloat3($"Scale##{id}", ref scale, 0.1f))
+                    if (ImGui.DragFloat3($"Scale##{id}", ref scale, 0.1f, 0.01f, float.MaxValue))
                     {
                         selectedRoute.Triggers[i].Cube.Scale = scale;
                         selectedRoute.Triggers[i].Cube.UpdateVerts();
