@@ -12,6 +12,7 @@ using ImGuiNET;
 using LiteDB;
 using Racingway.Race;
 using Racingway.Utils;
+using ZLinq;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace Racingway.Tabs
@@ -77,7 +78,7 @@ namespace Racingway.Tabs
 
         private void ApplyFilters()
         {
-            filteredRecords = cachedRecords.Where(IsRecordMatchingFilters).ToList();
+            filteredRecords = cachedRecords.AsValueEnumerable().Where(IsRecordMatchingFilters).ToList();
         }
 
         private void DrawFilterPopup()

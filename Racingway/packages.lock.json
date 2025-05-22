@@ -23,6 +23,12 @@
           "System.Buffers": "4.5.1"
         }
       },
+      "ZLinq": {
+        "type": "Direct",
+        "requested": "[1.4.6, )",
+        "resolved": "1.4.6",
+        "contentHash": "Z+bL9Yd0WEYdUkyDELQ5BTRaLScSWAZ6RxiaIv+jCM5OgvNMPbaqzmgdYy5J1ZH3fkXdC87F/oUhKq2fcxDZcw=="
+      },
       "System.Buffers": {
         "type": "Transitive",
         "resolved": "4.5.1",

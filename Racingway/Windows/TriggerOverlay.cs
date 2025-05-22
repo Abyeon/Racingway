@@ -16,6 +16,7 @@ using Racingway.Race.Collision.Triggers;
 using Racingway.Race.LineStyles;
 using Racingway.Utils;
 using Serilog;
+using ZLinq;
 
 namespace Racingway.Windows
 {
@@ -65,7 +66,7 @@ namespace Racingway.Windows
             // Display Trigger debug UI
             if (Plugin.Configuration.DrawTriggers)
             {
-                List<ITrigger> triggers = Plugin.LoadedRoutes.SelectMany(x => x.Triggers).ToList();
+                List<ITrigger> triggers = Plugin.LoadedRoutes.AsValueEnumerable().SelectMany(x => x.Triggers).ToList();
 
                 foreach (var trigger in triggers)
                 {
