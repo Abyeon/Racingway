@@ -176,6 +176,10 @@ namespace Racingway.Tabs
                                     {
                                         ShareHelper.ExportRouteToClipboard(route);
                                     }
+                                    if (ImGui.Selectable("Export JSON to Clipboard"))
+                                    {
+                                        ShareHelper.ExportRouteJsonToClipboard(route);
+                                    }
 
                                     if (selectedSearch == Search.Loaded) // Hide this button unless it's a loaded route for now
                                     {

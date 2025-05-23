@@ -31,6 +31,24 @@ namespace Racingway.Utils
         }
 
         /// <summary>
+        /// Get the serialized JSON version of a route and put it in the user's clipboard.
+        /// </summary>
+        /// <param name="route"></param>
+        public static void ExportRouteJsonToClipboard(Route route, bool pretty = true)
+        {
+            string text = JsonSerializer.Serialize(route.GetEmptySerialized(), pretty);
+
+            if (text != string.Empty)
+            {
+                ImGui.SetClipboardText(text);
+            }
+            else
+            {
+                Plugin.ChatGui.PrintError("[RACE] Error exporting route to clipboard.");
+            }
+        }
+
+        /// <summary>
         /// Import a Route from the user's clipboard.
         /// </summary>
         /// <param name="plugin"></param>
