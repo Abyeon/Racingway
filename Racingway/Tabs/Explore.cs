@@ -180,6 +180,10 @@ namespace Racingway.Tabs
                                     {
                                         ShareHelper.ExportRouteJsonToClipboard(route);
                                     }
+                                    if (ImGui.IsItemHovered(ImGuiHoveredFlags.None))
+                                    {
+                                        ImGui.SetTooltip("Intended only for creating external route lists at the moment.");
+                                    }
 
                                     if (selectedSearch == Search.Loaded) // Hide this button unless it's a loaded route for now
                                     {

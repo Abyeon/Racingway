@@ -162,6 +162,19 @@ public sealed class Plugin : IDalamudPlugin
 
             // Update our address when plugin first loads
             territoryHelper.GetLocationID();
+
+            // Try to fetch routes from RouteLists
+            try
+            {
+                foreach (string url in Configuration.RouteList)
+                {
+                    Log.Debug(url);
+                    ShareHelper.ImportRoutesFromURL(url, this);
+                }
+            } catch (Exception ex)
+            {
+                Log.Error(ex.ToString());
+            }
         } else
         {
             string err = "Racingway was unable to initialize DB. The plugin will be unable to function normally. This may be because you're running two instances of the plugin.";
@@ -646,6 +659,44 @@ public sealed class Plugin : IDalamudPlugin
         });
 
         SubscribeToRouteEvents();
+    }
+
+    public void AddRoutes(List<Route> routes)
+    {
+        if (CurrentAddress == null || Storage == null) return;
+
+        bool reloadZone = false;
+
+        foreach (Route route in routes)
+        {
+            bool containsRoute = Storage.RouteCache.ContainsKey(route.Id.ToString());
+            containsRoute |= Storage.RouteCache.Any(x => x.Value.Name == route.Name);
+
+            DataQueue.QueueDataOperation(async () =>
+            {
+                await Storage.AddRoute(route);
+                if (!containsRoute)
+                {
+                    if (route.Address == CurrentAddress) reloadZone = true;
+                    Log.Debug($"Adding {route.Name} to routes.");
+                    Storage.RouteCache.Add(route.Id.ToString(), route);
+                }
+
+                // TODO: Update routes if a player already has them. Preserve previous data, just update triggers/metadata
+            });
+        }
+
+        DataQueue.QueueDataOperation(() =>
+        {
+            if (reloadZone)
+            {
+                // Pretend we just loaded into the zone.
+                AddressChanged(CurrentAddress);
+                DisplayedRecord = null;
+
+                SubscribeToRouteEvents();
+            }
+        });
     }
 
     public void PayloadedChat(IPlayerCharacter player, string message)

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
@@ -35,6 +36,8 @@ namespace Racingway.Tabs
             ImGui.TextColored(ImGuiColors.DalamudOrange, text);
             ImGui.Dummy(spacing);
         }
+
+        private string inputUrl = string.Empty;
 
         public void Draw()
         {
@@ -330,6 +333,55 @@ namespace Racingway.Tabs
 
             #endregion
 
+            SectionSeparator("Route Lists");
+            #region Route Lists
+
+            using (ImRaii.ItemWidth(ImGui.GetContentRegionAvail().X - 35))
+            {
+                ImGui.InputText($"##OfficialRoutes", ref Plugin.Configuration.RouteList[0], 256, ImGuiInputTextFlags.ReadOnly);
+
+                for (int i = 1; i < Plugin.Configuration.RouteList.Length; i++)
+                {
+                    string listUrl = Plugin.Configuration.RouteList[i];
+                    ImGui.InputText($"##{i}", ref listUrl, 256, ImGuiInputTextFlags.ReadOnly);
+
+                    var ctrl = ImGui.GetIO().KeyCtrl;
+                    using (ImRaii.Disabled(!ctrl))
+                    {
+                        ImGui.SameLine();
+                        if (ImGuiComponents.IconButton(i, FontAwesomeIcon.Trash))
+                        {
+                            // Delete the list from the array
+                            List<string> converted = Plugin.Configuration.RouteList.ToList();
+                            converted.RemoveAt(i);
+                            Plugin.Configuration.RouteList = converted.ToArray();
+                        }
+                    }
+                    if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                    {
+                        ImGui.SetTooltip("Ctrl+click to delete URL from the list.");
+                    }
+                }
+
+                ImGui.InputText("##User Input", ref inputUrl, 256);
+
+                ImGui.SameLine();
+                if (ImGuiComponents.IconButton(FontAwesomeIcon.Plus))
+                {
+                    // Actually add to the list
+                    if (inputUrl.Length == 0) return;
+                    if (!Uri.IsWellFormedUriString(inputUrl, UriKind.Absolute)) return;
+
+                    Plugin.Configuration.RouteList = Plugin.Configuration.RouteList.Append(inputUrl).ToArray();
+                }
+                if (ImGui.IsItemHovered(ImGuiHoveredFlags.None))
+                {
+                    ImGui.SetTooltip("Add URL to list.");
+                }
+            }
+
+            #endregion
+
             SectionSeparator("Misc. Settings");
             #region Misc Settings
 
@@ -359,19 +411,32 @@ namespace Racingway.Tabs
                 {
                     try
                     {
-                        Plugin.Log.Debug(
-                            route.Name + ": " + route.Records.Count.ToString() + " records."
-                        );
-                        foreach (var record in route.Records)
+                        if (route.Name != null)
                         {
-                            try
+                            Plugin.Log.Debug(route.Name + ": ");
+                        } else
+                        {
+                            Plugin.Log.Debug("ROUTE NAME IS NULL HERE");
+                        }
+
+                        if (route.Records != null)
+                        {
+                            Plugin.Log.Debug(route.Records.Count.ToString() + " records:");
+
+                            foreach (var record in route.Records)
                             {
-                                Plugin.Log.Debug(record.GetCSV());
+                                try
+                                {
+                                    Plugin.Log.Debug(record.GetCSV());
+                                }
+                                catch (Exception ex)
+                                {
+                                    Plugin.Log.Error(ex.ToString());
+                                }
                             }
-                            catch (Exception ex)
-                            {
-                                Plugin.Log.Error(ex.ToString());
-                            }
+                        } else
+                        {
+                            Plugin.Log.Debug("ROUTE RECORDS ARE NULL... This might be expected.");
                         }
                     }
                     catch (Exception ex)
