@@ -20,7 +20,7 @@ namespace Racingway.Utils.Storage
         private Plugin Plugin { get; set; }
         private LiteDatabase Database { get; init; }
         private SemaphoreSlim dbLock = new SemaphoreSlim(1, 1);
-        private TaskCompletionSource<bool> pendingWrites = null;
+        private TaskCompletionSource<bool>? pendingWrites = null;
         private readonly TimeSpan debounceTime = TimeSpan.FromMilliseconds(1000);
         private CancellationTokenSource cancellationTokenSource;
 
@@ -349,43 +349,46 @@ namespace Racingway.Utils.Storage
 
         internal async Task ImportRouteFromBase64(string data)
         {
-            try
+            await Task.Run(() =>
             {
-                string normalized = data.Normalize();
-                string Json = Compression.FromCompressedBase64(normalized);
-
-                BsonValue bson = JsonSerializer.Deserialize(Json);
-                Route route = BsonMapper.Global.Deserialize<Route>(bson);
-
-                // If the route is somehow null, lets log the JSON.
-                if (route == null)
+                try
                 {
-                    Plugin.Log.Warning(
-                        "Imported route was null, printing the uncompressed Base64... "
-                    );
-                    Plugin.Log.Warning(Json);
-                    throw new NullReferenceException("Route is null. Check /xllog.");
+                    string normalized = data.Normalize();
+                    string Json = Compression.FromCompressedBase64(normalized);
+
+                    BsonValue bson = JsonSerializer.Deserialize(Json);
+                    Route route = BsonMapper.Global.Deserialize<Route>(bson);
+
+                    // If the route is somehow null, lets log the JSON.
+                    if (route == null)
+                    {
+                        Plugin.Log.Warning(
+                            "Imported route was null, printing the uncompressed Base64... "
+                        );
+                        Plugin.Log.Warning(Json);
+                        throw new NullReferenceException("Route is null. Check /xllog.");
+                    }
+
+                    route.Records = new List<Record>();
+
+                    bool hasRoute = Plugin.Storage.RouteCache.ContainsKey(route.Id.ToString());
+
+                    if (!hasRoute)
+                    {
+                        Plugin.AddRoute(route);
+                        Plugin.ChatGui.Print($"[RACE] Added {route.Name} to routes.");
+                    }
+                    else
+                    {
+                        Plugin.ChatGui.PrintError("[RACE] Route already saved!");
+                    }
                 }
-
-                route.Records = new List<Record>();
-
-                bool hasRoute = Plugin.Storage.RouteCache.ContainsKey(route.Id.ToString());
-
-                if (!hasRoute)
+                catch (Exception ex)
                 {
-                    Plugin.AddRoute(route);
-                    Plugin.ChatGui.Print($"[RACE] Added {route.Name} to routes.");
+                    Plugin.ChatGui.PrintError($"[RACE] Failed to import route. {ex.Message}");
+                    Plugin.Log.Error(ex, "Failed to import route");
                 }
-                else
-                {
-                    Plugin.ChatGui.PrintError("[RACE] Route already saved!");
-                }
-            }
-            catch (Exception ex)
-            {
-                Plugin.ChatGui.PrintError($"[RACE] Failed to import route. {ex.Message}");
-                Plugin.Log.Error(ex, "Failed to import route");
-            }
+            });
         }
 
         internal async Task ImportRecordFromBase64(string data)

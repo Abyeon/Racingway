@@ -308,6 +308,8 @@ namespace Racingway.Tabs
 
         public void Draw()
         {
+            if (Plugin.Storage == null) return;
+
             int id = 0;
 
             using (var tree = ImRaii.TreeNode("Routes"))

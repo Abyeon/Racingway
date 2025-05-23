@@ -32,7 +32,7 @@ public class Configuration : IPluginConfiguration
 
     // Timer Style
     public float TimerSize { get; set; } = 2f;
-    public IFontSpec TimerFont { get; set; } = null;
+    public IFontSpec? TimerFont { get; set; } = null;
     public Vector4 TimerColor { get; set; } = new Vector4(0, 0, 0, 0.75f);
     public Vector4 NormalColor { get; set; } = new Vector4(1, 1, 1, 1);
     public Vector4 FinishColor { get; set; } = new Vector4(0, 1, 1, 1);

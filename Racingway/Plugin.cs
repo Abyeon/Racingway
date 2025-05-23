@@ -58,7 +58,7 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService]
     internal static IDataManager DataManager { get; private set; } = null!;
 
-    internal LocalDatabase Storage { get; init; }
+    internal LocalDatabase? Storage { get; init; }
     public DataQueue DataQueue { get; init; }
 
     internal TerritoryHelper territoryHelper { get; set; }
@@ -75,79 +75,78 @@ public sealed class Plugin : IDalamudPlugin
 
     public List<Route> LoadedRoutes { get; set; } = new();
 
-    public Record DisplayedRecord { get; set; }
+    public Record? DisplayedRecord { get; set; }
     public ObjectId? SelectedRoute { get; set; }
     public ITrigger? SelectedTrigger { get; set; }
     public ITrigger? HoveredTrigger { get; set; }
     public Stopwatch LocalTimer { get; set; }
 
-    public Address CurrentAddress { get; set; }
+    public Address? CurrentAddress { get; set; }
 
     private IPlayerCharacter? localPlayer = null;
     private DateTime lastAutoCleanupTime = DateTime.MinValue;
     private readonly TimeSpan autoCleanupInterval = TimeSpan.FromHours(1); // Run cleanup once per hour
 
     public Dictionary<uint, Player> trackedPlayers = new();
-    public IGameObject[] trackedNPCs;
 
     // Add throttling for collision checks - we don't need to check every frame
-    private DateTime _lastCollisionCheck = DateTime.MinValue;
-    private readonly TimeSpan _collisionCheckInterval = TimeSpan.FromMilliseconds(16); // ~60 checks per second
+    //private DateTime lastCollisionCheck = DateTime.MinValue;
+    //private readonly TimeSpan collisionCheckInterval = TimeSpan.FromMilliseconds(16); // ~60 checks per second
 
     public Plugin()
     {
+        LocalTimer = new Stopwatch();
+        territoryHelper = new TerritoryHelper(this);
+
+        Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+        FontManager = new FontManager(this);
+
+        DataQueue = new DataQueue();
+
         try
         {
-            LocalTimer = new Stopwatch();
-            territoryHelper = new TerritoryHelper(this);
+            Storage = new(this, $"{PluginInterface.GetPluginConfigDirectory()}\\data.db");
 
-            Configuration =
-                PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
-            FontManager = new FontManager(this);
-
-            DataQueue = new DataQueue();
-
-            try
+            //Configuration.Version = 0;
+            // Delete current user's database if they are still using a legacy version
+            if (Configuration.Version == 0)
             {
-                Storage = new(this, $"{PluginInterface.GetPluginConfigDirectory()}\\data.db");
+                Storage.GetRecords().DeleteAll();
+                Storage.GetRoutes().DeleteAll();
 
-                //Configuration.Version = 0;
-                // Delete current user's database if they are still using a legacy version
-                if (Configuration.Version == 0)
-                {
-                    Storage.GetRecords().DeleteAll();
-                    Storage.GetRoutes().DeleteAll();
+                Plugin.ChatGui.PrintError(
+                    $"[RACE] Due to changes in the database, Racingway has wiped your previous data.. Apologies for this!"
+                );
 
-                    Plugin.ChatGui.PrintError(
-                        $"[RACE] Due to changes in the database, Racingway has wiped your previous data.. Apologies for this!"
-                    );
-
-                    Configuration.Version = 1;
-                    Configuration.Save();
-                }
-
-                Storage.UpdateRouteCache();
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex.ToString());
+                Configuration.Version = 1;
+                Configuration.Save();
             }
 
-            MainWindow = new MainWindow(this);
-            TriggerOverlay = new TriggerOverlay(this);
-            TimerWindow = new TimerWindow(this);
+            Storage.UpdateRouteCache();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex.ToString());
+        }
 
-            WindowSystem.AddWindow(MainWindow);
-            WindowSystem.AddWindow(TriggerOverlay);
-            WindowSystem.AddWindow(TimerWindow);
+        MainWindow = new MainWindow(this);
+        TriggerOverlay = new TriggerOverlay(this);
+        TimerWindow = new TimerWindow(this);
 
-            LoadedRoutes = new List<Route>();
+        WindowSystem.AddWindow(MainWindow);
+        WindowSystem.AddWindow(TriggerOverlay);
+        WindowSystem.AddWindow(TimerWindow);
 
-            CommandManager.AddHandler(
-                CommandName,
-                new CommandInfo(OnCommand) { HelpMessage = "Open the main UI" }
-            );
+        LoadedRoutes = new List<Route>();
 
+        CommandManager.AddHandler(
+            CommandName,
+            new CommandInfo(OnCommand) { HelpMessage = "Open the main UI" }
+        );
+
+
+        if (Storage != null)
+        {
             Framework.Update += OnFrameworkTick;
             ClientState.TerritoryChanged += OnTerritoryChange;
             ClientState.Logout += OnLogout;
@@ -163,10 +162,11 @@ public sealed class Plugin : IDalamudPlugin
 
             // Update our address when plugin first loads
             territoryHelper.GetLocationID();
-        }
-        catch (Exception ex)
+        } else
         {
-            Log.Error(ex.ToString());
+            string err = "Racingway was unable to initialize DB. The plugin will be unable to function normally. This may be because you're running two instances of the plugin.";
+            Plugin.ChatGui.PrintError("[RACE] " + err);
+            Plugin.Log.Error(err);
         }
     }
 
@@ -219,8 +219,9 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnFrameworkTick(IFramework framework)
     {
-        if (!ClientState.IsLoggedIn || ClientState.IsPvP)
+        if (!ClientState.IsLoggedIn || ClientState.IsPvP || ClientState.LocalPlayer == null || Storage == null)
             return;
+
         localPlayer = ClientState.LocalPlayer;
 
         // Check if it's time to run auto-cleanup
@@ -387,6 +388,8 @@ public sealed class Plugin : IDalamudPlugin
     // Triggered whenever TerritoryHelper learns the ID of the location we're at
     public void AddressChanged(Address address)
     {
+        if (Storage == null) return;
+
         Log.Debug("Detected area change: " + address.ReadableName);
 
         CurrentAddress = address;
@@ -461,6 +464,11 @@ public sealed class Plugin : IDalamudPlugin
     // Triggered when a player starts any loaded route
     private void OnStart(object? sender, Player e)
     {
+        if (ClientState.LocalPlayer == null) return;
+
+        Route? route = sender as Route;
+        if (route == null) return;
+
         if (e.id == ClientState.LocalPlayer.EntityId)
         {
             LocalTimer.Restart();
@@ -472,8 +480,6 @@ public sealed class Plugin : IDalamudPlugin
             }
         }
 
-        Route? route = sender as Route;
-
         if (Configuration.LogStart)
             PayloadedChat((IPlayerCharacter)e.actor, $" just started {route.Name}");
     }
@@ -481,6 +487,8 @@ public sealed class Plugin : IDalamudPlugin
     // Triggered whenever a player finished any loaded route
     private void OnFinish(object? sender, (Player, Record) e)
     {
+        if (Storage == null) return;
+
         Route? route = sender as Route;
         if (route == null)
         {
@@ -549,6 +557,8 @@ public sealed class Plugin : IDalamudPlugin
     // Triggered when a player fails any loaded route
     private void OnFailed(object? sender, Player e)
     {
+        if (Storage == null) return;
+
         Route? route = sender as Route;
         if (route == null)
             return;
@@ -618,6 +628,8 @@ public sealed class Plugin : IDalamudPlugin
 
     public void AddRoute(Route route)
     {
+        if (CurrentAddress == null || Storage == null) return;
+
         bool containsRoute = Storage.RouteCache.ContainsKey(route.Id.ToString());
 
         DataQueue.QueueDataOperation(async () =>
@@ -674,7 +686,11 @@ public sealed class Plugin : IDalamudPlugin
         MainWindow.Dispose();
         TriggerOverlay.Dispose();
 
-        Storage.Dispose();
+        if (Storage != null)
+        {
+            Storage.Dispose();
+        }
+
         Configuration.Save();
 
         DataQueue.Dispose();

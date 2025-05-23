@@ -157,7 +157,17 @@ namespace Racingway.Windows
                     );
                     if (maxIndex > 0)
                     {
-                        Array.Resize(ref displayedRecordLine, maxIndex - 1);
+                        Array.Resize(ref displayedRecordLine, maxIndex);
+                    }
+
+                    // Add a lerped point to the displayed record to simulate a player moving
+                    if (displayedRecord.Line.Length > 0 && maxIndex > 0)
+                    {
+                        TimedVector3 start = displayedRecord.Line[maxIndex - 1];
+                        TimedVector3 end = displayedRecord.Line[maxIndex];
+                        TimedVector3 midPoint = TimedVector3.LerpBetweenPoints(start, end, Plugin.LocalTimer.ElapsedMilliseconds);
+
+                        displayedRecordLine = displayedRecordLine.Append(midPoint).ToArray();
                     }
                 }
 

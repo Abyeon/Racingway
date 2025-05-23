@@ -214,6 +214,10 @@ namespace Racingway.Race
                 points.Add(segment.Destination);
             }
 
+            // Finally add a point at the players feet to make it "smooth"
+            if (inParkour)
+                points.Add(new TimedVector3(position, timer.ElapsedMilliseconds));
+
             return points.ToArray();
         }
 

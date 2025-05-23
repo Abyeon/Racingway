@@ -54,25 +54,16 @@ namespace Racingway.Race
         public List<(Player, Stopwatch)> PlayersInParkour = new();
 
         [BsonIgnore]
-        public event EventHandler<Player> OnStarted;
+        public event EventHandler<Player>? OnStarted;
 
         [BsonIgnore]
-        public event EventHandler<(Player, Record)> OnFinished;
+        public event EventHandler<(Player, Record)>? OnFinished;
 
         [BsonIgnore]
-        public event EventHandler<Player> OnFailed;
+        public event EventHandler<Player>? OnFailed;
 
-        public Route(
-            string name,
-            Address address,
-            string description,
-            List<ITrigger> triggers,
-            List<Record> records,
-            bool allowMounts = false,
-            bool enabled = true,
-            int clientFails = 0,
-            int clientFinishes = 0
-        )
+        public Route(string name, Address address, string description, List<ITrigger> triggers,
+            List<Record> records, bool allowMounts = false, bool enabled = true, int clientFails = 0, int clientFinishes = 0)
         {
             this.Id = ObjectId.NewObjectId();
 

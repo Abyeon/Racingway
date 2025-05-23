@@ -51,6 +51,8 @@ namespace Racingway.Tabs
 
         public void Draw()
         {
+            if (Plugin.Storage == null) return;
+
             Vector2 contentAvailable = ImGui.GetContentRegionAvail();
 
             float maxWidth = 175;
@@ -79,8 +81,7 @@ namespace Racingway.Tabs
                 if (child.Success)
                 {
                     ImGui.Dummy(new Vector2(0, 2f));
-
-                    if (ImGui.Button("New Route"))
+                    if (Plugin.CurrentAddress != null && ImGui.Button("New Route"))
                     {
                         Route newRoute = new Route("New Route#" + Plugin.Storage.RouteCache.Count.ToString(), Plugin.CurrentAddress, string.Empty, new List<ITrigger>(), new List<Record>());
                         Plugin.AddRoute(newRoute);

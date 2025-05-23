@@ -34,6 +34,18 @@ namespace Racingway.Tabs
 
         public void Draw()
         {
+            if (Plugin.CurrentAddress == null)
+            {
+                ImGui.TextUnformatted("No address currently loaded!");
+                return;
+            }
+
+            if (Plugin.ClientState.LocalPlayer == null)
+            {
+                ImGui.TextUnformatted("Player is currently null!");
+                return;
+            }
+
             if (Plugin.ClientState.LocalPlayer != null)
                 ImGui.Text($"Current position: {Plugin.ClientState.LocalPlayer.Position.ToString()}");
 
@@ -360,8 +372,11 @@ namespace Racingway.Tabs
                     ImGui.Text($"Current Record Count: {recordCount}");
 
                     // Show database stats
-                    string dbSize = Plugin.Storage.GetFileSizeString();
-                    ImGui.Text($"Database Size: {dbSize}");
+                    if (Plugin.Storage != null)
+                    {
+                        string dbSize = Plugin.Storage.GetFileSizeString();
+                        ImGui.Text($"Database Size: {dbSize}");
+                    }
                 }
 
                 ImGui.Unindent();
