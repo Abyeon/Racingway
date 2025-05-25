@@ -34,6 +34,18 @@ namespace Racingway.Tabs
 
         public void Draw()
         {
+            if (Plugin.CurrentAddress == null)
+            {
+                ImGui.TextUnformatted("No address currently loaded!");
+                return;
+            }
+
+            if (Plugin.ClientState.LocalPlayer == null)
+            {
+                ImGui.TextUnformatted("Player is currently null!");
+                return;
+            }
+
             if (Plugin.ClientState.LocalPlayer != null)
                 ImGui.Text($"Current position: {Plugin.ClientState.LocalPlayer.Position.ToString()}");
 
@@ -360,8 +372,11 @@ namespace Racingway.Tabs
                     ImGui.Text($"Current Record Count: {recordCount}");
 
                     // Show database stats
-                    string dbSize = Plugin.Storage.GetFileSizeString();
-                    ImGui.Text($"Database Size: {dbSize}");
+                    if (Plugin.Storage != null)
+                    {
+                        string dbSize = Plugin.Storage.GetFileSizeString();
+                        ImGui.Text($"Database Size: {dbSize}");
+                    }
                 }
 
                 ImGui.Unindent();
@@ -488,14 +503,11 @@ namespace Racingway.Tabs
                         {
                             if (ImGui.Selectable("Start", trigger is Start))
                             {
-                                if (trigger is Start)
-                                    return;
+                                if (trigger is Start) return;
 
                                 if (hasStart)
                                 {
-                                    Plugin.ChatGui.PrintError(
-                                        "[RACE] There is already a start trigger in this route."
-                                    );
+                                    Plugin.ChatGui.PrintError("[RACE] There is already a start trigger in this route.");
                                 }
                                 else
                                 {
@@ -506,34 +518,36 @@ namespace Racingway.Tabs
 
                             if (ImGui.Selectable("Checkpoint", trigger is Checkpoint))
                             {
-                                if (trigger is Checkpoint)
-                                    return;
+                                if (trigger is Checkpoint) return;
+
                                 selectedRoute.Triggers[i] = new Checkpoint(trigger.Route, trigger.Cube);
+                                Plugin.SelectedTrigger = selectedRoute.Triggers[i];
                                 updateRoute(selectedRoute);
                             }
 
                             if (ImGui.Selectable("Fail", trigger is Fail))
                             {
-                                if (trigger is Fail)
-                                    return;
+                                if (trigger is Fail) return;
                                 selectedRoute.Triggers[i] = new Fail(trigger.Route, trigger.Cube);
+                                Plugin.SelectedTrigger = selectedRoute.Triggers[i];
                                 updateRoute(selectedRoute);
                             }
 
                             if (ImGui.Selectable("Finish", trigger is Finish))
                             {
-                                if (trigger is Finish)
-                                    return;
+                                if (trigger is Finish) return;
 
                                 selectedRoute.Triggers[i] = new Finish(trigger.Route, trigger.Cube);
+                                Plugin.SelectedTrigger = selectedRoute.Triggers[i];
                                 updateRoute(selectedRoute);
                             }
 
                             if (ImGui.Selectable("Loop", trigger is Loop))
                             {
-                                if (trigger is Loop)
-                                    return;
+                                if (trigger is Loop) return;
+
                                 selectedRoute.Triggers[i] = new Loop(trigger.Route, trigger.Cube);
+                                Plugin.SelectedTrigger = selectedRoute.Triggers[i];
                                 updateRoute(selectedRoute);
                             }
                         }

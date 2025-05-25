@@ -46,6 +46,7 @@ namespace Racingway.Race
         // Tracking last point to avoid unnecessary additions
         private Vector3 lastAddedPosition = Vector3.Zero;
         private const float MIN_DISTANCE_THRESHOLD = 1.5f;
+        private const float MIN_LANDING_THRESHOLD = 0.5f;
 
         public Player(uint id, ICharacter actor, Plugin plugin)
         {
@@ -78,15 +79,28 @@ namespace Racingway.Race
                     throw new NullReferenceException("Character pointer is null");
                 }
 
-                this.isGrounded = !character->IsJumping();
+                bool nowGrounded = !character->IsJumping();
+
+                // Player landed or left ground
+                if (this.inParkour && this.isGrounded != nowGrounded)
+                {
+                    if (lastAddedPosition == Vector3.Zero || Vector3.Distance(lastAddedPosition, this.position) >= MIN_LANDING_THRESHOLD)
+                    {
+                        // Add a point
+                        AddPoint();
+                        lastAddedPosition = this.position;
+                    }
+                }
+                
+                this.isGrounded = nowGrounded;
                 this.inMount = character->IsMounted();
             }
             catch (NullReferenceException e)
             {
                 if (Plugin != null)
                 {
-                    Racingway.Plugin.Log.Error("Error updating player states. " + e.ToString());
-                    Racingway.Plugin.ChatGui.PrintError("Error updating player states. See /xllog");
+                    Plugin.Log.Error("Error updating player states. " + e.ToString());
+                    Plugin.ChatGui.PrintError("Error updating player states. See /xllog");
                 }
             }
         }
@@ -102,11 +116,7 @@ namespace Racingway.Race
                 if (delayRaceline >= Plugin.Configuration.LineQuality)
                 {
                     // Only add points if we've moved a sufficient distance
-                    if (
-                        lastAddedPosition == Vector3.Zero
-                        || Vector3.Distance(lastAddedPosition, this.position)
-                            >= MIN_DISTANCE_THRESHOLD
-                    )
+                    if (lastAddedPosition == Vector3.Zero || Vector3.Distance(lastAddedPosition, this.position) >= MIN_DISTANCE_THRESHOLD)
                     {
                         AddPoint();
                         lastAddedPosition = this.position;
@@ -213,6 +223,10 @@ namespace Racingway.Race
             {
                 points.Add(segment.Destination);
             }
+
+            // Finally add a point at the players feet to make it "smooth"
+            if (inParkour)
+                points.Add(new TimedVector3(position, timer.ElapsedMilliseconds));
 
             return points.ToArray();
         }

@@ -1,9 +1,12 @@
 using ImGuiNET;
 using LiteDB;
+using Newtonsoft.Json.Linq;
 using Racingway.Race;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -19,6 +22,24 @@ namespace Racingway.Utils
         {
             string input = JsonSerializer.Serialize(route.GetEmptySerialized());
             string text = Compression.ToCompressedBase64(input);
+
+            if (text != string.Empty)
+            {
+                ImGui.SetClipboardText(text);
+            }
+            else
+            {
+                Plugin.ChatGui.PrintError("[RACE] Error exporting route to clipboard.");
+            }
+        }
+
+        /// <summary>
+        /// Get the serialized JSON version of a route and put it in the user's clipboard.
+        /// </summary>
+        /// <param name="route"></param>
+        public static void ExportRouteJsonToClipboard(Route route, bool pretty = true)
+        {
+            string text = JsonSerializer.Serialize(route.GetEmptySerialized(), pretty);
 
             if (text != string.Empty)
             {
@@ -101,6 +122,51 @@ namespace Racingway.Utils
                     Plugin.Log.Error(ex.ToString());
                 }
             });
+        }
+
+        /// <summary>
+        /// Try to import routes from a given URL
+        /// </summary>
+        /// <param name="url"></param>
+        public static async void ImportRoutesFromURL(string url, Plugin plugin)
+        {
+            if (plugin.Storage == null) return;
+
+            try
+            {
+                using (var httpClient = new HttpClient())
+                {
+                    var json = await httpClient.GetStringAsync(url);
+                    JToken[] array = JArray.Parse(json).Children().ToArray();
+                    List<Route> routes = new List<Route>();
+
+                    foreach (var jsonRoute in array)
+                    {
+                        string? name = jsonRoute["name"].Value<string>();
+                        if (name != null)
+                        {
+                            Plugin.Log.Debug(name);
+                        }
+
+                        BsonValue bson = JsonSerializer.Deserialize(jsonRoute.ToString());
+                        Route route = BsonMapper.Global.Deserialize<Route>(bson);
+
+                        // If the route is null, lets log the JSON.
+                        if (route == null)
+                        {
+                            throw new NullReferenceException("Route is null.");
+                        } else
+                        {
+                            routes.Add(route);
+                        }
+                    }
+
+                    plugin.AddRoutes(routes);
+                }
+            } catch (Exception ex)
+            {
+                Plugin.Log.Error(ex.ToString());
+            }
         }
     }
 }

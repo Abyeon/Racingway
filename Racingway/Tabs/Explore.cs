@@ -51,6 +51,8 @@ namespace Racingway.Tabs
 
         public void Draw()
         {
+            if (Plugin.Storage == null) return;
+
             Vector2 contentAvailable = ImGui.GetContentRegionAvail();
 
             float maxWidth = 175;
@@ -79,8 +81,7 @@ namespace Racingway.Tabs
                 if (child.Success)
                 {
                     ImGui.Dummy(new Vector2(0, 2f));
-
-                    if (ImGui.Button("New Route"))
+                    if (Plugin.CurrentAddress != null && ImGui.Button("New Route"))
                     {
                         Route newRoute = new Route("New Route#" + Plugin.Storage.RouteCache.Count.ToString(), Plugin.CurrentAddress, string.Empty, new List<ITrigger>(), new List<Record>());
                         Plugin.AddRoute(newRoute);
@@ -174,6 +175,14 @@ namespace Racingway.Tabs
                                     if (ImGui.Selectable("Export to Clipboard"))
                                     {
                                         ShareHelper.ExportRouteToClipboard(route);
+                                    }
+                                    if (ImGui.Selectable("Export JSON to Clipboard"))
+                                    {
+                                        ShareHelper.ExportRouteJsonToClipboard(route);
+                                    }
+                                    if (ImGui.IsItemHovered(ImGuiHoveredFlags.None))
+                                    {
+                                        ImGui.SetTooltip("Intended only for creating external route lists at the moment.");
                                     }
 
                                     if (selectedSearch == Search.Loaded) // Hide this button unless it's a loaded route for now

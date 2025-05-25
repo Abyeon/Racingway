@@ -32,7 +32,7 @@ public class Configuration : IPluginConfiguration
 
     // Timer Style
     public float TimerSize { get; set; } = 2f;
-    public IFontSpec TimerFont { get; set; } = null;
+    public IFontSpec? TimerFont { get; set; } = null;
     public Vector4 TimerColor { get; set; } = new Vector4(0, 0, 0, 0.75f);
     public Vector4 NormalColor { get; set; } = new Vector4(1, 1, 1, 1);
     public Vector4 FinishColor { get; set; } = new Vector4(0, 1, 1, 1);
@@ -65,6 +65,15 @@ public class Configuration : IPluginConfiguration
 
     // Misc Settings
     public bool TrackOthers { get; set; } = true;
+    public float RenderDistance { get; set; } = 100f;
+
+    /// <summary>
+    /// List of github repos to pull routelist jsons from. Similar to how Dalamud does third party repos.
+    /// Intended for users to be able to subscribe to different housing community lists for automatically updated routes
+    /// </summary>
+    //public string[] RouteList { get; set; } = [
+    //    "https://raw.githubusercontent.com/Abyeon/RacingwayRoutes/main/routes.json"
+    //];
 
     public void Save()
     {

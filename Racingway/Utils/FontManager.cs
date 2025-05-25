@@ -11,7 +11,7 @@ namespace Racingway.Utils
     public unsafe class FontManager : IDisposable
     {
         private Plugin Plugin;
-        public IFontHandle Handle = null;
+        public IFontHandle? Handle = null;
 
         public FontManager(Plugin plugin)
         {
