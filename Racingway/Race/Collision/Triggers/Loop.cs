@@ -22,7 +22,7 @@ namespace Racingway.Race.Collision.Triggers
         public uint Color { get; set; } = InactiveColor;
         public bool Active { get; set; } = false;
         public List<uint> Touchers { get; set; } = new List<uint>();
-        private Dictionary<uint, bool> playerStarted = new Dictionary<uint, bool>();
+        public Dictionary<uint, bool> playerStarted = new Dictionary<uint, bool>();
 
         public Loop(Route route, Vector3 position, Vector3 scale, Vector3 rotation)
         {
@@ -42,14 +42,23 @@ namespace Racingway.Race.Collision.Triggers
         {
             var inTrigger = Cube.PointInCube(player.position);
 
+            // Quick return if not in trigger and not a toucher
+            if (!inTrigger && !Touchers.Contains(player.id))
+                return;
+
+            // True if grounded or grounded is not required by route
+            bool grounded = (player.isGrounded && Route.RequireGroundedStart) || !Route.RequireGroundedStart;
+
             // When player enters trigger and wasn't already inside
-            if (inTrigger && !Touchers.Contains(player.id))
+            if (inTrigger && !Touchers.Contains(player.id) && grounded)
             {
                 Touchers.Add(player.id);
                 OnEntered(player);
             }
             // When player leaves trigger and was inside
-            else if (!inTrigger && Touchers.Contains(player.id))
+            else if (
+                (!inTrigger && Touchers.Contains(player.id)) ||
+                (!grounded && Touchers.Contains(player.id)))
             {
                 Touchers.Remove(player.id);
                 OnLeft(player);
@@ -87,30 +96,19 @@ namespace Racingway.Race.Collision.Triggers
 
                     try
                     {
-                        var actor = player.actor;
-                        if (
-                            actor != null
-                            && actor
-                                is Dalamud.Game.ClientState.Objects.SubKinds.IPlayerCharacter playerActor
-                        )
-                        {
-                            Record record = new Record(
-                                now,
-                                playerActor.Name.ToString(),
-                                playerActor.HomeWorld.Value.Name.ToString(),
-                                t,
-                                distance,
-                                player.RaceLine.ToArray(),
-                                this.Route
-                            );
+                        Record record = new Record(
+                            now,
+                            player.Name,
+                            player.Homeworld,
+                            t,
+                            distance,
+                            player.RaceLine.ToArray(),
+                            this.Route
+                        );
 
-                            if (playerActor == Plugin.ClientState.LocalPlayer)
-                            {
-                                record.IsClient = true;
-                            }
+                        record.IsClient = player.isClient;
 
-                            Route.Finished(player, record);
-                        }
+                        Route.Finished(player, record);
                     }
                     catch (Exception ex)
                     {

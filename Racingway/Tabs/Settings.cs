@@ -395,7 +395,7 @@ namespace Racingway.Tabs
             }
 
             float renderDistance = Plugin.Configuration.RenderDistance;
-            if (ImGui.SliderFloat("Render Distance", ref renderDistance, 50f, 1000f))
+            if (ImGui.SliderFloat("Render Distance", ref renderDistance, 20f, 500f))
             {
                 Plugin.Configuration.RenderDistance = renderDistance;
                 Plugin.Configuration.Save();

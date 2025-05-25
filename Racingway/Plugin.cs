@@ -227,7 +227,17 @@ public sealed class Plugin : IDalamudPlugin
         // That way this can all be multithreaded
         foreach (var route in LoadedRoutes)
         {
-            route.CheckCollision(player);
+            // Run collision checks off-thread
+            Task.Run(() =>
+            {
+                try
+                {
+                    route.CheckCollision(player);
+                } catch (Exception e)
+                {
+                    Plugin.Log.Error(e.ToString());
+                }
+            });
         }
     }
 
@@ -478,12 +488,10 @@ public sealed class Plugin : IDalamudPlugin
     // Triggered when a player starts any loaded route
     private void OnStart(object? sender, Player e)
     {
-        if (ClientState.LocalPlayer == null) return;
-
         Route? route = sender as Route;
         if (route == null) return;
 
-        if (e.id == ClientState.LocalPlayer.EntityId)
+        if (e.isClient)
         {
             LocalTimer.Restart();
 
@@ -495,7 +503,7 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         if (Configuration.LogStart)
-            PayloadedChat((IPlayerCharacter)e.actor, $" just started {route.Name}");
+            PayloadedChat(e, $" just started {route.Name}");
     }
 
     // Triggered whenever a player finished any loaded route
@@ -523,7 +531,7 @@ public sealed class Plugin : IDalamudPlugin
         {
             var prettyPrint = Time.PrettyFormatTimeSpan(e.Item2.Time);
             PayloadedChat(
-                (IPlayerCharacter)e.Item1.actor,
+                e.Item1,
                 $" just finished {route.Name} in {prettyPrint} and {e.Item2.Distance} units."
             );
         }
@@ -617,7 +625,7 @@ public sealed class Plugin : IDalamudPlugin
 
         if (Configuration.LogFails)
         {
-            PayloadedChat((IPlayerCharacter)e.actor, " just failed the parkour.");
+            PayloadedChat(e, " just failed the parkour.");
         }
     }
 
@@ -700,11 +708,11 @@ public sealed class Plugin : IDalamudPlugin
         });
     }
 
-    public void PayloadedChat(IPlayerCharacter player, string message)
+    public void PayloadedChat(Player player, string message)
     {
         PlayerPayload payload = new PlayerPayload(
-            player.Name.ToString(),
-            player.HomeWorld.Value.RowId
+            player.Name,
+            player.HomeworldRow
         );
         TextPayload text = new TextPayload(message);
         SeString chat = new SeString(new Payload[] { payload, text });

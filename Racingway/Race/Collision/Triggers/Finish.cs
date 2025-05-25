@@ -72,19 +72,11 @@ namespace Racingway.Race.Collision.Triggers
         public void OnEntered(Player player)
         {
             // This method is required by the interface, but we're using ProcessPlayerFinish instead
-            // Steal some values from the playercharacter class before going off thread
-            IPlayerCharacter playerCharacter = (IPlayerCharacter)player.actor;
-
-            bool isClient = playerCharacter == Plugin.ClientState.LocalPlayer;
-
-            string name = playerCharacter.Name.ToString();
-            string world = playerCharacter.HomeWorld.Value.Name.ToString();
-
             // Starting the process on a background thread to avoid blocking the main thread
-            Task.Run(() => ProcessPlayerFinish(player, name, world, isClient));
+            Task.Run(() => ProcessPlayerFinish(player));
         }
 
-        private void ProcessPlayerFinish(Player player, string name, string world, bool isClient)
+        private void ProcessPlayerFinish(Player player)
         {
             // Prevent double-finishing for the same player
             lock (_processLock)
@@ -123,18 +115,15 @@ namespace Racingway.Race.Collision.Triggers
                     {
                         Record record = new Record(
                             now,
-                            name,
-                            world,
+                            player.Name,
+                            player.Homeworld,
                             t,
                             distance,
                             player.RaceLine.ToArray(),
                             this.Route
                         );
 
-                        if (isClient)
-                        {
-                            record.IsClient = true;
-                        }
+                        record.IsClient = player.isClient;
 
                         Route.Finished(player, record);
                     }
