@@ -20,6 +20,11 @@ namespace Racingway.Race.Collision.Triggers
         public void CheckCollision(Player player)
         {
             var inTrigger = Cube.PointInCube(player.position);
+
+            // Quick return if not in trigger and not a toucher
+            if (!inTrigger && !Touchers.Contains(player.id))
+                return;
+
             if (inTrigger && !Touchers.Contains(player.id))
             {
                 Touchers.Add(player.id);
