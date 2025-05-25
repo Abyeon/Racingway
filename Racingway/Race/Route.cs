@@ -245,14 +245,21 @@ namespace Racingway.Race
             }
 
             // If player is not in parkour, only check collision with start trigger
-            if (index == -1 && Triggers.Exists(x => x is Start))
+            if (index == -1 && Triggers.Exists(x => x is Start || x is Loop))
             {
                 // There shouldnt be more than one start trigger.
-                ITrigger start = Triggers.First(x => x is Start);
+                ITrigger start = Triggers.First(x => x is Start || x is Loop);
                 start.CheckCollision(player);
             }
             else
             {
+                // Check collision with start/loop trigger first
+                if (Triggers.Exists(x => x is Start || x is Loop))
+                {
+                    ITrigger start = Triggers.First(x => x is Start || x is Loop);
+                    start.CheckCollision(player);
+                }
+
                 // If player is in parkour, only check relevant triggers
                 // First, check fail triggers as they're most important for race integrity
                 foreach (ITrigger trigger in Triggers.AsValueEnumerable().Where(t => t is Fail))
@@ -260,8 +267,7 @@ namespace Racingway.Race
                     trigger.CheckCollision(player);
 
                     // If player is no longer in parkour after checking a fail trigger, stop further checks
-                    if (PlayersInParkour.FindIndex(x => x.Item1 == player) == -1)
-                        return;
+                    if (PlayersInParkour.FindIndex(x => x.Item1 == player) == -1) return;
                 }
 
                 // Then check finish and checkpoint triggers (higher priority)
@@ -277,10 +283,6 @@ namespace Racingway.Race
                     if (PlayersInParkour.FindIndex(x => x.Item1 == player) == -1)
                         return;
                 }
-
-                // Finally check the start collision, in case player needs to restart their run.
-                ITrigger start = Triggers.First(x => x is Start);
-                start.CheckCollision(player);
             }
         }
 
@@ -291,12 +293,26 @@ namespace Racingway.Race
 
         public void Finished(Player player, Record record)
         {
+            FixLoopTriggers(player);
             OnFinished?.Invoke(this, (player, record));
         }
 
         public void Failed(Player player)
         {
+            FixLoopTriggers(player);
             OnFailed?.Invoke(this, player);
+        }
+
+        /// <summary>
+        /// Removes the player from any Loop triggers in the route
+        /// </summary>
+        /// <param name="player">The player to remove</param>
+        private void FixLoopTriggers(Player player)
+        {
+            foreach (Loop trigger in Triggers.AsValueEnumerable().Where(t => t is Loop))
+            {
+                trigger.playerStarted.Remove(player.id);
+            }
         }
 
         /// <summary>

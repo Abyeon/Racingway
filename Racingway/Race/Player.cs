@@ -18,6 +18,12 @@ namespace Racingway.Race
 
         public uint id;
         public ICharacter actor;
+
+        public string Name;
+        public string Homeworld;
+        public uint HomeworldRow;
+        public bool isClient = false;
+
         public Vector3 position = Vector3.Zero;
 
         // Using a bounded collection to limit memory usage
@@ -52,6 +58,16 @@ namespace Racingway.Race
         {
             this.id = id;
             this.actor = actor;
+
+            IPlayerCharacter? playerCharacter = actor as IPlayerCharacter;
+            if (playerCharacter != null)
+            {
+                this.Name = playerCharacter.Name.ToString();
+                this.Homeworld = playerCharacter.HomeWorld.Value.ToString();
+                this.HomeworldRow = playerCharacter.HomeWorld.Value.RowId;
+                this.isClient = playerCharacter.Equals(Plugin.ClientState.LocalPlayer);
+            }
+
             Plugin = plugin;
             lastSeen = 0;
             _lastFinalPoint = new TimedVector3(Vector3.Zero, 0);

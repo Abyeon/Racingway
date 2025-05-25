@@ -98,7 +98,6 @@ namespace Racingway.Windows
             // Display Trigger debug UI
             if (Plugin.Configuration.DrawTriggers)
             {
-                //List<ITrigger> triggers = Plugin.LoadedRoutes.AsValueEnumerable().SelectMany(x => x.Triggers).ToList();
                 foreach (Route route in Plugin.LoadedRoutes)
                 {
                     foreach (ITrigger trigger in route.Triggers)
