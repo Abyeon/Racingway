@@ -26,7 +26,7 @@ namespace Racingway.Utils
 
 
         // Basically yoinked from https://github.com/LeonBlade/BDTHPlugin
-        public unsafe void DrawGizmo(ref Vector3 pos, ref Vector3 rotation, ref Vector3 scale, string id, float snapDistance)
+        public unsafe bool DrawGizmo(ref Vector3 pos, ref Vector3 rotation, ref Vector3 scale, string id, float snapDistance)
         {
             ImGuizmo.BeginFrame();
 
@@ -53,6 +53,7 @@ namespace Racingway.Utils
             ImGuizmo.SetRect(windowPos.X, windowPos.Y, Io.DisplaySize.X, Io.DisplaySize.Y);
 
             Matrix4x4 matrix = Matrix4x4.Identity;
+
             ImGuizmo.RecomposeMatrixFromComponents(ref pos.X, ref rotation.X, ref scale.X, ref matrix.M11);
 
             Vector3 snap = Vector3.One * snapDistance;
@@ -64,9 +65,15 @@ namespace Racingway.Utils
                 op = OPERATION.SCALE;
             }
 
-            if (Manipulate(ref view.M11, ref proj.M11, op, MODE.LOCAL, ref matrix.M11, ref snap.X))
+            Manipulate(ref view.M11, ref proj.M11, op, MODE.LOCAL, ref matrix.M11, ref snap.X);
+
+            if (ImGuizmo.IsUsing())
             {
                 ImGuizmo.DecomposeMatrixToComponents(ref matrix.M11, ref pos.X, ref rotation.X, ref scale.X);
+                return true;
+            } else
+            {
+                return false;
             }
         }
 
@@ -95,6 +102,55 @@ namespace Racingway.Utils
                     }
                 }
             }
+        }
+
+        // https://stackoverflow.com/a/70462919
+        public static Quaternion ToQuaternion(Vector3 v)
+        {
+
+            float cy = (float)Math.Cos(v.Z * 0.5);
+            float sy = (float)Math.Sin(v.Z * 0.5);
+            float cp = (float)Math.Cos(v.Y * 0.5);
+            float sp = (float)Math.Sin(v.Y * 0.5);
+            float cr = (float)Math.Cos(v.X * 0.5);
+            float sr = (float)Math.Sin(v.X * 0.5);
+
+            return new Quaternion
+            {
+                W = (cr * cp * cy + sr * sp * sy),
+                X = (sr * cp * cy - cr * sp * sy),
+                Y = (cr * sp * cy + sr * cp * sy),
+                Z = (cr * cp * sy - sr * sp * cy)
+            };
+
+        }
+
+        public Vector3 ToEulerAngles(Quaternion q)
+        {
+            Vector3 angles = new();
+
+            // roll / x
+            double sinr_cosp = 2 * (q.W * q.X + q.Y * q.Z);
+            double cosr_cosp = 1 - 2 * (q.X * q.X + q.Y * q.Y);
+            angles.X = (float)Math.Atan2(sinr_cosp, cosr_cosp);
+
+            // pitch / y
+            double sinp = 2 * (q.W * q.Y - q.Z * q.X);
+            if (Math.Abs(sinp) >= 1)
+            {
+                angles.Y = (float)Math.CopySign(Math.PI / 2, sinp);
+            }
+            else
+            {
+                angles.Y = (float)Math.Asin(sinp);
+            }
+
+            // yaw / z
+            double siny_cosp = 2 * (q.W * q.Z + q.X * q.Y);
+            double cosy_cosp = 1 - 2 * (q.Y * q.Y + q.Z * q.Z);
+            angles.Z = (float)Math.Atan2(siny_cosp, cosy_cosp);
+
+            return angles;
         }
 
         public void DrawText3d(string text, Vector3 position, uint color)
@@ -240,11 +296,7 @@ namespace Racingway.Utils
                 { 0, 4 },
                 { 1, 5 },
                 { 2, 6 },
-                {
-                    3,
-                    7,
-                } // Side edges
-                ,
+                { 3, 7 } // Side edges
             };
 
             // Get rotated vertices of cube
@@ -277,13 +329,7 @@ namespace Racingway.Utils
                 { 0, 4, 7, 3 }, // front face
                 { 1, 5, 6, 2 }, // back face
                 { 1, 5, 4, 0 }, // left face
-                {
-                    3,
-                    7,
-                    6,
-                    2,
-                } // right face
-                ,
+                { 3, 7, 6, 2,} // right face
             };
 
             // Get rotated vertices of cube
@@ -315,14 +361,15 @@ namespace Racingway.Utils
         )
         {
             Vector3[] tempVecs = points;
+         
+            Quaternion rotator = Quaternion.CreateFromYawPitchRoll(
+                rotation.X,
+                rotation.Y,
+                rotation.Z
+            );
 
             for (int i = 0; i < 8; i++)
             {
-                Quaternion rotator = Quaternion.CreateFromYawPitchRoll(
-                    rotation.X,
-                    rotation.Y,
-                    rotation.Z
-                );
                 Vector3 relativeVector = tempVecs[i] - origin;
                 Vector3 rotatedVector = Vector3.Transform(relativeVector, rotator);
                 tempVecs[i] = rotatedVector + origin;

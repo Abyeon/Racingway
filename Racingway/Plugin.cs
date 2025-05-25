@@ -163,18 +163,19 @@ public sealed class Plugin : IDalamudPlugin
             // Update our address when plugin first loads
             territoryHelper.GetLocationID();
 
+            // Disabling till I can get this stable
             // Try to fetch routes from RouteLists
-            try
-            {
-                foreach (string url in Configuration.RouteList)
-                {
-                    Log.Debug(url);
-                    ShareHelper.ImportRoutesFromURL(url, this);
-                }
-            } catch (Exception ex)
-            {
-                Log.Error(ex.ToString());
-            }
+            //try
+            //{
+            //    foreach (string url in Configuration.RouteList)
+            //    {
+            //        Log.Debug(url);
+            //        ShareHelper.ImportRoutesFromURL(url, this);
+            //    }
+            //} catch (Exception ex)
+            //{
+            //    Log.Error(ex.ToString());
+            //}
         } else
         {
             string err = "Racingway was unable to initialize DB. The plugin will be unable to function normally. This may be because you're running two instances of the plugin.";

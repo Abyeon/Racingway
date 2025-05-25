@@ -333,54 +333,56 @@ namespace Racingway.Tabs
 
             #endregion
 
-            SectionSeparator("Route Lists");
-            #region Route Lists
+            // Disabling till I can get this stable
 
-            using (ImRaii.ItemWidth(ImGui.GetContentRegionAvail().X - 35))
-            {
-                ImGui.InputText($"##OfficialRoutes", ref Plugin.Configuration.RouteList[0], 256, ImGuiInputTextFlags.ReadOnly);
+            //SectionSeparator("Route Lists");
+            //#region Route Lists
 
-                for (int i = 1; i < Plugin.Configuration.RouteList.Length; i++)
-                {
-                    string listUrl = Plugin.Configuration.RouteList[i];
-                    ImGui.InputText($"##{i}", ref listUrl, 256, ImGuiInputTextFlags.ReadOnly);
+            //using (ImRaii.ItemWidth(ImGui.GetContentRegionAvail().X - 35))
+            //{
+            //    ImGui.InputText($"##OfficialRoutes", ref Plugin.Configuration.RouteList[0], 256, ImGuiInputTextFlags.ReadOnly);
 
-                    var ctrl = ImGui.GetIO().KeyCtrl;
-                    using (ImRaii.Disabled(!ctrl))
-                    {
-                        ImGui.SameLine();
-                        if (ImGuiComponents.IconButton(i, FontAwesomeIcon.Trash))
-                        {
-                            // Delete the list from the array
-                            List<string> converted = Plugin.Configuration.RouteList.ToList();
-                            converted.RemoveAt(i);
-                            Plugin.Configuration.RouteList = converted.ToArray();
-                        }
-                    }
-                    if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-                    {
-                        ImGui.SetTooltip("Ctrl+click to delete URL from the list.");
-                    }
-                }
+            //    for (int i = 1; i < Plugin.Configuration.RouteList.Length; i++)
+            //    {
+            //        string listUrl = Plugin.Configuration.RouteList[i];
+            //        ImGui.InputText($"##{i}", ref listUrl, 256, ImGuiInputTextFlags.ReadOnly);
 
-                ImGui.InputText("##User Input", ref inputUrl, 256);
+            //        var ctrl = ImGui.GetIO().KeyCtrl;
+            //        using (ImRaii.Disabled(!ctrl))
+            //        {
+            //            ImGui.SameLine();
+            //            if (ImGuiComponents.IconButton(i, FontAwesomeIcon.Trash))
+            //            {
+            //                // Delete the list from the array
+            //                List<string> converted = Plugin.Configuration.RouteList.ToList();
+            //                converted.RemoveAt(i);
+            //                Plugin.Configuration.RouteList = converted.ToArray();
+            //            }
+            //        }
+            //        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            //        {
+            //            ImGui.SetTooltip("Ctrl+click to delete URL from the list.");
+            //        }
+            //    }
 
-                ImGui.SameLine();
-                if (ImGuiComponents.IconButton(FontAwesomeIcon.Plus))
-                {
-                    // Actually add to the list
-                    if (inputUrl.Length == 0) return;
-                    if (!Uri.IsWellFormedUriString(inputUrl, UriKind.Absolute)) return;
+            //    ImGui.InputText("##User Input", ref inputUrl, 256);
 
-                    Plugin.Configuration.RouteList = Plugin.Configuration.RouteList.Append(inputUrl).ToArray();
-                }
-                if (ImGui.IsItemHovered(ImGuiHoveredFlags.None))
-                {
-                    ImGui.SetTooltip("Add URL to list.");
-                }
-            }
+            //    ImGui.SameLine();
+            //    if (ImGuiComponents.IconButton(FontAwesomeIcon.Plus))
+            //    {
+            //        // Actually add to the list
+            //        if (inputUrl.Length == 0) return;
+            //        if (!Uri.IsWellFormedUriString(inputUrl, UriKind.Absolute)) return;
 
-            #endregion
+            //        Plugin.Configuration.RouteList = Plugin.Configuration.RouteList.Append(inputUrl).ToArray();
+            //    }
+            //    if (ImGui.IsItemHovered(ImGuiHoveredFlags.None))
+            //    {
+            //        ImGui.SetTooltip("Add URL to list.");
+            //    }
+            //}
+
+            //#endregion
 
             SectionSeparator("Misc. Settings");
             #region Misc Settings
@@ -389,6 +391,13 @@ namespace Racingway.Tabs
             if (ImGui.Checkbox("Track Other Players", ref trackOthers))
             {
                 Plugin.Configuration.TrackOthers = trackOthers;
+                Plugin.Configuration.Save();
+            }
+
+            float renderDistance = Plugin.Configuration.RenderDistance;
+            if (ImGui.SliderFloat("Render Distance", ref renderDistance, 50f, 1000f))
+            {
+                Plugin.Configuration.RenderDistance = renderDistance;
                 Plugin.Configuration.Save();
             }
 

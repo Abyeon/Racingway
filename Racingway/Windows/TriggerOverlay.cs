@@ -14,6 +14,7 @@ using LiteDB;
 using Racingway.Race;
 using Racingway.Race.Collision.Triggers;
 using Racingway.Race.LineStyles;
+using Racingway.Tabs;
 using Racingway.Utils;
 using Serilog;
 using ZLinq;
@@ -53,8 +54,39 @@ namespace Racingway.Windows
 
         public void Dispose() { }
 
+        private bool usedLastFrame = false;
+
+        private void UpdateRouteFromGizmo(Route route)
+        {
+            if (Plugin.Storage == null) return;
+
+            int index = Plugin.LoadedRoutes.FindIndex(x => x.Id == route.Id);
+            if (index == -1)
+            {
+                index = Plugin.LoadedRoutes.FindIndex(x => x == route);
+            }
+
+            if (index != -1)
+            {
+                Plugin.LoadedRoutes[index] = route;
+            }
+            else
+            {
+                Plugin.LoadedRoutes.Add(route);
+            }
+
+            Plugin.DataQueue.QueueDataOperation(async () =>
+            {
+                await Plugin.Storage.AddRoute(route);
+                Plugin.Storage.UpdateRouteCache();
+            });
+        }
+
         public override unsafe void Draw()
         {
+            // Fast return if player is null
+            if (Plugin.ClientState.LocalPlayer == null) return;
+
             ImGuiHelpers.SetWindowPosRelativeMainViewport("Trigger Overlay", new Vector2(0, 0));
 
             ImDrawListPtr drawList = ImGui.GetWindowDrawList();
@@ -66,57 +98,72 @@ namespace Racingway.Windows
             // Display Trigger debug UI
             if (Plugin.Configuration.DrawTriggers)
             {
-                List<ITrigger> triggers = Plugin.LoadedRoutes.AsValueEnumerable().SelectMany(x => x.Triggers).ToList();
-
-                foreach (var trigger in triggers)
+                //List<ITrigger> triggers = Plugin.LoadedRoutes.AsValueEnumerable().SelectMany(x => x.Triggers).ToList();
+                foreach (Route route in Plugin.LoadedRoutes)
                 {
-                    if (trigger == null)
-                        continue;
+                    foreach (ITrigger trigger in route.Triggers)
+                    {
+                        if (trigger == null)
+                            continue;
 
-                    try
-                    {
-                        float snapDistance = Plugin.Configuration.UseSnapping ? Plugin.Configuration.SnapDistance : 0f;
+                        // Skip if the distance is too high
+                        if (Vector3.Distance(trigger.Cube.Position, Plugin.ClientState.LocalPlayer.Position) > Plugin.Configuration.RenderDistance)
+                            continue;
 
-                        if (trigger.Equals(Plugin.SelectedTrigger))
-                            draw.DrawGizmo(
-                                ref trigger.Cube.Position,
-                                ref trigger.Cube.Rotation,
-                                ref trigger.Cube.Scale,
-                                trigger.Id.ToString(),
-                                snapDistance);
-                    } catch (Exception ex)
-                    {
-                        Plugin.Log.Error(ex.ToString());
-                    }
-
-                    uint color = trigger.Color;
-                    if (trigger.Active)
-                    {
-                        color = Plugin.Configuration.ActivatedColor.ToByteColor().RGBA;
-                    }
-                    else
-                    {
-                        switch (trigger)
+                        try
                         {
-                            case Start:
-                                color = Plugin.Configuration.StartTriggerColor.ToByteColor().RGBA;
-                                break;
-                            case Loop:
-                                color = Plugin.Configuration.StartTriggerColor.ToByteColor().RGBA;
-                                break;
-                            case Checkpoint:
-                                color = Plugin.Configuration.CheckpointTriggerColor.ToByteColor().RGBA;
-                                break;
-                            case Fail:
-                                color = Plugin.Configuration.FailTriggerColor.ToByteColor().RGBA;
-                                break;
-                            case Finish:
-                                color = Plugin.Configuration.FinishTriggerColor.ToByteColor().RGBA;
-                                break;
-                        }
-                    }
+                            float snapDistance = Plugin.Configuration.UseSnapping ? Plugin.Configuration.SnapDistance : 0f;
 
-                    draw.DrawCubeFilled(trigger.Cube, color, 5.0f);
+                            if (trigger.Equals(Plugin.SelectedTrigger))
+                            {
+                                if (!draw.DrawGizmo(ref trigger.Cube.Position, ref trigger.Cube.Rotation, ref trigger.Cube.Scale, trigger.Id.ToString(), snapDistance))
+                                {
+                                    if (usedLastFrame)
+                                    {
+                                        UpdateRouteFromGizmo(route);
+                                    }
+                                    usedLastFrame = false;
+                                } else
+                                {
+                                    usedLastFrame = true;
+                                }
+                            }
+
+                        }
+                        catch (Exception ex)
+                        {
+                            Plugin.Log.Error(ex.ToString());
+                        }
+
+                        uint color = trigger.Color;
+                        if (trigger.Active)
+                        {
+                            color = Plugin.Configuration.ActivatedColor.ToByteColor().RGBA;
+                        }
+                        else
+                        {
+                            switch (trigger)
+                            {
+                                case Start:
+                                    color = Plugin.Configuration.StartTriggerColor.ToByteColor().RGBA;
+                                    break;
+                                case Loop:
+                                    color = Plugin.Configuration.StartTriggerColor.ToByteColor().RGBA;
+                                    break;
+                                case Checkpoint:
+                                    color = Plugin.Configuration.CheckpointTriggerColor.ToByteColor().RGBA;
+                                    break;
+                                case Fail:
+                                    color = Plugin.Configuration.FailTriggerColor.ToByteColor().RGBA;
+                                    break;
+                                case Finish:
+                                    color = Plugin.Configuration.FinishTriggerColor.ToByteColor().RGBA;
+                                    break;
+                            }
+                        }
+
+                        draw.DrawCubeFilled(trigger.Cube, color, 5.0f);
+                    }
                 }
 
                 // Draw hovered trigger
