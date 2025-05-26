@@ -6,6 +6,7 @@ using Dalamud.Interface.FontIdentifier;
 using Dalamud.Plugin;
 using Racingway.Race;
 using Racingway.Race.Collision;
+using Racingway.Race.Collision.Triggers;
 using Racingway.Tabs;
 
 namespace Racingway;

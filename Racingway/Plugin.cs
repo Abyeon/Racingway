@@ -89,6 +89,15 @@ public sealed class Plugin : IDalamudPlugin
 
     public Dictionary<uint, Player> trackedPlayers = new();
 
+    public Dictionary<Type, bool> TriggerToggles { get; set; } = new Dictionary<Type, bool>
+    {
+        {typeof(Start), true },
+        {typeof(Loop), true },
+        {typeof(Checkpoint), true },
+        {typeof(Fail), true },
+        {typeof(Finish), true }
+    };
+
     // Add throttling for collision checks - we don't need to check every frame
     //private DateTime lastCollisionCheck = DateTime.MinValue;
     //private readonly TimeSpan collisionCheckInterval = TimeSpan.FromMilliseconds(16); // ~60 checks per second
@@ -599,15 +608,6 @@ public sealed class Plugin : IDalamudPlugin
                 }
             });
         }
-
-        //int index = route.PlayersInParkour.FindIndex(x => x.Item1 == e);
-        //if (index == -1) return; // return if player is not in parkour
-
-        //e.inParkour = false;
-
-        //route.PlayersInParkour.RemoveAt(index);
-        //e.raceLine.Clear();
-        //e.timer.Reset();
 
         if (Configuration.LogFails)
         {

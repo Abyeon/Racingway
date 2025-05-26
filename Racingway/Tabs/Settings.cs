@@ -45,33 +45,37 @@ namespace Racingway.Tabs
             #region Display Toggles
             ImGui.Dummy(spacing);
 
-            if (
-                ImGui.Button(
-                    $"{(Plugin.Configuration.DrawTriggers ? "Disable" : "Enable")} Triggers Display"
-                )
-            )
+            if (ImGui.Button($"{(Plugin.Configuration.DrawTriggers ? "Disable" : "Enable")} Triggers Display"))
             {
                 Plugin.Configuration.DrawTriggers = !Plugin.Configuration.DrawTriggers;
                 Plugin.Configuration.Save();
                 Plugin.ShowHideOverlay();
             }
 
-            if (
-                ImGui.Button(
-                    $"{(Plugin.Configuration.DrawRacingLines ? "Disable" : "Enable")} Racing Lines Display"
-                )
-            )
+            if (Plugin.Configuration.DrawTriggers)
+            {
+                ImGui.Indent();
+
+                foreach (var pair in Plugin.TriggerToggles)
+                {
+                    bool enabled = pair.Value;
+                    if (ImGui.Checkbox($"Draw {pair.Key.Name} Triggers", ref enabled))
+                    {
+                        Plugin.TriggerToggles[pair.Key] = enabled;
+                    }
+                }
+
+                ImGui.Unindent();
+            }
+
+            if (ImGui.Button($"{(Plugin.Configuration.DrawRacingLines ? "Disable" : "Enable")} Racing Lines Display"))
             {
                 Plugin.Configuration.DrawRacingLines = !Plugin.Configuration.DrawRacingLines;
                 Plugin.Configuration.Save();
                 Plugin.ShowHideOverlay();
             }
 
-            if (
-                ImGui.Button(
-                    $"{(Plugin.Configuration.DrawTimer ? "Disable" : "Enable")} Timer Display"
-                )
-            )
+            if (ImGui.Button($"{(Plugin.Configuration.DrawTimer ? "Disable" : "Enable")} Timer Display"))
             {
                 Plugin.Configuration.DrawTimer = !Plugin.Configuration.DrawTimer;
                 Plugin.Configuration.Save();

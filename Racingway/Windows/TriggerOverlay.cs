@@ -102,8 +102,8 @@ namespace Racingway.Windows
                 {
                     foreach (ITrigger trigger in route.Triggers)
                     {
-                        if (trigger == null)
-                            continue;
+                        if (trigger == null) continue;
+                        if (!Plugin.TriggerToggles[trigger.GetType()]) continue;
 
                         // Skip if the distance is too high
                         if (Vector3.Distance(trigger.Cube.Position, Plugin.ClientState.LocalPlayer.Position) > Plugin.Configuration.RenderDistance)
