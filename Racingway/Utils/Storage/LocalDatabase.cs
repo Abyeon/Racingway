@@ -391,7 +391,7 @@ namespace Racingway.Utils.Storage
             });
         }
 
-        internal async Task ImportRecord(Record record)
+        internal void ImportRecord(Record record)
         {
             try
             {
@@ -423,7 +423,7 @@ namespace Racingway.Utils.Storage
                     )
                     {
                         route.Records.Add(record);
-                        await AddRoute(route);
+                        Plugin.AddRoute(route);
                         return;
                     }
                     else

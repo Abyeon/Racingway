@@ -68,6 +68,11 @@ namespace Racingway.Utils
             });
         }
 
+        /// <summary>
+        /// Use MessagePack to export a smaller version of the record to the user's clipboard.
+        /// </summary>
+        /// <param name="record"></param>
+        /// <param name="plugin"></param>
         public static void PackRecordToClipboard(Record record, Plugin plugin)
         {
             try
@@ -93,6 +98,10 @@ namespace Racingway.Utils
             }
         }
 
+        /// <summary>
+        /// Use MessagePack to import user's clipboard data.
+        /// </summary>
+        /// <param name="plugin"></param>
         public static void ImportPackedRecord(Plugin plugin)
         {
             if (plugin.Storage == null) return;
@@ -110,9 +119,10 @@ namespace Racingway.Utils
                         .WithCompression(MessagePackCompression.Lz4BlockArray);
 
                     Record record = MessagePackSerializer.Deserialize<Record>(uncompressed, lz4Options);
-                    await plugin.Storage.ImportRecord(record);
+                    plugin.Storage.ImportRecord(record);
                 } catch (Exception e)
                 {
+                    Plugin.ChatGui.PrintError("[RACE] Error importing record from clipboard.");
                     Plugin.Log.Error(e.ToString());
                 }
             });

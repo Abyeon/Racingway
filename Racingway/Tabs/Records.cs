@@ -505,21 +505,21 @@ namespace Racingway.Tabs
                 }
             }
 
-            using (var table = ImRaii.Table("###race-records", 5, ImGuiTableFlags.Sortable))
+            using (var table = ImRaii.Table("###race-records", 5, ImGuiTableFlags.Sortable | ImGuiTableFlags.Resizable))
             {
                 if (table)
                 {
-                    ImGui.TableSetupColumn("Date", ImGuiTableColumnFlags.WidthFixed, 100f);
-                    ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthFixed, 100f);
-                    ImGui.TableSetupColumn("World", ImGuiTableColumnFlags.WidthFixed, 100f);
+                    ImGui.TableSetupColumn("Date", ImGuiTableColumnFlags.WidthStretch, 100f);
+                    ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthStretch, 100f);
+                    ImGui.TableSetupColumn("World", ImGuiTableColumnFlags.WidthStretch, 100f);
                     ImGui.TableSetupColumn(
                         "Time",
-                        ImGuiTableColumnFlags.WidthFixed
+                        ImGuiTableColumnFlags.WidthStretch
                             | ImGuiTableColumnFlags.DefaultSort
                             | ImGuiTableColumnFlags.PreferSortAscending,
                         100f
                     );
-                    ImGui.TableSetupColumn("Distance", ImGuiTableColumnFlags.WidthFixed, 100f);
+                    ImGui.TableSetupColumn("Distance", ImGuiTableColumnFlags.WidthStretch, 100f);
 
                     ImGui.TableHeadersRow();
 
