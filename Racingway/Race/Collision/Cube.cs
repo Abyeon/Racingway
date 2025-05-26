@@ -1,4 +1,5 @@
 using LiteDB;
+using MessagePack;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -9,12 +10,13 @@ using System.Threading.Tasks;
 
 namespace Racingway.Race.Collision
 {
+    [MessagePackObject]
     public class Cube
     {
-        public Vector3 Position;
-        public Vector3 Scale;
-        public Vector3 Rotation;
-        public Vector3[] Vertices { get; internal set; }
+        [Key(0)] public Vector3 Position;
+        [Key(1)] public Vector3 Scale;
+        [Key(2)] public Vector3 Rotation;
+        [IgnoreMember] public Vector3[] Vertices { get; internal set; }
 
         public Cube(Vector3 position, Vector3 scale, Vector3 rotation)
         {

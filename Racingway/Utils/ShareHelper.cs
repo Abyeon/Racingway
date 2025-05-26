@@ -1,9 +1,12 @@
 using ImGuiNET;
 using LiteDB;
+using MessagePack;
+using MessagePack.Resolvers;
 using Newtonsoft.Json.Linq;
 using Racingway.Race;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -62,6 +65,56 @@ namespace Racingway.Utils
             plugin.DataQueue.QueueDataOperation(async () =>
             {
                 await plugin.Storage.ImportRouteFromBase64(data);
+            });
+        }
+
+        public static void PackRecordToClipboard(Record record, Plugin plugin)
+        {
+            try
+            {
+                // Init compression options
+                var lz4Options = MessagePackSerializerOptions.Standard
+                    .WithResolver(StandardResolver.Instance)
+                    .WithCompression(MessagePackCompression.Lz4BlockArray);
+
+                // Serialize and convert to base64
+                byte[] data = MessagePackSerializer.Serialize(record, lz4Options);
+                string text = Convert.ToBase64String(data);
+
+                Plugin.Log.Debug($"Packing record to {text.Length} characters.");
+
+                // Throw the data to the clipboard.
+                ImGui.SetClipboardText(text);
+            }
+            catch (Exception e)
+            {
+                Plugin.ChatGui.PrintError("[RACE] Error exporting record to clipboard.");
+                Plugin.Log.Error(e.ToString());
+            }
+        }
+
+        public static void ImportPackedRecord(Plugin plugin)
+        {
+            if (plugin.Storage == null) return;
+
+            string data = ImGui.GetClipboardText();
+            byte[] uncompressed = Convert.FromBase64String(data);
+
+            plugin.DataQueue.QueueDataOperation(async () =>
+            {
+                try
+                {
+                    // Init compression options
+                    var lz4Options = MessagePackSerializerOptions.Standard
+                        .WithResolver(StandardResolver.Instance)
+                        .WithCompression(MessagePackCompression.Lz4BlockArray);
+
+                    Record record = MessagePackSerializer.Deserialize<Record>(uncompressed, lz4Options);
+                    await plugin.Storage.ImportRecord(record);
+                } catch (Exception e)
+                {
+                    Plugin.Log.Error(e.ToString());
+                }
             });
         }
 

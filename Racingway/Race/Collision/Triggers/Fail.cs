@@ -82,7 +82,7 @@ namespace Racingway.Race.Collision.Triggers
                 Cube.Rotation.X.ToString(),
                 Cube.Rotation.Y.ToString(),
                 Cube.Rotation.Z.ToString(),
-            ]; // Roration
+            ]; // Rotation
 
             doc["Cube"] = cube;
 

@@ -609,7 +609,8 @@ namespace Racingway.Tabs
                             {
                                 if (ImGui.Selectable("Export to Clipboard"))
                                 {
-                                    ShareHelper.ExportRecordToClipboard(record, Plugin);
+                                    //ShareHelper.ExportRecordToClipboard(record, Plugin);
+                                    ShareHelper.PackRecordToClipboard(record, Plugin);
                                 }
 
                                 if (ImGui.Selectable("Delete"))

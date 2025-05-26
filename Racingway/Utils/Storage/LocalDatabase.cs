@@ -391,6 +391,58 @@ namespace Racingway.Utils.Storage
             });
         }
 
+        internal async Task ImportRecord(Record record)
+        {
+            try
+            {
+                bool hasRoute = RouteCache.ContainsKey(record.RouteId.ToString());
+
+                if (hasRoute)
+                {
+                    //var route1 = GetRoutes().Find(x => x.Id.ToString() == record.RouteId).FirstOrDefault();
+                    var route = RouteCache[record.RouteId];
+                    var records = route.Records;
+                    string hash = route.GetHash();
+
+                    // Check if route matches record's saved hash
+                    if (hash != record.RouteHash)
+                    {
+                        Plugin.Log.Error(hash + " != " + record.RouteHash);
+                        throw new Exception(
+                            "Saved version of route may not match the one this record was made in."
+                        );
+                    }
+
+                    // Incredibly stupid way to check if a duplicate record exists.. Because my LiteDB implementation was flawed from the start! I might burn it all down..
+                    if (
+                        !records.Exists(r =>
+                            r.Name == record.Name
+                            && r.World == record.World
+                            && r.Time == record.Time
+                        )
+                    )
+                    {
+                        route.Records.Add(record);
+                        await AddRoute(route);
+                        return;
+                    }
+                    else
+                    {
+                        throw new Exception("Route already contains this record.");
+                    }
+                }
+                else
+                {
+                    throw new Exception("Route that record was intended for does not exist.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.ChatGui.PrintError($"[RACE] Failed to import record. {ex.Message}");
+                Plugin.Log.Error(ex, "Failed to import record");
+            }
+        }
+
         internal async Task ImportRecordFromBase64(string data)
         {
             try

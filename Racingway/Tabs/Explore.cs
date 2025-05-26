@@ -100,12 +100,19 @@ namespace Racingway.Tabs
                     ImGui.SameLine();
                     if (ImGui.Button("Import Record"))
                     {
-                        ShareHelper.ImportRecordFromClipboard(Plugin);
+                        ShareHelper.ImportPackedRecord(Plugin);
+                        //ShareHelper.ImportRecordFromClipboard(Plugin);
                     }
                     if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
                     {
                         ImGui.SetTooltip("Import record from clipboard, this will automatically get assigned to the route if it exists.");
                     }
+
+                    //ImGui.SameLine();
+                    //if (ImGui.Button("Import Packed Record"))
+                    //{
+                    //    ShareHelper.ImportPackedRecord(Plugin);
+                    //}
 
                     filter.Draw("Filter");
 
@@ -180,6 +187,7 @@ namespace Racingway.Tabs
                                     {
                                         ShareHelper.ExportRouteJsonToClipboard(route);
                                     }
+
                                     if (ImGui.IsItemHovered(ImGuiHoveredFlags.None))
                                     {
                                         ImGui.SetTooltip("Intended only for creating external route lists at the moment.");

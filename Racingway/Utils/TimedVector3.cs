@@ -1,4 +1,5 @@
 using LiteDB;
+using MessagePack;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,12 +9,13 @@ using System.Threading.Tasks;
 
 namespace Racingway.Utils
 {
+    [MessagePackObject]
     public class TimedVector3
     {
-        public float X { get; set; }
-        public float Y { get; set; }
-        public float Z { get; set; }
-        public long Offset { get; set; }
+        [Key(0)] public float X { get; set; }
+        [Key(1)] public float Y { get; set; }
+        [Key(2)] public float Z { get; set; }
+        [Key(3)] public long Offset { get; set; }
 
         public TimedVector3(float x, float y, float z, long offset)
         {
