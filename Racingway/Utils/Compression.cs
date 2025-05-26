@@ -39,12 +39,17 @@ namespace Racingway.Utils
             {
                 var bytes = Encoding.UTF8.GetBytes(data);
                 using var compressedStream = new MemoryStream();
+
                 using (var zipStream = new GZipStream(compressedStream, CompressionMode.Compress))
                 {
                     zipStream.Write(bytes, 0, bytes.Length);
                 }
 
-                return Convert.ToBase64String(compressedStream.ToArray());
+                string output = Convert.ToBase64String(compressedStream.ToArray());
+
+                Plugin.Log.Debug($"Compressed {data.Length} characters down to {output.Length} characters");
+
+                return output;
             }
             catch (Exception ex)
             {

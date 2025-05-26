@@ -10,6 +10,7 @@ using Racingway.Utils;
 
 namespace Racingway.Race
 {
+
     public class Record
     {
         [BsonId]
@@ -33,15 +34,7 @@ namespace Racingway.Race
         // Semaphore to prevent multiple simplification operations
         private static SemaphoreSlim _simplificationSemaphore = new SemaphoreSlim(1, 1);
 
-        public Record(
-            DateTime date,
-            string name,
-            string world,
-            TimeSpan time,
-            float distance,
-            TimedVector3[] line,
-            Route route
-        )
+        public Record(DateTime date, string name, string world, TimeSpan time, float distance, TimedVector3[] line, Route route)
         {
             Id = new();
 
@@ -154,10 +147,7 @@ namespace Racingway.Race
         /// </summary>
         /// <param name="originalPointCount">The count of points before simplification</param>
         /// <returns>Percentage of storage saved</returns>
-        public static float CalculateStorageSavings(
-            int originalPointCount,
-            int simplifiedPointCount
-        )
+        public static float CalculateStorageSavings(int originalPointCount,int simplifiedPointCount)
         {
             if (originalPointCount <= 0)
                 return 0;

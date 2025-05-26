@@ -83,9 +83,7 @@ namespace Racingway.Utils
             }
 
             // update route hash.. because old records probably have a broken hash.. oops!
-            record.RouteHash = plugin
-                .Storage.RouteCache[plugin.SelectedRoute.ToString()]
-                .GetHash();
+            record.RouteHash = plugin.Storage.RouteCache[plugin.SelectedRoute.ToString()].GetHash();
 
             var doc = BsonMapper.Global.ToDocument(record);
             string json = JsonSerializer.Serialize(doc);

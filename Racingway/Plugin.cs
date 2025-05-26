@@ -222,21 +222,15 @@ public sealed class Plugin : IDalamudPlugin
 
         //_lastCollisionCheck = DateTime.UtcNow;
 
+        // Ensure player state is updated
+        player.UpdateState();
 
-        // TODO: Get rid of LocalPlayer and IPlayerCharacter calls and store the values we need in Player class.
-        // That way this can all be multithreaded
         foreach (var route in LoadedRoutes)
         {
             // Run collision checks off-thread
             Task.Run(() =>
             {
-                try
-                {
-                    route.CheckCollision(player);
-                } catch (Exception e)
-                {
-                    Plugin.Log.Error(e.ToString());
-                }
+                route.CheckCollision(player);
             });
         }
     }
@@ -337,10 +331,7 @@ public sealed class Plugin : IDalamudPlugin
                             bool lastGrounded = trackedPlayers[id].isGrounded;
                             trackedPlayers[id].UpdateState();
 
-                            if (
-                                player.Position != trackedPlayers[id].position
-                                || lastGrounded != trackedPlayers[id].isGrounded
-                            )
+                            if (player.Position != trackedPlayers[id].position || lastGrounded != trackedPlayers[id].isGrounded)
                             {
                                 trackedPlayers[id].Moved(player.Position);
                             }
@@ -352,8 +343,6 @@ public sealed class Plugin : IDalamudPlugin
                 else
                 {
                     // Copied from above but modified to track just the client. A tad stupid.
-                    // Check for people
-                    //ICharacter player = ClientState.LocalPlayer;
                     if (localPlayer != null)
                     {
                         uint id = localPlayer.EntityId;
@@ -369,10 +358,7 @@ public sealed class Plugin : IDalamudPlugin
                             bool lastGrounded = trackedPlayers[id].isGrounded;
                             trackedPlayers[id].UpdateState();
 
-                            if (
-                                localPlayer.Position != trackedPlayers[id].position
-                                || lastGrounded != trackedPlayers[id].isGrounded
-                            )
+                            if (localPlayer.Position != trackedPlayers[id].position || lastGrounded != trackedPlayers[id].isGrounded)
                             {
                                 trackedPlayers[id].Moved(localPlayer.Position);
                             }

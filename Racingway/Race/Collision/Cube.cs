@@ -48,12 +48,19 @@ namespace Racingway.Race.Collision
             ];
         }
 
+        /// <summary>
+        /// Check if a point is within the cube
+        /// </summary>
+        /// <param name="position"></param>
+        /// <returns>true if the point is within the cube</returns>
         public bool PointInCube(Vector3 position)
         {
+            // Since cubes are AABB's at their heart, rotate the point around the cube's origin in the opposite direction of the cube's rotation
             var rotator = Quaternion.CreateFromYawPitchRoll(-Rotation.X, -Rotation.Y, -Rotation.Z);
             var relativeVector = position - Position;
             var rotatedVector = Vector3.Transform(relativeVector, rotator) + Position;
 
+            // Get the cube's vertices in the relative space
             var moved = GetMovedVertices();
 
             return

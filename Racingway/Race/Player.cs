@@ -141,7 +141,6 @@ namespace Racingway.Race
                 }
             }
 
-            //UpdateState();
             if (Plugin != null)
             {
                 Plugin.CheckCollision(this);
