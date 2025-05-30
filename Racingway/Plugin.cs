@@ -25,38 +25,17 @@ namespace Racingway;
 
 public sealed class Plugin : IDalamudPlugin
 {
-    [PluginService]
-    public static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
-
-    [PluginService]
-    internal static ITextureProvider TextureProvider { get; private set; } = null!;
-
-    [PluginService]
-    internal static ICommandManager CommandManager { get; private set; } = null!;
-
-    [PluginService]
-    internal static IObjectTable ObjectTable { get; private set; } = null!;
-
-    [PluginService]
-    internal static IPluginLog Log { get; private set; } = null!;
-
-    [PluginService]
-    internal static IFramework Framework { get; private set; } = null!;
-
-    [PluginService]
-    internal static IGameNetwork GameNetwork { get; private set; } = null!;
-
-    [PluginService]
-    internal static IClientState ClientState { get; private set; } = null!;
-
-    [PluginService]
-    internal static IChatGui ChatGui { get; private set; } = null!;
-
-    [PluginService]
-    internal static IGameGui GameGui { get; private set; } = null!;
-
-    [PluginService]
-    internal static IDataManager DataManager { get; private set; } = null!;
+    [PluginService] public static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
+    [PluginService] internal static ITextureProvider TextureProvider { get; private set; } = null!;
+    [PluginService] internal static ICommandManager CommandManager { get; private set; } = null!;
+    [PluginService] internal static IObjectTable ObjectTable { get; private set; } = null!;
+    [PluginService] internal static IPluginLog Log { get; private set; } = null!;
+    [PluginService] internal static IFramework Framework { get; private set; } = null!;
+    [PluginService] internal static IGameNetwork GameNetwork { get; private set; } = null!;
+    [PluginService] internal static IClientState ClientState { get; private set; } = null!;
+    [PluginService] internal static IChatGui ChatGui { get; private set; } = null!;
+    [PluginService] internal static IGameGui GameGui { get; private set; } = null!;
+    [PluginService] internal static IDataManager DataManager { get; private set; } = null!;
 
     internal LocalDatabase? Storage { get; init; }
     public DataQueue DataQueue { get; init; }
@@ -424,8 +403,13 @@ public sealed class Plugin : IDalamudPlugin
                 .RouteCache.Values.Where(r => r.Address.LocationId == address.LocationId)
                 .ToList();
 
+            // Reset map markers before placing new ones
+            TerritoryHelper.ResetMapMarkers();
+
             foreach (Route route in LoadedRoutes)
             {
+                route.AddMapMarkers();
+
                 if (route.Records == null)
                 {
                     route.Records = new();

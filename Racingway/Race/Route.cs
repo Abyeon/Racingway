@@ -19,7 +19,6 @@ namespace Racingway.Race
     /// Container for triggers making up a race.
     /// To be used to differentiate races.
     /// </summary>
-
     public class Route
     {
         [BsonId]
@@ -326,6 +325,16 @@ namespace Racingway.Race
             foreach (Loop trigger in Triggers.AsValueEnumerable().Where(t => t is Loop))
             {
                 trigger.playerStarted.Remove(player.id);
+            }
+        }
+
+        public void AddMapMarkers()
+        {
+            foreach (ITrigger trigger in Triggers)
+            {
+                if (trigger.FlagIcon == null) continue;
+                TerritoryHelper.AddMiniMapMarker(trigger.Cube.Position, (uint)trigger.FlagIcon);
+                TerritoryHelper.AddMapMarker(trigger.Cube.Position, (uint)trigger.FlagIcon);
             }
         }
 

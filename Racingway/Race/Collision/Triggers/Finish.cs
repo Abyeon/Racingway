@@ -29,6 +29,8 @@ namespace Racingway.Race.Collision.Triggers
         private HashSet<uint> _recentlyProcessed = new HashSet<uint>();
         private readonly object _processLock = new object();
 
+        public uint? FlagIcon { get; set; } = 60583;
+
         public Finish(Route route, Vector3 position, Vector3 scale, Vector3 rotation)
         {
             this.Id = new();

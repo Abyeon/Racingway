@@ -21,6 +21,7 @@ namespace Racingway.Race.Collision.Triggers
         public uint Color { get; set; } = InactiveColor;
         public bool Active { get; set; } = false;
         public List<uint> Touchers { get; set; } = new List<uint>();
+        public uint? FlagIcon { get; set; } = 60557;
 
         public Checkpoint(Route route, Vector3 position, Vector3 scale, Vector3 rotation)
         {

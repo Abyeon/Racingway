@@ -11,6 +11,7 @@ using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
+using ImPlotNET;
 
 namespace Racingway.Utils
 {
@@ -26,7 +27,6 @@ namespace Racingway.Utils
         {
             this.drawList = drawListPtr;
         }
-
 
         // Basically yoinked from https://github.com/LeonBlade/BDTHPlugin
         public unsafe bool DrawGizmo(ref Vector3 pos, ref Vector3 rotation, ref Vector3 scale, string id, float snapDistance)
@@ -274,7 +274,7 @@ namespace Racingway.Utils
             }
         }
 
-        public void DrawCubeFilled(Cube cube, uint color, float thickness)
+        public void DrawCubeFilled(Cube cube, uint color)
         {
             // Arrays of indices for each face
             int[,] faces =

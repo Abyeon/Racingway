@@ -24,6 +24,8 @@ namespace Racingway.Race.Collision.Triggers
         public List<uint> Touchers { get; set; } = new List<uint>();
         public Dictionary<uint, bool> playerStarted = new Dictionary<uint, bool>();
 
+        public uint? FlagIcon { get; set; } = 63929;
+
         public Loop(Route route, Vector3 position, Vector3 scale, Vector3 rotation)
         {
             this.Id = new();

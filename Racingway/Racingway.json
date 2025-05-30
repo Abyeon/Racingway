@@ -2,12 +2,13 @@
     "Author": "Abyeon",
     "Name": "Racingway",
     "Punchline": "Time your jumping puzzles!",
-    "Description": "A simple plugin for timing, logging, and ranking players times for your jumping puzzles!",
+    "Description": "A simple plugin for timing, logging, and ranking player times for your jumping puzzles!",
+    "RepoUrl": "https://github.com/Abyeon/Racingway",
     "ApplicableVersion": "any",
     "Tags": [
         "parkour",
-        "plugin",
+        "race",
         "jump",
-        "util"
+        "timer"
     ]
 }

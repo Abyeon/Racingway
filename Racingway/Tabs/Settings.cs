@@ -41,6 +41,8 @@ namespace Racingway.Tabs
 
         public void Draw()
         {
+            ImGui.PushItemWidth(200f);
+
             ImGui.TextColored(ImGuiColors.DalamudOrange, "Display Toggles");
             #region Display Toggles
             ImGui.Dummy(spacing);
@@ -50,22 +52,6 @@ namespace Racingway.Tabs
                 Plugin.Configuration.DrawTriggers = !Plugin.Configuration.DrawTriggers;
                 Plugin.Configuration.Save();
                 Plugin.ShowHideOverlay();
-            }
-
-            if (Plugin.Configuration.DrawTriggers)
-            {
-                ImGui.Indent();
-
-                foreach (var pair in Plugin.TriggerToggles)
-                {
-                    bool enabled = pair.Value;
-                    if (ImGui.Checkbox($"Draw {pair.Key.Name} Triggers", ref enabled))
-                    {
-                        Plugin.TriggerToggles[pair.Key] = enabled;
-                    }
-                }
-
-                ImGui.Unindent();
             }
 
             if (ImGui.Button($"{(Plugin.Configuration.DrawRacingLines ? "Disable" : "Enable")} Racing Lines Display"))
@@ -80,6 +66,28 @@ namespace Racingway.Tabs
                 Plugin.Configuration.DrawTimer = !Plugin.Configuration.DrawTimer;
                 Plugin.Configuration.Save();
                 Plugin.ShowHideOverlay();
+            }
+
+            if (Plugin.Configuration.DrawTriggers)
+            {
+                using (var child = ImRaii.TreeNode("Trigger Toggles"))
+                {
+                    if (child.Success)
+                    {
+                        ImGui.Indent(1);
+
+                        foreach (var pair in Plugin.TriggerToggles)
+                        {
+                            bool enabled = pair.Value;
+                            if (ImGui.Checkbox($"Draw {pair.Key.Name} Triggers", ref enabled))
+                            {
+                                Plugin.TriggerToggles[pair.Key] = enabled;
+                            }
+                        }
+
+                        ImGui.Unindent();
+                    }
+                }
             }
             #endregion
 
@@ -98,14 +106,11 @@ namespace Racingway.Tabs
                 DisplayFontSelector();
             }
 
-            using (_ = ImRaii.ItemWidth(200f))
+            var size = Plugin.Configuration.TimerSize;
+            if (ImGui.DragFloat("Font Size", ref size, 0.01f, 1f, 20f))
             {
-                var size = Plugin.Configuration.TimerSize;
-                if (ImGui.DragFloat("Font Size", ref size, 0.01f, 1f, 20f))
-                {
-                    Plugin.Configuration.TimerSize = size;
-                    Plugin.Configuration.Save();
-                }
+                Plugin.Configuration.TimerSize = size;
+                Plugin.Configuration.Save();
             }
 
             var bgColor = Plugin.Configuration.TimerColor;
@@ -114,6 +119,8 @@ namespace Racingway.Tabs
                 Plugin.Configuration.TimerColor = bgColor;
                 Plugin.Configuration.Save();
             }
+
+            #endregion
 
             /* Commenting this out for now until I actually implement this feature
             var normalColor = Plugin.Configuration.NormalColor;
@@ -137,34 +144,33 @@ namespace Racingway.Tabs
                 Plugin.Configuration.Save();
             }*/
 
-            using (_ = ImRaii.ItemWidth(200f))
+            SectionSeparator("Timer Behavior");
+            #region Timer Behavior
+
+            bool showInParkour = Plugin.Configuration.ShowWhenInParkour;
+            if (ImGui.Checkbox("Display Timer When In Parkour", ref showInParkour))
             {
-                SectionSeparator("Timer Behavior");
-
-                bool showInParkour = Plugin.Configuration.ShowWhenInParkour;
-                if (ImGui.Checkbox("Display Timer When In Parkour", ref showInParkour))
-                {
-                    Plugin.Configuration.ShowWhenInParkour = showInParkour;
-                    Plugin.Configuration.Save();
-                }
-
-                ImGuiComponents.HelpMarker(
-                    "This will display the timer even if you have it toggled off.",
-                    FontAwesomeIcon.ExclamationTriangle
-                );
-
-                int secondsShownAfter = Plugin.Configuration.SecondsShownAfter;
-                if (ImGui.InputInt("Hide Delay", ref secondsShownAfter))
-                {
-                    if (secondsShownAfter < 0)
-                        secondsShownAfter = 0;
-
-                    Plugin.Configuration.SecondsShownAfter = secondsShownAfter;
-                    Plugin.Configuration.Save();
-                }
-
-                ImGuiComponents.HelpMarker("Delay the timer window being hidden by x seconds.");
+                Plugin.Configuration.ShowWhenInParkour = showInParkour;
+                Plugin.Configuration.Save();
             }
+
+            ImGuiComponents.HelpMarker(
+                "This will display the timer even if you have it toggled off.",
+                FontAwesomeIcon.ExclamationTriangle
+            );
+
+            int secondsShownAfter = Plugin.Configuration.SecondsShownAfter;
+            if (ImGui.InputInt("Hide Delay", ref secondsShownAfter))
+            {
+                if (secondsShownAfter < 0)
+                    secondsShownAfter = 0;
+
+                Plugin.Configuration.SecondsShownAfter = secondsShownAfter;
+                Plugin.Configuration.Save();
+            }
+
+            ImGuiComponents.HelpMarker("Delay the timer window being hidden by x seconds.");
+
             #endregion
 
             SectionSeparator("Chat Output");
@@ -212,127 +218,121 @@ namespace Racingway.Tabs
             SectionSeparator("Line Style");
             #region Line Style
 
-            using (_ = ImRaii.ItemWidth(200f))
+            int quality = Plugin.Configuration.LineQuality;
+            if (ImGui.DragInt("Line Quality", ref quality, 0.05f, 1, 50))
             {
-                int quality = Plugin.Configuration.LineQuality;
-                if (ImGui.DragInt("Line Quality", ref quality, 0.05f, 1, 50))
-                {
-                    Plugin.Configuration.LineQuality = quality;
-                    Plugin.Configuration.Save();
-                }
+                Plugin.Configuration.LineQuality = quality;
+                Plugin.Configuration.Save();
+            }
 
-                ImGuiComponents.HelpMarker(
-                    "How many frames between line points. 1 line quality = 1 point per frame."
-                );
+            ImGuiComponents.HelpMarker(
+                "How many frames between line points. 1 line quality = 1 point per frame."
+            );
 
-                // Combo box for selecting the desired line style
-                using (var child = ImRaii.Combo("Line Style", Plugin.Configuration.LineStyle))
+            // Combo box for selecting the desired line style
+            using (var child = ImRaii.Combo("Line Style", Plugin.Configuration.LineStyle))
+            {
+                if (child.Success)
                 {
-                    if (child.Success)
+                    foreach (ILineStyle style in Plugin.TriggerOverlay.LineStyles)
                     {
-                        foreach (ILineStyle style in Plugin.TriggerOverlay.LineStyles)
+                        if (ImGui.Selectable(style.Name))
                         {
-                            if (ImGui.Selectable(style.Name))
-                            {
-                                Plugin.Configuration.LineStyle = style.Name;
-                                Plugin.TriggerOverlay.selectedStyle = style;
+                            Plugin.Configuration.LineStyle = style.Name;
+                            Plugin.TriggerOverlay.selectedStyle = style;
 
-                                Plugin.Configuration.Save();
-                            }
+                            Plugin.Configuration.Save();
+                        }
 
-                            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-                            {
-                                ImGui.SetTooltip(style.Description);
-                            }
+                        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                        {
+                            ImGui.SetTooltip(style.Description);
                         }
                     }
                 }
-
-                float dotSize = Plugin.Configuration.DotSize;
-                if (ImGui.DragFloat("Dot Size", ref dotSize, 0.05f, 1f, 10f))
-                {
-                    Plugin.Configuration.DotSize = dotSize;
-                    Plugin.Configuration.Save();
-                }
-
-                float lineThickness = Plugin.Configuration.LineThickness;
-                if (ImGui.DragFloat("Line Thickness", ref lineThickness, 0.05f, 1f, 10f))
-                {
-                    Plugin.Configuration.LineThickness = lineThickness;
-                    Plugin.Configuration.Save();
-                }
-
-                var lineColor = Plugin.Configuration.LineColor;
-                if (ImGui.ColorEdit4("Line Color", ref lineColor, ImGuiColorEditFlags.NoInputs))
-                {
-                    Plugin.Configuration.LineColor = lineColor;
-                    Plugin.Configuration.Save();
-                }
-
-                var highlightedLineColor = Plugin.Configuration.HighlightedLineColor;
-                if (
-                    ImGui.ColorEdit4(
-                        "Highlighted Line Color",
-                        ref highlightedLineColor,
-                        ImGuiColorEditFlags.NoInputs
-                    )
-                )
-                {
-                    Plugin.Configuration.HighlightedLineColor = highlightedLineColor;
-                    Plugin.Configuration.Save();
-                }
-
-                int maxLinePoints = Plugin.Configuration.MaxLinePoints;
-                if (ImGui.SliderInt("Max Line Points", ref maxLinePoints, 50, 2000))
-                {
-                    Plugin.Configuration.MaxLinePoints = maxLinePoints;
-                    Plugin.Configuration.Save();
-                }
-                ImGuiComponents.HelpMarker(
-                    "Maximum number of points to store for each player's path. Lower values improve performance."
-                );
             }
+
+            float dotSize = Plugin.Configuration.DotSize;
+            if (ImGui.DragFloat("Dot Size", ref dotSize, 0.05f, 1f, 10f))
+            {
+                Plugin.Configuration.DotSize = dotSize;
+                Plugin.Configuration.Save();
+            }
+
+            float lineThickness = Plugin.Configuration.LineThickness;
+            if (ImGui.DragFloat("Line Thickness", ref lineThickness, 0.05f, 1f, 10f))
+            {
+                Plugin.Configuration.LineThickness = lineThickness;
+                Plugin.Configuration.Save();
+            }
+
+            var lineColor = Plugin.Configuration.LineColor;
+            if (ImGui.ColorEdit4("Line Color", ref lineColor, ImGuiColorEditFlags.NoInputs))
+            {
+                Plugin.Configuration.LineColor = lineColor;
+                Plugin.Configuration.Save();
+            }
+
+            var highlightedLineColor = Plugin.Configuration.HighlightedLineColor;
+            if (
+                ImGui.ColorEdit4(
+                    "Highlighted Line Color",
+                    ref highlightedLineColor,
+                    ImGuiColorEditFlags.NoInputs
+                )
+            )
+            {
+                Plugin.Configuration.HighlightedLineColor = highlightedLineColor;
+                Plugin.Configuration.Save();
+            }
+
+            int maxLinePoints = Plugin.Configuration.MaxLinePoints;
+            if (ImGui.SliderInt("Max Line Points", ref maxLinePoints, 50, 2000))
+            {
+                Plugin.Configuration.MaxLinePoints = maxLinePoints;
+                Plugin.Configuration.Save();
+            }
+            ImGuiComponents.HelpMarker(
+                "Maximum number of points to store for each player's path. Lower values improve performance."
+            );
             #endregion
 
             SectionSeparator("Trigger Style");
             #region Trigger Style
 
-            using (ImRaii.ItemWidth(200f))
+            var activatedColor = Plugin.Configuration.ActivatedColor;
+            if (ImGui.ColorEdit4("Active Color", ref activatedColor, ImGuiColorEditFlags.NoInputs))
             {
-                var activatedColor = Plugin.Configuration.ActivatedColor;
-                if (ImGui.ColorEdit4("Active Color", ref activatedColor, ImGuiColorEditFlags.NoInputs))
-                {
-                    Plugin.Configuration.ActivatedColor = activatedColor;
-                    Plugin.Configuration.Save();
-                }
+                Plugin.Configuration.ActivatedColor = activatedColor;
+                Plugin.Configuration.Save();
+            }
 
-                var startColor = Plugin.Configuration.StartTriggerColor;
-                if (ImGui.ColorEdit4("Start Color", ref startColor, ImGuiColorEditFlags.NoInputs))
-                {
-                    Plugin.Configuration.StartTriggerColor = startColor;
-                    Plugin.Configuration.Save();
-                }
+            var startColor = Plugin.Configuration.StartTriggerColor;
+            if (ImGui.ColorEdit4("Start Color", ref startColor, ImGuiColorEditFlags.NoInputs))
+            {
+                Plugin.Configuration.StartTriggerColor = startColor;
+                Plugin.Configuration.Save();
+            }
 
-                var failColor = Plugin.Configuration.FailTriggerColor;
-                if (ImGui.ColorEdit4("Fail Color", ref failColor, ImGuiColorEditFlags.NoInputs))
-                {
-                    Plugin.Configuration.FailTriggerColor = failColor;
-                    Plugin.Configuration.Save();
-                }
+            var failColor = Plugin.Configuration.FailTriggerColor;
+            if (ImGui.ColorEdit4("Fail Color", ref failColor, ImGuiColorEditFlags.NoInputs))
+            {
+                Plugin.Configuration.FailTriggerColor = failColor;
+                Plugin.Configuration.Save();
+            }
 
-                var checkpointColor = Plugin.Configuration.CheckpointTriggerColor;
-                if (ImGui.ColorEdit4("Checkpoint Color", ref checkpointColor, ImGuiColorEditFlags.NoInputs))
-                {
-                    Plugin.Configuration.CheckpointTriggerColor = checkpointColor;
-                    Plugin.Configuration.Save();
-                }
+            var checkpointColor = Plugin.Configuration.CheckpointTriggerColor;
+            if (ImGui.ColorEdit4("Checkpoint Color", ref checkpointColor, ImGuiColorEditFlags.NoInputs))
+            {
+                Plugin.Configuration.CheckpointTriggerColor = checkpointColor;
+                Plugin.Configuration.Save();
+            }
 
-                var finishColor = Plugin.Configuration.FinishTriggerColor;
-                if (ImGui.ColorEdit4("Finish Color", ref finishColor, ImGuiColorEditFlags.NoInputs))
-                {
-                    Plugin.Configuration.FinishTriggerColor = finishColor;
-                    Plugin.Configuration.Save();
-                }
+            var finishColor = Plugin.Configuration.FinishTriggerColor;
+            if (ImGui.ColorEdit4("Finish Color", ref finishColor, ImGuiColorEditFlags.NoInputs))
+            {
+                Plugin.Configuration.FinishTriggerColor = finishColor;
+                Plugin.Configuration.Save();
             }
 
             #endregion
@@ -459,6 +459,8 @@ namespace Racingway.Tabs
                 }
             }
 #endif
+
+            ImGui.PopItemWidth();
         }
 
         private void DisplayFontSelector()

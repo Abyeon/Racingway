@@ -41,7 +41,9 @@ namespace Racingway.Windows
                 | ImGuiWindowFlags.NoNavFocus
                 | ImGuiWindowFlags.NoNavInputs
                 | ImGuiWindowFlags.NoTitleBar
-                | ImGuiWindowFlags.NoInputs;
+                | ImGuiWindowFlags.NoInputs
+                | ImGuiWindowFlags.NoBringToFrontOnFocus
+                | ImGuiWindowFlags.NoFocusOnAppearing;
 
             this.Plugin = plugin;
             this.LineStyles = [new Line(plugin), new Dotted(plugin), new DottedLine(plugin)];
@@ -161,7 +163,7 @@ namespace Racingway.Windows
                             }
                         }
 
-                        draw.DrawCubeFilled(trigger.Cube, color, 5.0f);
+                        draw.DrawCubeFilled(trigger.Cube, color);
                     }
                 }
 
