@@ -409,6 +409,7 @@ public sealed class Plugin : IDalamudPlugin
             foreach (Route route in LoadedRoutes)
             {
                 route.AddMapMarkers();
+                route.AddMinimapMarkers();
 
                 if (route.Records == null)
                 {

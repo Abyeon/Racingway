@@ -333,8 +333,16 @@ namespace Racingway.Race
             foreach (ITrigger trigger in Triggers)
             {
                 if (trigger.FlagIcon == null) continue;
-                TerritoryHelper.AddMiniMapMarker(trigger.Cube.Position, (uint)trigger.FlagIcon);
                 TerritoryHelper.AddMapMarker(trigger.Cube.Position, (uint)trigger.FlagIcon);
+            }
+        }
+
+        public void AddMinimapMarkers()
+        {
+            foreach (ITrigger trigger in Triggers)
+            {
+                if (trigger.FlagIcon == null) continue;
+                TerritoryHelper.AddMiniMapMarker(trigger.Cube.Position, (uint)trigger.FlagIcon);
             }
         }
 

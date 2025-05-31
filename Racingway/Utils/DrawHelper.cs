@@ -132,7 +132,7 @@ namespace Racingway.Utils
         {
             Vector2 screenPos1 = new Vector2();
             Vector2 screenPos2 = new Vector2();
-
+    
             // Always attempt to draw the line, even if points are off-screen
             // This ensures consistency when zooming in/out
             bool startVisible = Plugin.GameGui.WorldToScreen(start, out screenPos1);
