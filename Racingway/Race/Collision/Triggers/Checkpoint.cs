@@ -6,6 +6,7 @@ using System.Text;
 using Newtonsoft.Json;
 using System.Threading.Tasks;
 using LiteDB;
+using ZLinq;
 
 namespace Racingway.Race.Collision.Triggers
 {
@@ -39,6 +40,12 @@ namespace Racingway.Race.Collision.Triggers
 
         public void OnEntered(Player player)
         {
+            // Return if the player has this checkpoint in their splits
+            if (player.currentSplits.AsValueEnumerable().Where(x => x.checkpoint == this).Count() > 0) return;
+
+            player.currentSplits.Add(new TimedCheckpoint(this, player.timer.ElapsedMilliseconds));
+            Route.HitCheckpoint(player);
+
             Active = true;
             Color = ActiveColor;
         }

@@ -28,6 +28,8 @@ namespace Racingway.Race
         public string Description { get; set; }
         public bool AllowMounts { get; set; }
         public bool RequireGroundedStart { get; set; }
+        public bool RequireGroundedCheckpoint { get; set; }
+        public bool RequireAllCheckpoints { get; set; }
         public bool RequireGroundedFinish { get; set; }
         public bool Enabled { get; set; }
         public List<ITrigger> Triggers { get; set; }
@@ -46,20 +48,14 @@ namespace Racingway.Race
         public float MinTimeThreshold { get; set; } // Minimum time in seconds to keep a record
         public float MaxTimeThreshold { get; set; } // Maximum time in seconds to keep a record, 0 = no limit
 
-        [BsonIgnore]
-        public Record? BestRecord = null;
+        [BsonIgnore] public Record? BestRecord = null;
 
-        [BsonIgnore]
-        public List<(Player, Stopwatch)> PlayersInParkour = new();
+        [BsonIgnore] public List<(Player, Stopwatch)> PlayersInParkour = new();
 
-        [BsonIgnore]
-        public event EventHandler<Player>? OnStarted;
-
-        [BsonIgnore]
-        public event EventHandler<(Player, Record)>? OnFinished;
-
-        [BsonIgnore]
-        public event EventHandler<Player>? OnFailed;
+        [BsonIgnore] public event EventHandler<Player>? OnStarted;
+        [BsonIgnore] public event EventHandler<Player>? OnCheckpoint;
+        [BsonIgnore] public event EventHandler<(Player, Record)>? OnFinished;
+        [BsonIgnore] public event EventHandler<Player>? OnFailed;
 
         public Route(string name, Address address, string description, List<ITrigger> triggers,
             List<Record> records, bool allowMounts = false, bool enabled = true, int clientFails = 0, int clientFinishes = 0)
@@ -74,7 +70,10 @@ namespace Racingway.Race
             this.AllowMounts = allowMounts;
 
             this.RequireGroundedStart = true;
+            this.RequireGroundedCheckpoint = false;
             this.RequireGroundedFinish = true;
+
+            this.RequireAllCheckpoints = true;
 
             this.Enabled = enabled;
             this.ClientFails = clientFails;
@@ -121,6 +120,8 @@ namespace Racingway.Race
             doc["enabled"] = Enabled;
 
             doc["requireGroundedStart"] = RequireGroundedStart;
+            doc["requireGroundedCheckpoint"] = RequireGroundedCheckpoint;
+            doc["requireAllCheckpoints"] = RequireAllCheckpoints;
             doc["requireGroundedFinish"] = RequireGroundedFinish;
 
             doc["clientFails"] = ClientFails;
@@ -169,6 +170,8 @@ namespace Racingway.Race
             doc["enabled"] = Enabled;
 
             doc["requireGroundedStart"] = RequireGroundedStart;
+            doc["requireGroundedCheckpoint"] = RequireGroundedCheckpoint;
+            doc["requireAllCheckpoints"] = RequireAllCheckpoints;
             doc["requireGroundedFinish"] = RequireGroundedFinish;
 
             doc["clientFails"] = 0;
@@ -301,17 +304,25 @@ namespace Racingway.Race
 
         public void Started(Player player)
         {
+            player.currentSplits.Clear();
             OnStarted?.Invoke(this, player);
+        }
+
+        public void HitCheckpoint(Player player)
+        {
+            OnCheckpoint?.Invoke(this, player);
         }
 
         public void Finished(Player player, Record record)
         {
+            player.currentSplits.Clear();
             FixLoopTriggers(player);
             OnFinished?.Invoke(this, (player, record));
         }
 
         public void Failed(Player player)
         {
+            player.currentSplits.Clear();
             FixLoopTriggers(player);
             OnFailed?.Invoke(this, player);
         }

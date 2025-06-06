@@ -447,9 +447,11 @@ public sealed class Plugin : IDalamudPlugin
         foreach (var route in LoadedRoutes)
         {
             route.OnStarted -= OnStart;
+            route.OnCheckpoint -= OnCheckpoint;
             route.OnFinished -= OnFinish;
             route.OnFailed -= OnFailed;
             route.OnStarted += OnStart;
+            route.OnCheckpoint += OnCheckpoint;
             route.OnFinished += OnFinish;
             route.OnFailed += OnFailed;
         }
@@ -460,6 +462,7 @@ public sealed class Plugin : IDalamudPlugin
         foreach (var route in LoadedRoutes)
         {
             route.OnStarted -= OnStart;
+            route.OnCheckpoint -= OnCheckpoint;
             route.OnFinished -= OnFinish;
             route.OnFailed -= OnFailed;
         }
@@ -486,6 +489,24 @@ public sealed class Plugin : IDalamudPlugin
             PayloadedChat(e, $" just started {route.Name}");
     }
 
+    private void OnCheckpoint(object? sender, Player e)
+    {
+        Route? route = sender as Route;
+        if (route == null) return;
+        if (DisplayedRecord == null) return;
+        if (DisplayedRecord.Splits == null) return;
+        if (DisplayedRecord.Splits.Length == 0) return;
+
+        if (e.isClient)
+        {
+            long specifiedSplit = DisplayedRecord.Splits[e.currentSplits.Count - 1];
+            long difference = e.currentSplits.Last().offset - specifiedSplit;
+            string pretty = Time.PrettyFormatTimeSpan(TimeSpan.FromMilliseconds(difference));
+
+            Plugin.ChatGui.Print($"Hit Checkpoint {e.currentSplits.Count} in {pretty}");
+        }
+    }
+
     // Triggered whenever a player finished any loaded route
     private void OnFinish(object? sender, (Player, Record) e)
     {
@@ -510,23 +531,10 @@ public sealed class Plugin : IDalamudPlugin
         if (Configuration.LogFinish)
         {
             var prettyPrint = Time.PrettyFormatTimeSpan(e.Item2.Time);
-            PayloadedChat(
-                e.Item1,
-                $" just finished {route.Name} in {prettyPrint} and {e.Item2.Distance} units."
-            );
+            PayloadedChat(e.Item1, $" just finished {route.Name} in {prettyPrint} and {e.Item2.Distance} units.");
         }
 
-        // Create a local copy of the record to avoid working with the original object
-        // to reduce chances of blocking the main thread
-        Record recordCopy = new Record(
-            e.Item2.Date,
-            e.Item2.Name,
-            e.Item2.World,
-            e.Item2.Time,
-            e.Item2.Distance,
-            e.Item2.Line,
-            route
-        );
+        Record record = e.Item2;
 
         // Store reference to route ID to avoid potential race conditions
         var routeId = route.Id.ToString();
@@ -540,7 +548,7 @@ public sealed class Plugin : IDalamudPlugin
                 if (Storage.RouteCache.TryGetValue(routeId, out Route? cachedRoute))
                 {
                     // Update in-memory route data
-                    cachedRoute.Records.Add(recordCopy);
+                    cachedRoute.Records.Add(record);
                     cachedRoute.Records = cachedRoute
                         .Records.OrderBy(r => r.Time.TotalNanoseconds)
                         .ToList();

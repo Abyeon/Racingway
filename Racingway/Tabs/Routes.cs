@@ -167,10 +167,24 @@ namespace Racingway.Tabs
                     updateRoute(selectedRoute);
                 }
 
+                bool requireGroundedCheckpoint = selectedRoute.RequireGroundedCheckpoint;
+                if (ImGui.Checkbox("Checkpoint when grounded", ref requireGroundedCheckpoint))
+                {
+                    selectedRoute.RequireGroundedCheckpoint = requireGroundedCheckpoint;
+                    updateRoute(selectedRoute);
+                }
+
                 bool requireGroundedFinish = selectedRoute.RequireGroundedFinish;
                 if (ImGui.Checkbox("Finish when grounded", ref requireGroundedFinish))
                 {
                     selectedRoute.RequireGroundedFinish = requireGroundedFinish;
+                    updateRoute(selectedRoute);
+                }
+
+                bool requireAllCheckpoints = selectedRoute.RequireAllCheckpoints;
+                if (ImGui.Checkbox("Require all checkpoints", ref requireAllCheckpoints))
+                {
+                    selectedRoute.RequireAllCheckpoints = requireAllCheckpoints;
                     updateRoute(selectedRoute);
                 }
 

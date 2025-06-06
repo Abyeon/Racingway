@@ -47,8 +47,6 @@ namespace Racingway.Utils
 
                 string output = Convert.ToBase64String(compressedStream.ToArray());
 
-                Plugin.Log.Debug($"Compressed {data.Length} characters down to {output.Length} characters");
-
                 return output;
             }
             catch (Exception ex)

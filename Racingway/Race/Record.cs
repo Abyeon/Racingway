@@ -21,7 +21,7 @@ namespace Racingway.Race
         [Key(2)] public string World { get; set; }
         [Key(3)] public TimeSpan Time { get; set; }
         [Key(4)] public float Distance { get; set; }
-        [Key(5)] public double[]? Splits { get; set; } = null;
+        [Key(5)] public long[]? Splits { get; set; } = null;
         [Key(6)] public TimedVector3[] Line { get; set; }
         [Key(7)] public string RouteId { get; set; }
         [Key(8)] public string RouteName { get; set; }
@@ -97,7 +97,7 @@ namespace Racingway.Race
             string world,
             TimeSpan time,
             float distance,
-            double[] splits,
+            long [] splits,
             TimedVector3[] line,
             string routeId,
             string routeName,
