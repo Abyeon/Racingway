@@ -309,6 +309,11 @@ namespace Racingway.Tabs
         public void Draw()
         {
             if (Plugin.Storage == null) return;
+            if (Plugin.LoadedRoutes.Count == 0)
+            {
+                ImGui.TextUnformatted("No routes loaded for this area.");
+                return;
+            }
 
             int id = 0;
 
@@ -505,21 +510,21 @@ namespace Racingway.Tabs
                 }
             }
 
-            using (var table = ImRaii.Table("###race-records", 5, ImGuiTableFlags.Sortable))
+            using (var table = ImRaii.Table("###race-records", 5, ImGuiTableFlags.Sortable | ImGuiTableFlags.Resizable))
             {
                 if (table)
                 {
-                    ImGui.TableSetupColumn("Date", ImGuiTableColumnFlags.WidthFixed, 100f);
-                    ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthFixed, 100f);
-                    ImGui.TableSetupColumn("World", ImGuiTableColumnFlags.WidthFixed, 100f);
+                    ImGui.TableSetupColumn("Date", ImGuiTableColumnFlags.WidthStretch, 100f);
+                    ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthStretch, 100f);
+                    ImGui.TableSetupColumn("World", ImGuiTableColumnFlags.WidthStretch, 100f);
                     ImGui.TableSetupColumn(
                         "Time",
-                        ImGuiTableColumnFlags.WidthFixed
+                        ImGuiTableColumnFlags.WidthStretch
                             | ImGuiTableColumnFlags.DefaultSort
                             | ImGuiTableColumnFlags.PreferSortAscending,
                         100f
                     );
-                    ImGui.TableSetupColumn("Distance", ImGuiTableColumnFlags.WidthFixed, 100f);
+                    ImGui.TableSetupColumn("Distance", ImGuiTableColumnFlags.WidthStretch, 100f);
 
                     ImGui.TableHeadersRow();
 
@@ -609,7 +614,8 @@ namespace Racingway.Tabs
                             {
                                 if (ImGui.Selectable("Export to Clipboard"))
                                 {
-                                    ShareHelper.ExportRecordToClipboard(record, Plugin);
+                                    //ShareHelper.ExportRecordToClipboard(record, Plugin);
+                                    ShareHelper.PackRecordToClipboard(record, Plugin);
                                 }
 
                                 if (ImGui.Selectable("Delete"))

@@ -6,6 +6,7 @@ using System.Text;
 using Newtonsoft.Json;
 using System.Threading.Tasks;
 using LiteDB;
+using ZLinq;
 
 namespace Racingway.Race.Collision.Triggers
 {
@@ -21,6 +22,7 @@ namespace Racingway.Race.Collision.Triggers
         public uint Color { get; set; } = InactiveColor;
         public bool Active { get; set; } = false;
         public List<uint> Touchers { get; set; } = new List<uint>();
+        public uint? FlagIcon { get; set; } = 60557;
 
         public Checkpoint(Route route, Vector3 position, Vector3 scale, Vector3 rotation)
         {
@@ -36,8 +38,38 @@ namespace Racingway.Race.Collision.Triggers
             this.Cube = cube;
         }
 
+        public void CheckCollision(Player player)
+        {
+            var inTrigger = Cube.PointInCube(player.position);
+
+            // Fast return if nothing changed
+            if ((!inTrigger && !Touchers.Contains(player.id)))
+            {
+                return;
+            }
+
+            bool grounded = (player.isGrounded && Route.RequireGroundedCheckpoint) || !Route.RequireGroundedCheckpoint;
+
+            if (inTrigger && !Touchers.Contains(player.id) && grounded)
+            {
+                Touchers.Add(player.id);
+                OnEntered(player);
+            }
+            else if (!inTrigger && Touchers.Contains(player.id))
+            {
+                Touchers.Remove(player.id);
+                OnLeft(player);
+            }
+        }
+
         public void OnEntered(Player player)
         {
+            // Return if the player has this checkpoint in their splits
+            if (player.currentSplits.AsValueEnumerable().Where(x => x.checkpoint == this).Count() > 0) return;
+
+            player.currentSplits.Add(new TimedCheckpoint(this, player.timer.ElapsedMilliseconds));
+            Route.HitCheckpoint(player);
+
             Active = true;
             Color = ActiveColor;
         }

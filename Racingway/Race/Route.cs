@@ -19,7 +19,6 @@ namespace Racingway.Race
     /// Container for triggers making up a race.
     /// To be used to differentiate races.
     /// </summary>
-
     public class Route
     {
         [BsonId]
@@ -29,6 +28,8 @@ namespace Racingway.Race
         public string Description { get; set; }
         public bool AllowMounts { get; set; }
         public bool RequireGroundedStart { get; set; }
+        public bool RequireGroundedCheckpoint { get; set; }
+        public bool RequireAllCheckpoints { get; set; }
         public bool RequireGroundedFinish { get; set; }
         public bool Enabled { get; set; }
         public List<ITrigger> Triggers { get; set; }
@@ -47,20 +48,14 @@ namespace Racingway.Race
         public float MinTimeThreshold { get; set; } // Minimum time in seconds to keep a record
         public float MaxTimeThreshold { get; set; } // Maximum time in seconds to keep a record, 0 = no limit
 
-        [BsonIgnore]
-        public Record? BestRecord = null;
+        [BsonIgnore] public Record? BestRecord = null;
 
-        [BsonIgnore]
-        public List<(Player, Stopwatch)> PlayersInParkour = new();
+        [BsonIgnore] public List<(Player, Stopwatch)> PlayersInParkour = new();
 
-        [BsonIgnore]
-        public event EventHandler<Player>? OnStarted;
-
-        [BsonIgnore]
-        public event EventHandler<(Player, Record)>? OnFinished;
-
-        [BsonIgnore]
-        public event EventHandler<Player>? OnFailed;
+        [BsonIgnore] public event EventHandler<Player>? OnStarted;
+        [BsonIgnore] public event EventHandler<Player>? OnCheckpoint;
+        [BsonIgnore] public event EventHandler<(Player, Record)>? OnFinished;
+        [BsonIgnore] public event EventHandler<Player>? OnFailed;
 
         public Route(string name, Address address, string description, List<ITrigger> triggers,
             List<Record> records, bool allowMounts = false, bool enabled = true, int clientFails = 0, int clientFinishes = 0)
@@ -75,7 +70,10 @@ namespace Racingway.Race
             this.AllowMounts = allowMounts;
 
             this.RequireGroundedStart = true;
+            this.RequireGroundedCheckpoint = false;
             this.RequireGroundedFinish = true;
+
+            this.RequireAllCheckpoints = true;
 
             this.Enabled = enabled;
             this.ClientFails = clientFails;
@@ -122,6 +120,8 @@ namespace Racingway.Race
             doc["enabled"] = Enabled;
 
             doc["requireGroundedStart"] = RequireGroundedStart;
+            doc["requireGroundedCheckpoint"] = RequireGroundedCheckpoint;
+            doc["requireAllCheckpoints"] = RequireAllCheckpoints;
             doc["requireGroundedFinish"] = RequireGroundedFinish;
 
             doc["clientFails"] = ClientFails;
@@ -170,6 +170,8 @@ namespace Racingway.Race
             doc["enabled"] = Enabled;
 
             doc["requireGroundedStart"] = RequireGroundedStart;
+            doc["requireGroundedCheckpoint"] = RequireGroundedCheckpoint;
+            doc["requireAllCheckpoints"] = RequireAllCheckpoints;
             doc["requireGroundedFinish"] = RequireGroundedFinish;
 
             doc["clientFails"] = 0;
@@ -254,51 +256,73 @@ namespace Racingway.Race
             else
             {
                 // Check collision with start/loop trigger first
-                if (Triggers.Exists(x => x is Start || x is Loop))
+                //if (Triggers.Exists(x => x is Start || x is Loop))
+                //{
+                //    ITrigger start = Triggers.First(x => x is Start || x is Loop);
+                //    start.CheckCollision(player);
+                //}
+
+                //foreach (ITrigger t in Triggers)
+                //{
+                //    Task.Run(() =>
+                //    {
+                //        t.CheckCollision(player);
+                //    });
+                //}
+
+                // Multithread collision checks for all triggers
+                Parallel.ForEach(Triggers, trigger =>
                 {
-                    ITrigger start = Triggers.First(x => x is Start || x is Loop);
-                    start.CheckCollision(player);
-                }
+                    trigger.CheckCollision(player);
+                });
 
                 // If player is in parkour, only check relevant triggers
                 // First, check fail triggers as they're most important for race integrity
-                foreach (ITrigger trigger in Triggers.AsValueEnumerable().Where(t => t is Fail))
-                {
-                    trigger.CheckCollision(player);
+                //foreach (ITrigger trigger in Triggers.AsValueEnumerable().Where(t => t is Fail))
+                //{
+                //    trigger.CheckCollision(player);
 
-                    // If player is no longer in parkour after checking a fail trigger, stop further checks
-                    if (PlayersInParkour.FindIndex(x => x.Item1 == player) == -1) return;
-                }
+                //    // If player is no longer in parkour after checking a fail trigger, stop further checks
+                //    if (PlayersInParkour.FindIndex(x => x.Item1 == player) == -1) return;
+                //}
 
-                // Then check finish and checkpoint triggers (higher priority)
-                foreach (
-                    ITrigger trigger in Triggers.AsValueEnumerable().Where(t =>
-                        t is Finish || t is Checkpoint || t is Loop
-                    )
-                )
-                {
-                    trigger.CheckCollision(player);
+                //// Then check finish and checkpoint triggers (higher priority)
+                //foreach (
+                //    ITrigger trigger in Triggers.AsValueEnumerable().Where(t =>
+                //        t is Finish || t is Checkpoint || t is Loop
+                //    )
+                //)
+                //{
+                //    trigger.CheckCollision(player);
 
-                    // If player is no longer in parkour after a finish trigger, stop checking
-                    if (PlayersInParkour.FindIndex(x => x.Item1 == player) == -1)
-                        return;
-                }
+                //    // If player is no longer in parkour after a finish trigger, stop checking
+                //    if (PlayersInParkour.FindIndex(x => x.Item1 == player) == -1)
+                //        return;
+                //}
             }
         }
 
         public void Started(Player player)
         {
+            player.currentSplits.Clear();
             OnStarted?.Invoke(this, player);
+        }
+
+        public void HitCheckpoint(Player player)
+        {
+            OnCheckpoint?.Invoke(this, player);
         }
 
         public void Finished(Player player, Record record)
         {
+            player.currentSplits.Clear();
             FixLoopTriggers(player);
             OnFinished?.Invoke(this, (player, record));
         }
 
         public void Failed(Player player)
         {
+            player.currentSplits.Clear();
             FixLoopTriggers(player);
             OnFailed?.Invoke(this, player);
         }
@@ -312,6 +336,24 @@ namespace Racingway.Race
             foreach (Loop trigger in Triggers.AsValueEnumerable().Where(t => t is Loop))
             {
                 trigger.playerStarted.Remove(player.id);
+            }
+        }
+
+        public void AddMapMarkers()
+        {
+            foreach (ITrigger trigger in Triggers)
+            {
+                if (trigger.FlagIcon == null) continue;
+                TerritoryHelper.AddMapMarker(trigger.Cube.Position, (uint)trigger.FlagIcon);
+            }
+        }
+
+        public void AddMinimapMarkers()
+        {
+            foreach (ITrigger trigger in Triggers)
+            {
+                if (trigger.FlagIcon == null) continue;
+                TerritoryHelper.AddMiniMapMarker(trigger.Cube.Position, (uint)trigger.FlagIcon);
             }
         }
 

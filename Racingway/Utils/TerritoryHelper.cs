@@ -1,3 +1,5 @@
+using Dalamud.Game.Text.SeStringHandling;
+using Dalamud.Interface.FontIdentifier;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
@@ -10,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 using static Dalamud.Interface.Utility.Raii.ImRaii;
@@ -63,6 +66,55 @@ namespace Racingway.Utils
             {-128, "wing 1" },
             {-127, "wing 2" }
         };
+
+        /// <summary>
+        /// Sets the player's map flag to the given position and opens their map.
+        /// </summary>
+        public static unsafe void SetFlagMarkerPosition(Vector3 position, uint territoryId, uint mapId, string title, uint iconId = 60561)
+        {
+            Plugin.Framework.RunOnFrameworkThread(() =>
+            {
+                var agent = AgentMap.Instance();
+
+                agent->SetFlagMapMarker(territoryId, mapId, position, iconId);
+                agent->OpenMap(mapId, territoryId, title);
+            });
+        }
+
+        /// <summary>
+        /// Adds a map marker to the current map at the position.
+        /// </summary>
+        /// <param name="iconId">The icon to set. /xldata has a list of them</param>
+        public static unsafe void AddMapMarker(Vector3 position, uint iconId, int scale = 0)
+        {
+            Plugin.Framework.RunOnFrameworkThread(() =>
+            {
+                var agent = AgentMap.Instance();
+
+                agent->AddMapMarker(position, iconId, scale);
+            });
+        }
+
+        public static unsafe void AddMiniMapMarker(Vector3 position, uint iconId, int scale = 0)
+        {
+            Plugin.Framework.RunOnFrameworkThread(() =>
+            {
+                var agent = AgentMap.Instance();
+
+                agent->AddMiniMapMarker(position, iconId, scale);
+            });
+        }
+
+        public static unsafe void ResetMapMarkers()
+        {
+            Plugin.Framework.RunOnFrameworkThread(() =>
+            {
+                var agent = AgentMap.Instance();
+
+                agent->ResetMiniMapMarkers();
+                agent->ResetMapMarkers();
+            });
+        }
 
         public void GetLocationID()
         {

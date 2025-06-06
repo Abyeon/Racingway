@@ -100,12 +100,19 @@ namespace Racingway.Tabs
                     ImGui.SameLine();
                     if (ImGui.Button("Import Record"))
                     {
-                        ShareHelper.ImportRecordFromClipboard(Plugin);
+                        ShareHelper.ImportPackedRecord(Plugin);
+                        //ShareHelper.ImportRecordFromClipboard(Plugin);
                     }
                     if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
                     {
                         ImGui.SetTooltip("Import record from clipboard, this will automatically get assigned to the route if it exists.");
                     }
+
+                    //ImGui.SameLine();
+                    //if (ImGui.Button("Import Packed Record"))
+                    //{
+                    //    ShareHelper.ImportPackedRecord(Plugin);
+                    //}
 
                     filter.Draw("Filter");
 
@@ -163,10 +170,10 @@ namespace Racingway.Tabs
                                     }
                                     if (ImGui.Selectable("Set Flag"))
                                     {
-                                        var start = route.Triggers.FirstOrDefault(t => t.GetType() == typeof(Start), null);
+                                        var start = route.Triggers.FirstOrDefault(t => t.GetType() == typeof(Start) || t.GetType() == typeof(Start), null);
                                         if (start != null)
                                         {
-                                            SetFlagMarkerPosition(start.Cube.Position, route.Address.TerritoryId, route.Address.MapId, route.Name);
+                                            TerritoryHelper.SetFlagMarkerPosition(start.Cube.Position, route.Address.TerritoryId, route.Address.MapId, route.Name, (uint)start.FlagIcon);
                                         } else
                                         {
                                             Plugin.ChatGui.PrintError("[RACE] There appears to be no start trigger in this route.");
@@ -180,6 +187,7 @@ namespace Racingway.Tabs
                                     {
                                         ShareHelper.ExportRouteJsonToClipboard(route);
                                     }
+
                                     if (ImGui.IsItemHovered(ImGuiHoveredFlags.None))
                                     {
                                         ImGui.SetTooltip("Intended only for creating external route lists at the moment.");
@@ -302,14 +310,6 @@ namespace Racingway.Tabs
                     }
                 }
             }
-        }
-
-        public unsafe void SetFlagMarkerPosition(Vector3 position, uint territoryId, uint mapId, string title)
-        {
-            var agent = AgentMap.Instance();
-
-            agent->SetFlagMapMarker(territoryId, mapId, position);
-            agent->OpenMap(mapId, territoryId, title);
         }
     }
 }

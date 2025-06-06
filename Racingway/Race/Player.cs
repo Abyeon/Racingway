@@ -8,7 +8,6 @@ using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using FFXIVClientStructs.FFXIV.Client.Graphics;
 using FFXIVClientStructs.FFXIV.Common.Component.BGCollision;
 using Racingway.Race.Collision;
-using Racingway.Utils;
 
 namespace Racingway.Race
 {
@@ -41,6 +40,8 @@ namespace Racingway.Race
 
         // Public property to maintain compatibility with existing code
         public IEnumerable<TimedVector3> RaceLine => _rawPoints;
+
+        public List<TimedCheckpoint> currentSplits = new List<TimedCheckpoint>();
 
         public Stopwatch timer = new Stopwatch();
         public int lastSeen;
@@ -141,7 +142,6 @@ namespace Racingway.Race
                 }
             }
 
-            //UpdateState();
             if (Plugin != null)
             {
                 Plugin.CheckCollision(this);

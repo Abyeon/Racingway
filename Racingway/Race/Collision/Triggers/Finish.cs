@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using LiteDB;
+using MessagePack;
 using Newtonsoft.Json;
 using Racingway.Utils;
 
@@ -28,6 +29,8 @@ namespace Racingway.Race.Collision.Triggers
         private HashSet<uint> _recentlyProcessed = new HashSet<uint>();
         private readonly object _processLock = new object();
 
+        public uint? FlagIcon { get; set; } = 60583;
+
         public Finish(Route route, Vector3 position, Vector3 scale, Vector3 rotation)
         {
             this.Id = new();
@@ -47,10 +50,7 @@ namespace Racingway.Race.Collision.Triggers
             var inTrigger = Cube.PointInCube(player.position);
 
             // Fast return if nothing changed
-            if (
-                (!inTrigger && !Touchers.Contains(player.id))
-                || (_recentlyProcessed.Contains(player.id))
-            )
+            if ((!inTrigger && !Touchers.Contains(player.id)) || (_recentlyProcessed.Contains(player.id)))
             {
                 return;
             }
@@ -71,6 +71,25 @@ namespace Racingway.Race.Collision.Triggers
         // Required by ITrigger interface
         public void OnEntered(Player player)
         {
+            // Do not process if player hasnt hit all checkpoints
+            if (Route.RequireAllCheckpoints)
+            {
+                int totalCheckpoints = Route.Triggers.Where(x => x is Checkpoint).Count();
+                int hitCheckpoints = player.currentSplits.Count;
+                if (hitCheckpoints != totalCheckpoints)
+                {
+                    if (player.isClient)
+                    {
+                        int missed = totalCheckpoints - hitCheckpoints;
+
+                        Plugin.ChatGui.PrintError($"[RACE] Tried to finish a route without hitting all checkpoints! {missed.ToString()} checkpoint(s) missed." +
+                            $"\nWas this intended? Check the behavior in the routes tab.");
+                    }
+
+                    return;
+                }
+            }
+
             // This method is required by the interface, but we're using ProcessPlayerFinish instead
             // Starting the process on a background thread to avoid blocking the main thread
             Task.Run(() => ProcessPlayerFinish(player));
@@ -124,6 +143,14 @@ namespace Racingway.Race.Collision.Triggers
                         );
 
                         record.IsClient = player.isClient;
+
+                        List<long> splits = new List<long>();
+                        for (int i = 0; i < player.currentSplits.Count; i++)
+                        {
+                            splits.Add(player.currentSplits[i].offset);
+                        }
+
+                        record.Splits = splits.ToArray();
 
                         Route.Finished(player, record);
                     }

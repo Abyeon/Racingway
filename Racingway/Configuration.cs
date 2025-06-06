@@ -6,6 +6,7 @@ using Dalamud.Interface.FontIdentifier;
 using Dalamud.Plugin;
 using Racingway.Race;
 using Racingway.Race.Collision;
+using Racingway.Race.Collision.Triggers;
 using Racingway.Tabs;
 
 namespace Racingway;
@@ -29,6 +30,7 @@ public class Configuration : IPluginConfiguration
     public bool DrawRacingLines { get; set; } = false;
     public bool DrawTimer { get; set; } = false;
     public bool DrawTimerButtons {  get; set; } = true;
+    public bool AddMapMarkers { get; set; } = true;
 
     // Timer Style
     public float TimerSize { get; set; } = 2f;

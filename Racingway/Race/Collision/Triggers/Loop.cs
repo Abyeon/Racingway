@@ -24,6 +24,8 @@ namespace Racingway.Race.Collision.Triggers
         public List<uint> Touchers { get; set; } = new List<uint>();
         public Dictionary<uint, bool> playerStarted = new Dictionary<uint, bool>();
 
+        public uint? FlagIcon { get; set; } = 63929;
+
         public Loop(Route route, Vector3 position, Vector3 scale, Vector3 rotation)
         {
             this.Id = new();
@@ -73,6 +75,21 @@ namespace Racingway.Race.Collision.Triggers
             // If the player is returning to the trigger after starting the race
             if (playerStarted.ContainsKey(player.id) && playerStarted[player.id])
             {
+                // Do not process if player hasnt hit all checkpoints
+                if (Route.RequireAllCheckpoints)
+                {
+                    int totalCheckpoints = Route.Triggers.Where(x => x is Checkpoint).Count();
+                    int hitCheckpoints = player.currentSplits.Count;
+                    if (hitCheckpoints != totalCheckpoints)
+                    {
+                        playerStarted[player.id] = false;
+                        Route.Failed(player);
+                        player.ClearLine();
+
+                        return;
+                    }
+                }
+
                 DateTime now = DateTime.UtcNow;
                 int index = Route.PlayersInParkour.FindIndex(x => x.Item1 == player);
 
@@ -105,6 +122,12 @@ namespace Racingway.Race.Collision.Triggers
                             player.RaceLine.ToArray(),
                             this.Route
                         );
+
+                        List<long> splits = new List<long>();
+                        for (int i = 0; i < player.currentSplits.Count; i++)
+                        {
+                            splits.Add(player.currentSplits[i].offset);
+                        }
 
                         record.IsClient = player.isClient;
 

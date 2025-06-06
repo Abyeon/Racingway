@@ -39,12 +39,15 @@ namespace Racingway.Utils
             {
                 var bytes = Encoding.UTF8.GetBytes(data);
                 using var compressedStream = new MemoryStream();
+
                 using (var zipStream = new GZipStream(compressedStream, CompressionMode.Compress))
                 {
                     zipStream.Write(bytes, 0, bytes.Length);
                 }
 
-                return Convert.ToBase64String(compressedStream.ToArray());
+                string output = Convert.ToBase64String(compressedStream.ToArray());
+
+                return output;
             }
             catch (Exception ex)
             {
@@ -69,6 +72,25 @@ namespace Racingway.Utils
             catch
             {
                 return string.Empty;
+            }
+        }
+
+        public static byte[]? ByteFromBase64(string compressedBase64)
+        {
+            try
+            {
+                var data = Convert.FromBase64String(compressedBase64);
+                using var compressedStream = new MemoryStream(data);
+                using var zipStream = new GZipStream(compressedStream, CompressionMode.Decompress);
+                using var resultStream = new MemoryStream();
+
+                zipStream.CopyTo(resultStream);
+
+                return resultStream.ToArray();
+            }
+            catch
+            {
+                return null;
             }
         }
 

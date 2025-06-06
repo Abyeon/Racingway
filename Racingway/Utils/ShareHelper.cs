@@ -1,9 +1,12 @@
 using ImGuiNET;
 using LiteDB;
+using MessagePack;
+using MessagePack.Resolvers;
 using Newtonsoft.Json.Linq;
 using Racingway.Race;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -66,6 +69,66 @@ namespace Racingway.Utils
         }
 
         /// <summary>
+        /// Use MessagePack to export a smaller version of the record to the user's clipboard.
+        /// </summary>
+        /// <param name="record"></param>
+        /// <param name="plugin"></param>
+        public static void PackRecordToClipboard(Record record, Plugin plugin)
+        {
+            try
+            {
+                // Init compression options
+                var lz4Options = MessagePackSerializerOptions.Standard
+                    .WithResolver(StandardResolver.Instance)
+                    .WithCompression(MessagePackCompression.Lz4BlockArray);
+
+                // Serialize and convert to base64
+                byte[] data = MessagePackSerializer.Serialize(record, lz4Options);
+                string text = Convert.ToBase64String(data);
+
+                Plugin.Log.Debug($"Packing record to {text.Length} characters.");
+
+                // Throw the data to the clipboard.
+                ImGui.SetClipboardText(text);
+            }
+            catch (Exception e)
+            {
+                Plugin.ChatGui.PrintError("[RACE] Error exporting record to clipboard.");
+                Plugin.Log.Error(e.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Use MessagePack to import user's clipboard data.
+        /// </summary>
+        /// <param name="plugin"></param>
+        public static void ImportPackedRecord(Plugin plugin)
+        {
+            if (plugin.Storage == null) return;
+
+            string data = ImGui.GetClipboardText();
+            byte[] uncompressed = Convert.FromBase64String(data);
+
+            plugin.DataQueue.QueueDataOperation(async () =>
+            {
+                try
+                {
+                    // Init compression options
+                    var lz4Options = MessagePackSerializerOptions.Standard
+                        .WithResolver(StandardResolver.Instance)
+                        .WithCompression(MessagePackCompression.Lz4BlockArray);
+
+                    Record record = MessagePackSerializer.Deserialize<Record>(uncompressed, lz4Options);
+                    plugin.Storage.ImportRecord(record);
+                } catch (Exception e)
+                {
+                    Plugin.ChatGui.PrintError("[RACE] Error importing record from clipboard.");
+                    Plugin.Log.Error(e.ToString());
+                }
+            });
+        }
+
+        /// <summary>
         /// Export a record to the user's clipboard.
         /// </summary>
         /// <param name="record">The record to export</param>
@@ -83,9 +146,7 @@ namespace Racingway.Utils
             }
 
             // update route hash.. because old records probably have a broken hash.. oops!
-            record.RouteHash = plugin
-                .Storage.RouteCache[plugin.SelectedRoute.ToString()]
-                .GetHash();
+            record.RouteHash = plugin.Storage.RouteCache[plugin.SelectedRoute.ToString()].GetHash();
 
             var doc = BsonMapper.Global.ToDocument(record);
             string json = JsonSerializer.Serialize(doc);

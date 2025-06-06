@@ -22,6 +22,7 @@ namespace Racingway.Race.Collision.Triggers
         public uint Color { get; set; } = InactiveColor;
         public bool Active { get; set; } = false;
         public List<uint> Touchers { get; set; } = new List<uint>();
+        public uint? FlagIcon { get; set; } = 63929; //199718; //61534 - chocobo
 
         public Start(Route route, Vector3 position, Vector3 scale, Vector3 rotation)
         {

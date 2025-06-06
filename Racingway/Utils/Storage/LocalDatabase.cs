@@ -130,11 +130,19 @@ namespace Racingway.Utils.Storage
                             e.ToString();
                         }
 
-                        // Load start/finish behaviour bools if they exist
+                        // Load behaviour bools if they exist
                         if (bson.AsDocument.ContainsKey("requireGroundedStart"))
                         {
                             newRoute.RequireGroundedStart = bson["requireGroundedStart"];
                             newRoute.RequireGroundedFinish = bson["requireGroundedFinish"];
+                        }
+
+                        if (bson.AsDocument.ContainsKey("requireGroundedCheckpoint"))
+                        {
+                            newRoute.RequireGroundedCheckpoint = bson["requireGroundedCheckpoint"];
+
+                            if (bson.AsDocument.ContainsKey("requireAllCheckpoints"))
+                                newRoute.RequireAllCheckpoints = bson["requireAllCheckpoints"];
                         }
 
                         // Load route cleanup settings if they exist
@@ -389,6 +397,58 @@ namespace Racingway.Utils.Storage
                     Plugin.Log.Error(ex, "Failed to import route");
                 }
             });
+        }
+
+        internal void ImportRecord(Record record)
+        {
+            try
+            {
+                bool hasRoute = RouteCache.ContainsKey(record.RouteId.ToString());
+
+                if (hasRoute)
+                {
+                    //var route1 = GetRoutes().Find(x => x.Id.ToString() == record.RouteId).FirstOrDefault();
+                    var route = RouteCache[record.RouteId];
+                    var records = route.Records;
+                    string hash = route.GetHash();
+
+                    // Check if route matches record's saved hash
+                    if (hash != record.RouteHash)
+                    {
+                        Plugin.Log.Error(hash + " != " + record.RouteHash);
+                        throw new Exception(
+                            "Saved version of route may not match the one this record was made in."
+                        );
+                    }
+
+                    // Incredibly stupid way to check if a duplicate record exists.. Because my LiteDB implementation was flawed from the start! I might burn it all down..
+                    if (
+                        !records.Exists(r =>
+                            r.Name == record.Name
+                            && r.World == record.World
+                            && r.Time == record.Time
+                        )
+                    )
+                    {
+                        route.Records.Add(record);
+                        Plugin.AddRoute(route);
+                        return;
+                    }
+                    else
+                    {
+                        throw new Exception("Route already contains this record.");
+                    }
+                }
+                else
+                {
+                    throw new Exception("Route that record was intended for does not exist.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.ChatGui.PrintError($"[RACE] Failed to import record. {ex.Message}");
+                Plugin.Log.Error(ex, "Failed to import record");
+            }
         }
 
         internal async Task ImportRecordFromBase64(string data)

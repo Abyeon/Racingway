@@ -9,17 +9,18 @@ using System.Threading.Tasks;
 using static Dalamud.Interface.Utility.Raii.ImRaii;
 using System.Xml.Linq;
 using Racingway.Utils;
+using MessagePack;
 
 namespace Racingway.Race
 {
+    [MessagePackObject]
     public class Address
     {
-        [BsonId]
-        private ObjectId Id { get; set; }
-        public uint TerritoryId { get; set; }
-        public uint MapId { get; set; }
-        public string LocationId { get; set; }
-        public string ReadableName { get; set; }
+        [BsonId] private ObjectId Id { get; set; }
+        [Key(0)] public uint TerritoryId { get; set; }
+        [Key(1)] public uint MapId { get; set; }
+        [Key(2)] public string LocationId { get; set; }
+        [Key(3)] public string ReadableName { get; set; }
 
         public Address(uint territoryId, uint mapId, string location, string readableName)
         {

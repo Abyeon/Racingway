@@ -6,26 +6,28 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using LiteDB;
+using MessagePack;
 using Racingway.Utils;
 
 namespace Racingway.Race
 {
+    [MessagePackObject]
     public class Record
     {
-        [BsonId]
+        [BsonId, IgnoreMember]
         public ObjectId Id { get; set; }
-        public DateTime Date { get; set; }
-        public string Name { get; set; }
-        public string World { get; set; }
-        public TimeSpan Time { get; set; }
-        public float Distance { get; set; }
-        public double[]? Splits { get; set; } = null;
-        public TimedVector3[] Line { get; set; }
-        public string RouteId { get; set; }
-        public string RouteName { get; set; }
-        public string RouteAddress { get; set; }
-        public string RouteHash { get; set; }
-        public bool IsClient { get; set; }
+        [Key(0)] public DateTime Date { get; set; }
+        [Key(1)] public string Name { get; set; }
+        [Key(2)] public string World { get; set; }
+        [Key(3)] public TimeSpan Time { get; set; }
+        [Key(4)] public float Distance { get; set; }
+        [Key(5)] public long[]? Splits { get; set; } = null;
+        [Key(6)] public TimedVector3[] Line { get; set; }
+        [Key(7)] public string RouteId { get; set; }
+        [Key(8)] public string RouteName { get; set; }
+        [Key(9)] public string RouteAddress { get; set; }
+        [Key(10)] public string RouteHash { get; set; }
+        [Key(11)] public bool IsClient { get; set; }
 
         // Track whether line simplification has been completed
         private bool _lineSimplified = false;
@@ -33,15 +35,7 @@ namespace Racingway.Race
         // Semaphore to prevent multiple simplification operations
         private static SemaphoreSlim _simplificationSemaphore = new SemaphoreSlim(1, 1);
 
-        public Record(
-            DateTime date,
-            string name,
-            string world,
-            TimeSpan time,
-            float distance,
-            TimedVector3[] line,
-            Route route
-        )
+        public Record(DateTime date, string name, string world, TimeSpan time, float distance, TimedVector3[] line, Route route)
         {
             Id = new();
 
@@ -96,14 +90,14 @@ namespace Racingway.Race
             }
         }
 
-        [BsonCtor]
+        [BsonCtor, SerializationConstructor]
         public Record(
             DateTime date,
             string name,
             string world,
             TimeSpan time,
             float distance,
-            double[] splits,
+            long [] splits,
             TimedVector3[] line,
             string routeId,
             string routeName,
@@ -154,10 +148,7 @@ namespace Racingway.Race
         /// </summary>
         /// <param name="originalPointCount">The count of points before simplification</param>
         /// <returns>Percentage of storage saved</returns>
-        public static float CalculateStorageSavings(
-            int originalPointCount,
-            int simplifiedPointCount
-        )
+        public static float CalculateStorageSavings(int originalPointCount,int simplifiedPointCount)
         {
             if (originalPointCount <= 0)
                 return 0;

@@ -41,7 +41,9 @@ namespace Racingway.Windows
                 | ImGuiWindowFlags.NoNavFocus
                 | ImGuiWindowFlags.NoNavInputs
                 | ImGuiWindowFlags.NoTitleBar
-                | ImGuiWindowFlags.NoInputs;
+                | ImGuiWindowFlags.NoInputs
+                | ImGuiWindowFlags.NoBringToFrontOnFocus
+                | ImGuiWindowFlags.NoFocusOnAppearing;
 
             this.Plugin = plugin;
             this.LineStyles = [new Line(plugin), new Dotted(plugin), new DottedLine(plugin)];
@@ -102,8 +104,8 @@ namespace Racingway.Windows
                 {
                     foreach (ITrigger trigger in route.Triggers)
                     {
-                        if (trigger == null)
-                            continue;
+                        if (trigger == null) continue;
+                        if (!Plugin.TriggerToggles[trigger.GetType()]) continue;
 
                         // Skip if the distance is too high
                         if (Vector3.Distance(trigger.Cube.Position, Plugin.ClientState.LocalPlayer.Position) > Plugin.Configuration.RenderDistance)
@@ -161,7 +163,7 @@ namespace Racingway.Windows
                             }
                         }
 
-                        draw.DrawCubeFilled(trigger.Cube, color, 5.0f);
+                        draw.DrawCubeFilled(trigger.Cube, color);
                     }
                 }
 

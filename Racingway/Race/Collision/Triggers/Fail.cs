@@ -22,6 +22,7 @@ namespace Racingway.Race.Collision.Triggers
         public uint Color { get; set; } = InactiveColor;
         public bool Active { get; set; } = false;
         public List<uint> Touchers { get; set; } = new List<uint>();
+        public uint? FlagIcon { get; set; } = null;
 
         public Fail(Route route, Vector3 position, Vector3 scale, Vector3 rotation)
         {
@@ -82,7 +83,7 @@ namespace Racingway.Race.Collision.Triggers
                 Cube.Rotation.X.ToString(),
                 Cube.Rotation.Y.ToString(),
                 Cube.Rotation.Z.ToString(),
-            ]; // Roration
+            ]; // Rotation
 
             doc["Cube"] = cube;
 
