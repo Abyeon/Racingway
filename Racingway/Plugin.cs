@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.ClientState.Objects.Types;
@@ -180,10 +181,9 @@ public sealed class Plugin : IDalamudPlugin
         {
             TimerWindow.IsOpen = true;
         }
-        else
+        else if (!(Configuration.ShowWhenInParkour && LocalTimer.IsRunning))
         {
-            if (!(Configuration.ShowWhenInParkour && LocalTimer.IsRunning))
-                TimerWindow.IsOpen = false;
+            TimerWindow.IsOpen = false;
         }
 
         if (Configuration.DrawRacingLines || Configuration.DrawTriggers || DisplayedRecord != null)
@@ -489,6 +489,26 @@ public sealed class Plugin : IDalamudPlugin
             PayloadedChat(e, $" just started {route.Name}");
     }
 
+    private readonly Lock _splitLock = new();
+
+    private void QueueSplit(Player player, long difference)
+    {
+        if (player.isClient)
+        {
+            string pretty = Time.PrettyFormatTimeSpan(TimeSpan.FromMilliseconds(difference));
+
+            Task.Run(async () =>
+            {
+                bool positive = difference > 0;
+                TimerWindow.splits.Add(difference);
+                await Task.Delay(3000);
+                TimerWindow.splits.Remove(difference);
+            });
+
+            //Plugin.ChatGui.Print($"Hit Checkpoint {player.currentSplits.Count} in {pretty}");
+        }
+    }
+
     private void OnCheckpoint(object? sender, Player e)
     {
         Route? route = sender as Route;
@@ -497,14 +517,11 @@ public sealed class Plugin : IDalamudPlugin
         if (DisplayedRecord.Splits == null) return;
         if (DisplayedRecord.Splits.Length == 0) return;
 
-        if (e.isClient)
-        {
-            long specifiedSplit = DisplayedRecord.Splits[e.currentSplits.Count - 1];
-            long difference = e.currentSplits.Last().offset - specifiedSplit;
-            string pretty = Time.PrettyFormatTimeSpan(TimeSpan.FromMilliseconds(difference));
+        long currSplit = e.currentSplits.Last().offset;
+        long specifiedSplit = DisplayedRecord.Splits[e.currentSplits.Count - 1];
+        long difference = currSplit - specifiedSplit;
 
-            Plugin.ChatGui.Print($"Hit Checkpoint {e.currentSplits.Count} in {pretty}");
-        }
+        QueueSplit(e, difference);
     }
 
     // Triggered whenever a player finished any loaded route
@@ -522,6 +539,13 @@ public sealed class Plugin : IDalamudPlugin
         // Immediately handle UI updates and local player actions
         if (localPlayer != null && e.Item1.actor.EntityId == localPlayer.EntityId)
         {
+            if (DisplayedRecord != null && DisplayedRecord.Splits != null && DisplayedRecord.Splits.Length != 0)
+            {
+                long currSplit = (long)e.Item2.Time.TotalMilliseconds;
+                long specifiedSplit = (long)DisplayedRecord.Time.TotalMilliseconds;
+                long difference = currSplit - specifiedSplit;
+                QueueSplit(e.Item1, difference);
+            }
             LocalTimer.Stop();
             HideTimer();
             route.ClientFinishes++;

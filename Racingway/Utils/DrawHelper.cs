@@ -108,6 +108,17 @@ namespace Racingway.Utils
             }
         }
 
+        public void DrawTextWithBackground(string text, uint color)
+        {
+            drawList.ChannelsSplit(2);
+            drawList.ChannelsSetCurrent(1);
+            ImGui.TextUnformatted(text);
+
+            drawList.ChannelsSetCurrent(0);
+            drawList.AddRectFilled(ImGui.GetItemRectMin() - ImGui.GetStyle().FramePadding * 2, ImGui.GetItemRectMax() + ImGui.GetStyle().FramePadding * 2, color);
+            drawList.ChannelsMerge();
+        }
+
         public void DrawText3d(string text, Vector3 position, uint color)
         {
             Vector2 screenPos = new Vector2();

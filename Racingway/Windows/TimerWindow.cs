@@ -7,12 +7,16 @@ using System.Threading.Tasks;
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
+using Dalamud.Interface.Style;
 using Dalamud.Interface.Utility;
+using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 using Dalamud.Utility;
 using Dalamud.Utility.Numerics;
 using ImGuiNET;
+using Racingway.Race;
 using Racingway.Utils;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Racingway.Windows
 {
@@ -27,63 +31,26 @@ namespace Racingway.Windows
                 ImGuiWindowFlags.NoScrollbar
                 | ImGuiWindowFlags.AlwaysAutoResize
                 | ImGuiWindowFlags.NoCollapse
-                | ImGuiWindowFlags.NoDecoration;
+                | ImGuiWindowFlags.NoDecoration
+                | ImGuiWindowFlags.NoBackground;
 
             this.Plugin = Plugin;
+            //this.Size = Vector2.Zero;
         }
+
+        public List<long> splits = new List<long>();
 
         public void Dispose() { }
 
-        public override void PreDraw()
-        {
-            base.PreDraw();
-            ImGui.PushStyleColor(ImGuiCol.WindowBg, Plugin.Configuration.TimerColor);
-
-            Vector4 color;
-            unsafe
-            {
-                color = *ImGui.GetStyleColorVec4(ImGuiCol.FrameBg);
-                color.W = Plugin.Configuration.TimerColor.W;
-            }
-
-            ImGui.PushStyleColor(ImGuiCol.FrameBg, color);
-            Plugin.FontManager.PushFont();
-        }
-
         public override void Draw()
         {
-            ImGui.SetWindowFontScale(Plugin.Configuration.TimerSize);
-
-            if (Plugin.FontManager.FontPushed && !Plugin.FontManager.FontReady)
-            {
-                ImGui.Text("Loading font, please wait...");
-                return;
-            }
-
-            TimeSpan span = TimeSpan.FromMilliseconds(Plugin.LocalTimer.ElapsedMilliseconds);
-            string timerText = Time.PrettyFormatTimeSpan(span);
-            Vector2 startPos = ImGui.GetCursorPos();
-
-            ImGui.Text(timerText);
+            //ImGui.SetWindowFontScale(Plugin.Configuration.TimerSize);
+            //Vector2 startPos = ImGui.GetCursorPos();
 
             if (Plugin.Configuration.DrawTimerButtons)
             {
-                // Add better spacing between timer and buttons
-                ImGui.SameLine(0, 12);
-
-                // Add padding to ensure enough space between timer and buttons
-                float btnSize = 22; // Fixed size for buttons
-
-                // Vertical alignment adjustment
-                ImGui.SetCursorPosY(startPos.Y + (ImGui.GetTextLineHeight() - btnSize) * 0.5f);
-
-                // Apply consistent button styling
-                ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 3.0f);
-                ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.3f, 0.3f, 0.3f, 0.6f));
-                ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.4f, 0.4f, 0.4f, 0.8f));
-
                 // Main window button
-                if (ImGuiComponents.IconButton("##openMain", FontAwesomeIcon.ExternalLinkAlt, new Vector2(btnSize, btnSize)))
+                if (ImGuiComponents.IconButton("##openMain", FontAwesomeIcon.ExternalLinkAlt))
                 {
                     Plugin.ToggleMainUI();
                 }
@@ -93,38 +60,68 @@ namespace Racingway.Windows
                 }
 
                 // Clear racing lines button
-                ImGui.SameLine(0, 25); // Increased spacing between buttons from 4 to 9 pixels
+                ImGui.SameLine(0);
 
-                // Adjust vertical position for trash button (15% lower)
-                float trashButtonOffset = ImGui.GetTextLineHeight() * 0.05f;
-                ImGui.SetCursorPosY(startPos.Y + (ImGui.GetTextLineHeight() - btnSize) * 0.5f + trashButtonOffset);
-
-                if (ImGuiComponents.IconButton("##clearLines", FontAwesomeIcon.Trash, new Vector2(btnSize, btnSize)))
+                if (ImGuiComponents.IconButton("##clearLines", FontAwesomeIcon.Trash))
                 {
                     foreach (var actor in Plugin.trackedPlayers.Values)
                     {
                         actor.ClearLine();
                     }
                 }
+
                 if (ImGui.IsItemHovered())
                 {
                     ImGui.SetTooltip("Clear Racing Lines");
                 }
-
-                // Restore original style
-                ImGui.PopStyleColor(2);
-                ImGui.PopStyleVar();
             }
 
-            ImGui.SetWindowFontScale(1.0f);
-        }
+            if (Plugin.FontManager.FontPushed && !Plugin.FontManager.FontReady)
+            {
+                ImGui.Text("Loading font..");
+            }
+            else
+            {
+                TimeSpan span = TimeSpan.FromMilliseconds(Plugin.LocalTimer.ElapsedMilliseconds);
+                string timerText = Time.PrettyFormatTimeSpan(span);
 
-        public override void PostDraw()
-        {
-            Plugin.FontManager.PopFont();
-            base.PostDraw();
-            ImGui.PopStyleColor();
-            ImGui.PopStyleColor();
+                Plugin.FontManager.PushFont();
+
+                ImDrawListPtr drawList = ImGui.GetWindowDrawList();
+
+                uint color = Plugin.Configuration.TimerColor.ToByteColor().RGBA;
+
+                drawList.ChannelsSplit(2);
+                drawList.ChannelsSetCurrent(1);
+                ImGui.TextUnformatted(timerText);
+
+                drawList.ChannelsSetCurrent(0);
+                drawList.AddRectFilled(ImGui.GetItemRectMin() - ImGui.GetStyle().FramePadding * 2, ImGui.GetItemRectMax() + ImGui.GetStyle().FramePadding * 2, color);
+
+                Plugin.FontManager.PopFont();
+
+                foreach (var split in splits)
+                {
+                    drawList.ChannelsSetCurrent(1);
+
+                    StringBuilder sb = new StringBuilder();
+
+                    Vector4 splitCol = ImGuiColors.DalamudRed;
+                    if (split < 0)
+                        splitCol = ImGuiColors.HealerGreen;
+
+                    sb.Append(Time.PrettyFormatTimeSpanSigned(TimeSpan.FromMilliseconds(split)));
+
+                    string pretty = sb.ToString();
+
+                    ImGui.TextColored(splitCol, pretty);
+
+                    drawList.ChannelsSetCurrent(0);
+                    drawList.AddRectFilled(ImGui.GetItemRectMin() - ImGui.GetStyle().FramePadding * 2, ImGui.GetItemRectMax() + ImGui.GetStyle().FramePadding * 2, color);
+                }
+
+                drawList.ChannelsMerge();
+            }
         }
     }
 }

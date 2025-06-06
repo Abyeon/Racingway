@@ -50,10 +50,7 @@ namespace Racingway.Race.Collision.Triggers
             var inTrigger = Cube.PointInCube(player.position);
 
             // Fast return if nothing changed
-            if (
-                (!inTrigger && !Touchers.Contains(player.id))
-                || (_recentlyProcessed.Contains(player.id))
-            )
+            if ((!inTrigger && !Touchers.Contains(player.id)) || (_recentlyProcessed.Contains(player.id)))
             {
                 return;
             }
