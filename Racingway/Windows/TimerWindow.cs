@@ -47,33 +47,52 @@ namespace Racingway.Windows
             //ImGui.SetWindowFontScale(Plugin.Configuration.TimerSize);
             //Vector2 startPos = ImGui.GetCursorPos();
 
+            ImDrawListPtr drawList = ImGui.GetWindowDrawList();
+
+            uint color = Plugin.Configuration.TimerColor.ToByteColor().RGBA;
+
+            // Fancy way of drawing behind text
+            drawList.ChannelsSplit(2);
+
+            Vector2 start = Vector2.Zero;
             if (Plugin.Configuration.DrawTimerButtons)
             {
-                // Main window button
-                if (ImGuiComponents.IconButton("##openMain", FontAwesomeIcon.ExternalLinkAlt))
-                {
-                    Plugin.ToggleMainUI();
-                }
-                if (ImGui.IsItemHovered())
-                {
-                    ImGui.SetTooltip("Open Main Window");
-                }
+                drawList.ChannelsSetCurrent(1);
 
-                // Clear racing lines button
-                ImGui.SameLine(0);
-
-                if (ImGuiComponents.IconButton("##clearLines", FontAwesomeIcon.Trash))
+                using (ImRaii.PushColor(ImGuiCol.Button, Vector4.Zero))
                 {
-                    foreach (var actor in Plugin.trackedPlayers.Values)
+                    using (ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, 5f))
                     {
-                        actor.ClearLine();
+                        // Main window button
+                        if (ImGuiComponents.IconButton("##openMain", FontAwesomeIcon.ExternalLinkAlt))
+                        {
+                            Plugin.ToggleMainUI();
+                        }
+                        if (ImGui.IsItemHovered())
+                        {
+                            ImGui.SetTooltip("Open Main Window");
+                        }
+
+                        start = ImGui.GetItemRectMin();
+
+                        ImGui.SameLine(0);
+
+                        // Clear racing lines button
+                        if (ImGuiComponents.IconButton("##clearLines", FontAwesomeIcon.Trash))
+                        {
+                            foreach (var actor in Plugin.trackedPlayers.Values)
+                            {
+                                actor.ClearLine();
+                            }
+                        }
+                        if (ImGui.IsItemHovered())
+                        {
+                            ImGui.SetTooltip("Clear Racing Lines");
+                        }
                     }
                 }
 
-                if (ImGui.IsItemHovered())
-                {
-                    ImGui.SetTooltip("Clear Racing Lines");
-                }
+                //ImGui.Spacing();
             }
 
             if (Plugin.FontManager.FontPushed && !Plugin.FontManager.FontReady)
@@ -87,17 +106,17 @@ namespace Racingway.Windows
 
                 Plugin.FontManager.PushFont();
 
-                ImDrawListPtr drawList = ImGui.GetWindowDrawList();
-
-                uint color = Plugin.Configuration.TimerColor.ToByteColor().RGBA;
-
-                // Fancy way of drawing behind text
-                drawList.ChannelsSplit(2);
                 drawList.ChannelsSetCurrent(1);
                 ImGui.TextUnformatted(timerText);
 
                 drawList.ChannelsSetCurrent(0);
-                drawList.AddRectFilled(ImGui.GetItemRectMin() - ImGui.GetStyle().FramePadding * 2, ImGui.GetItemRectMax() + ImGui.GetStyle().FramePadding * 2, color);
+
+                if (start == Vector2.Zero)
+                {
+                    start = ImGui.GetItemRectMin();
+                }
+
+                drawList.AddRectFilled(start - ImGui.GetStyle().FramePadding * 2, ImGui.GetItemRectMax() + ImGui.GetStyle().FramePadding * 2, color);
                 Vector2 lastpos = ImGui.GetItemRectMax() + ImGui.GetStyle().FramePadding * 2;
 
                 Plugin.FontManager.PopFont();
@@ -128,8 +147,9 @@ namespace Racingway.Windows
                     lastpos = ImGui.GetItemRectMax() + ImGui.GetStyle().FramePadding * 2;
                 }
 
-                drawList.ChannelsMerge();
             }
+
+            drawList.ChannelsMerge();
         }
     }
 }
