@@ -91,15 +91,18 @@ namespace Racingway.Windows
 
                 uint color = Plugin.Configuration.TimerColor.ToByteColor().RGBA;
 
+                // Fancy way of drawing behind text
                 drawList.ChannelsSplit(2);
                 drawList.ChannelsSetCurrent(1);
                 ImGui.TextUnformatted(timerText);
 
                 drawList.ChannelsSetCurrent(0);
                 drawList.AddRectFilled(ImGui.GetItemRectMin() - ImGui.GetStyle().FramePadding * 2, ImGui.GetItemRectMax() + ImGui.GetStyle().FramePadding * 2, color);
+                Vector2 lastpos = ImGui.GetItemRectMax() + ImGui.GetStyle().FramePadding * 2;
 
                 Plugin.FontManager.PopFont();
 
+                // Display the latest splits
                 foreach (var split in splits)
                 {
                     drawList.ChannelsSetCurrent(1);
@@ -117,7 +120,12 @@ namespace Racingway.Windows
                     ImGui.TextColored(splitCol, pretty);
 
                     drawList.ChannelsSetCurrent(0);
-                    drawList.AddRectFilled(ImGui.GetItemRectMin() - ImGui.GetStyle().FramePadding * 2, ImGui.GetItemRectMax() + ImGui.GetStyle().FramePadding * 2, color);
+
+                    // Avoid clipping
+                    Vector2 startRect = new Vector2(ImGui.GetItemRectMin().X - ImGui.GetStyle().FramePadding.X * 2, MathF.Max(ImGui.GetItemRectMin().Y - ImGui.GetStyle().FramePadding.Y * 2, lastpos.Y));
+
+                    drawList.AddRectFilled(startRect, ImGui.GetItemRectMax() + ImGui.GetStyle().FramePadding * 2, color);
+                    lastpos = ImGui.GetItemRectMax() + ImGui.GetStyle().FramePadding * 2;
                 }
 
                 drawList.ChannelsMerge();
