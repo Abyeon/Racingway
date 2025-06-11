@@ -14,6 +14,7 @@ using Dalamud.Interface.Windowing;
 using Dalamud.Utility;
 using Dalamud.Utility.Numerics;
 using ImGuiNET;
+using Lumina.Extensions;
 using Racingway.Race;
 using Racingway.Utils;
 using static System.Net.Mime.MediaTypeNames;
@@ -75,7 +76,7 @@ namespace Racingway.Windows
 
                         start = ImGui.GetItemRectMin();
 
-                        ImGui.SameLine(0);
+                        ImGui.SameLine();
 
                         // Clear racing lines button
                         if (ImGuiComponents.IconButton("##clearLines", FontAwesomeIcon.Trash))
@@ -88,6 +89,18 @@ namespace Racingway.Windows
                         if (ImGui.IsItemHovered())
                         {
                             ImGui.SetTooltip("Clear Racing Lines");
+                        }
+
+                        ImGui.SameLine();
+
+                        // Leave race button
+                        if (ImGuiComponents.IconButton(FontAwesomeIcon.ArrowRightFromBracket))
+                        {
+                            Plugin.KickClientFromParkour();
+                        }
+                        if (ImGui.IsItemHovered())
+                        {
+                            ImGui.SetTooltip("Quit parkour");
                         }
                     }
                 }
@@ -106,6 +119,7 @@ namespace Racingway.Windows
 
                 Plugin.FontManager.PushFont();
 
+                // Add text
                 drawList.ChannelsSetCurrent(1);
                 ImGui.TextUnformatted(timerText);
 
@@ -116,6 +130,7 @@ namespace Racingway.Windows
                     start = ImGui.GetItemRectMin();
                 }
 
+                // Add the background color
                 drawList.AddRectFilled(start - ImGui.GetStyle().FramePadding * 2, ImGui.GetItemRectMax() + ImGui.GetStyle().FramePadding * 2, color);
                 Vector2 lastpos = ImGui.GetItemRectMax() + ImGui.GetStyle().FramePadding * 2;
 
@@ -128,21 +143,23 @@ namespace Racingway.Windows
 
                     StringBuilder sb = new StringBuilder();
 
+                    // Set color of text (green = faster split, red = slower)
                     Vector4 splitCol = ImGuiColors.DalamudRed;
                     if (split < 0)
                         splitCol = ImGuiColors.HealerGreen;
 
+                    // Add the time
                     sb.Append(Time.PrettyFormatTimeSpanSigned(TimeSpan.FromMilliseconds(split)));
 
-                    string pretty = sb.ToString();
-
-                    ImGui.TextColored(splitCol, pretty);
+                    // Display the split
+                    ImGui.TextColored(splitCol, sb.ToString());
 
                     drawList.ChannelsSetCurrent(0);
 
                     // Avoid clipping
                     Vector2 startRect = new Vector2(ImGui.GetItemRectMin().X - ImGui.GetStyle().FramePadding.X * 2, MathF.Max(ImGui.GetItemRectMin().Y - ImGui.GetStyle().FramePadding.Y * 2, lastpos.Y));
 
+                    // Add background to split
                     drawList.AddRectFilled(startRect, ImGui.GetItemRectMax() + ImGui.GetStyle().FramePadding * 2, color);
                     lastpos = ImGui.GetItemRectMax() + ImGui.GetStyle().FramePadding * 2;
                 }

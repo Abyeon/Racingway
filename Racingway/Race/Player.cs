@@ -46,6 +46,8 @@ namespace Racingway.Race
         public Stopwatch timer = new Stopwatch();
         public int lastSeen;
 
+        public int lapsFinished = 0;
+
         public bool inParkour = false;
         public bool isGrounded = true;
         public bool inMount = false;

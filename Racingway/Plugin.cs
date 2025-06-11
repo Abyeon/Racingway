@@ -130,7 +130,10 @@ public sealed class Plugin : IDalamudPlugin
 
         CommandManager.AddHandler(
             CommandName,
-            new CommandInfo(OnCommand) { HelpMessage = "Open the main UI" }
+            new CommandInfo(OnCommand) {
+                HelpMessage = "Open the main UI\n" +
+                "/race quit → Quit current race"
+            }
         );
 
 
@@ -422,8 +425,7 @@ public sealed class Plugin : IDalamudPlugin
             // Kick everyone from parkour when you change zones
             foreach (var player in trackedPlayers)
             {
-                player.Value.inParkour = false;
-                player.Value.ClearLine();
+                KickFromParkour(player.Value);
             }
 
             if (LoadedRoutes.Count() > 0 && Configuration.AnnounceLoadedRoutes)
@@ -440,6 +442,33 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         SubscribeToRouteEvents();
+    }
+
+    public void KickFromParkour(Player player)
+    {
+        player.inParkour = false;
+        player.timer.Reset();
+        player.currentSplits.Clear();
+        player.lapsFinished = 0;
+        player.ClearLine();
+
+        foreach (var route in LoadedRoutes)
+        {
+            route.PlayersInParkour.RemoveAll(x => x.Item1 == player);
+        }
+    }
+
+    public void KickClientFromParkour()
+    {
+        foreach (Player player in trackedPlayers.Values)
+        {
+            if (player.isClient && player.inParkour)
+            {
+                KickFromParkour(player);
+                HideTimer();
+                LocalTimer.Reset();
+            }
+        }
     }
 
     public void SubscribeToRouteEvents()
@@ -488,8 +517,6 @@ public sealed class Plugin : IDalamudPlugin
         if (Configuration.LogStart)
             PayloadedChat(e, $" just started {route.Name}");
     }
-
-    private readonly Lock _splitLock = new();
 
     private void QueueSplit(Player player, long difference)
     {
@@ -602,6 +629,8 @@ public sealed class Plugin : IDalamudPlugin
             LocalTimer.Reset();
             HideTimer();
 
+            KickFromParkour(e);
+
             route.ClientFails++;
 
             // Store reference to route ID to avoid potential race conditions
@@ -711,7 +740,7 @@ public sealed class Plugin : IDalamudPlugin
         });
     }
 
-    public void PayloadedChat(Player player, string message)
+    public static void PayloadedChat(Player player, string message)
     {
         PlayerPayload payload = new PlayerPayload(
             player.Name,
@@ -764,8 +793,14 @@ public sealed class Plugin : IDalamudPlugin
     private void OnCommand(string command, string args)
     {
         // in response to the slash command, just toggle the display status of our main ui
-
-        ToggleMainUI();
+        if (args.ToLower().Trim().Contains("quit"))
+        {
+            KickClientFromParkour();
+        }
+        else
+        {
+            ToggleMainUI();
+        }
     }
 
     private void DrawUI() => WindowSystem.Draw();

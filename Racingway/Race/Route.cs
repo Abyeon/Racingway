@@ -21,16 +21,19 @@ namespace Racingway.Race
     /// </summary>
     public class Route
     {
-        [BsonId]
-        public ObjectId Id { get; set; }
+        // Metadata
+        [BsonId] public ObjectId Id { get; set; }
         public string Name { get; set; }
         public Address Address { get; set; }
         public string Description { get; set; }
+
+        // Behavior
         public bool AllowMounts { get; set; }
         public bool RequireGroundedStart { get; set; }
         public bool RequireGroundedCheckpoint { get; set; }
         public bool RequireAllCheckpoints { get; set; }
         public bool RequireGroundedFinish { get; set; }
+        public int Laps { get; set; }
         public bool Enabled { get; set; }
         public List<ITrigger> Triggers { get; set; }
         public List<Record> Records { get; set; }
@@ -52,6 +55,7 @@ namespace Racingway.Race
 
         [BsonIgnore] public List<(Player, Stopwatch)> PlayersInParkour = new();
 
+        // Events
         [BsonIgnore] public event EventHandler<Player>? OnStarted;
         [BsonIgnore] public event EventHandler<Player>? OnCheckpoint;
         [BsonIgnore] public event EventHandler<(Player, Record)>? OnFinished;
@@ -74,6 +78,8 @@ namespace Racingway.Race
             this.RequireGroundedFinish = true;
 
             this.RequireAllCheckpoints = true;
+
+            this.Laps = 1;
 
             this.Enabled = enabled;
             this.ClientFails = clientFails;
@@ -124,6 +130,8 @@ namespace Racingway.Race
             doc["requireAllCheckpoints"] = RequireAllCheckpoints;
             doc["requireGroundedFinish"] = RequireGroundedFinish;
 
+            doc["laps"] = Laps;
+
             doc["clientFails"] = ClientFails;
             doc["clientFinishes"] = ClientFinishes;
 
@@ -173,6 +181,8 @@ namespace Racingway.Race
             doc["requireGroundedCheckpoint"] = RequireGroundedCheckpoint;
             doc["requireAllCheckpoints"] = RequireAllCheckpoints;
             doc["requireGroundedFinish"] = RequireGroundedFinish;
+
+            doc["laps"] = Laps;
 
             doc["clientFails"] = 0;
             doc["clientFinishes"] = 0;
