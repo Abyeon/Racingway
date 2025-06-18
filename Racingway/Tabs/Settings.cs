@@ -219,16 +219,16 @@ namespace Racingway.Tabs
             SectionSeparator("Line Style");
             #region Line Style
 
-            int quality = Plugin.Configuration.LineQuality;
-            if (ImGui.DragInt("Line Quality", ref quality, 0.05f, 1, 50))
-            {
-                Plugin.Configuration.LineQuality = quality;
-                Plugin.Configuration.Save();
-            }
+            //int quality = Plugin.Configuration.LineQuality;
+            //if (ImGui.DragInt("Line Quality", ref quality, 0.05f, 1, 50))
+            //{
+            //    Plugin.Configuration.LineQuality = quality;
+            //    Plugin.Configuration.Save();
+            //}
 
-            ImGuiComponents.HelpMarker(
-                "How many frames between line points. 1 line quality = 1 point per frame."
-            );
+            //ImGuiComponents.HelpMarker(
+            //    "How many frames between line points. 1 line quality = 1 point per frame."
+            //);
 
             // Combo box for selecting the desired line style
             using (var child = ImRaii.Combo("Line Style", Plugin.Configuration.LineStyle))
