@@ -39,6 +39,8 @@ namespace Racingway.Windows
         }
 
         public List<long> splits = new List<long>();
+        public int currentLap = 1;
+        public int maxLap = 1;
 
         public void Dispose() { }
 
@@ -132,9 +134,42 @@ namespace Racingway.Windows
 
                 Plugin.FontManager.PopFont();
 
-                // Display the latest splits
-                foreach (var split in splits)
+                if (maxLap > 1)
                 {
+                    Vector2 afterTimer = ImGui.GetCursorPos();
+                    ImGui.SameLine();
+                    Vector2 beforeLap = ImGui.GetCursorPos();
+
+                    // Calculate text location and set position
+                    Vector2 placement = new Vector2(
+                        beforeLap.X - ImGui.CalcTextSize("0 / 3").X - ImGui.GetStyle().FramePadding.X * 2,
+                        afterTimer.Y
+                    );
+
+                    ImGui.SetCursorPos(placement);
+
+                    // Add lap info
+                    drawList.ChannelsSetCurrent(1);
+                    ImGui.TextUnformatted($"{currentLap} / {maxLap}");
+
+                    // Add background
+                    drawList.ChannelsSetCurrent(0);
+
+                    Vector2 lapRectMin = new Vector2(
+                        ImGui.GetItemRectMin().X - ImGui.GetStyle().FramePadding.X * 2,
+                        MathF.Max(ImGui.GetItemRectMin().Y - ImGui.GetStyle().FramePadding.Y * 2, lastpos.Y)
+                    );
+
+                    drawList.AddRectFilled(lapRectMin, ImGui.GetItemRectMax() + ImGui.GetStyle().FramePadding * 2, color);
+
+                    // Reset position
+                    ImGui.SetCursorPos(afterTimer);
+                }
+
+                // Display the latest splits
+                for (int i = 0; i < splits.Count; i++)
+                {
+                    var split = splits[i];
                     drawList.ChannelsSetCurrent(1);
 
                     StringBuilder sb = new StringBuilder();
@@ -153,10 +188,14 @@ namespace Racingway.Windows
                     drawList.ChannelsSetCurrent(0);
 
                     // Avoid clipping
-                    Vector2 startRect = new Vector2(ImGui.GetItemRectMin().X - ImGui.GetStyle().FramePadding.X * 2, MathF.Max(ImGui.GetItemRectMin().Y - ImGui.GetStyle().FramePadding.Y * 2, lastpos.Y));
+                    Vector2 startRect = new Vector2(
+                        ImGui.GetItemRectMin().X - ImGui.GetStyle().FramePadding.X * 2,
+                        MathF.Max(ImGui.GetItemRectMin().Y - ImGui.GetStyle().FramePadding.Y * 2, lastpos.Y)
+                    );
 
                     // Add background to split
                     drawList.AddRectFilled(startRect, ImGui.GetItemRectMax() + ImGui.GetStyle().FramePadding * 2, color);
+
                     lastpos = ImGui.GetItemRectMax() + ImGui.GetStyle().FramePadding * 2;
                 }
 

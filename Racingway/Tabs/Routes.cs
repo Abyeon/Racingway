@@ -181,13 +181,10 @@ namespace Racingway.Tabs
                 }
 
                 int laps = selectedRoute.Laps;
-                if (ImGui.InputInt("Required Laps", ref laps, 1, 2, ImGuiInputTextFlags.None))
+                if (ImGui.InputInt("Required Laps", ref laps, 1, 2, ImGuiInputTextFlags.None) && laps > 0)
                 {
-                    if (laps > 0)
-                    {
-                        selectedRoute.Laps = laps;
-                        updateRoute(selectedRoute);
-                    }
+                    selectedRoute.Laps = laps;
+                    updateRoute(selectedRoute);
                 }
 
                 ImGuiComponents.HelpMarker("Only applies if you have a Loop trigger as a start/finish.");
