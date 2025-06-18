@@ -55,7 +55,7 @@ public class Configuration : IPluginConfiguration
     public bool LogFinish { get; set; } = true;
 
     // Line Style
-    public int LineQuality { get; set; } = 10;
+    //public int LineQuality { get; set; } = 10;
     public string LineStyle { get; set; } = "Line";
     public float DotSize { get; set; } = 3.0f;
     public float LineThickness { get; set; } = 2.0f;
