@@ -80,10 +80,15 @@ namespace Racingway.Race.Collision.Triggers
                 {
                     int totalCheckpoints = Route.Triggers.Where(x => x is Checkpoint).Count();
                     int hitCheckpoints = player.currentSplits.Count - (player.lapsFinished * totalCheckpoints);
+
+                    // Player failed
                     if (hitCheckpoints != totalCheckpoints)
                     {
                         playerStarted[player.id] = false;
                         Route.Failed(player);
+                        player.timer.Reset();
+                        player.currentSplits.Clear();
+                        player.lapsFinished = 0;
                         player.ClearLine();
 
                         return;

@@ -56,6 +56,7 @@ public sealed class Plugin : IDalamudPlugin
     public List<Route> LoadedRoutes { get; set; } = new();
 
     public Record? DisplayedRecord { get; set; }
+    public Record? ClientBestRecord { get; set; }
     public ObjectId? SelectedRoute { get; set; }
     public ITrigger? SelectedTrigger { get; set; }
     public ITrigger? HoveredTrigger { get; set; }
@@ -505,12 +506,20 @@ public sealed class Plugin : IDalamudPlugin
 
         if (e.isClient)
         {
-            LocalTimer.Restart();
-
             // Display Timer
+            LocalTimer.Restart();
             if (Configuration.ShowWhenInParkour && !TimerWindow.IsOpen)
             {
                 TimerWindow.IsOpen = true;
+            }
+
+            // Get best time
+            List<Record> records = route.Records;
+            records.AsValueEnumerable().Where(x => x.IsClient).OrderBy(x => x.Time).ToArray();
+
+            if (records.Count > 0)
+            {
+                ClientBestRecord = records.First();
             }
         }
 
@@ -540,12 +549,12 @@ public sealed class Plugin : IDalamudPlugin
     {
         Route? route = sender as Route;
         if (route == null) return;
-        if (DisplayedRecord == null) return;
-        if (DisplayedRecord.Splits == null) return;
-        if (DisplayedRecord.Splits.Length == 0) return;
+        if (ClientBestRecord == null) return;
+        if (ClientBestRecord.Splits == null) return;
+        if (ClientBestRecord.Splits.Length == 0) return;
 
         long currSplit = e.currentSplits.Last().offset;
-        long specifiedSplit = DisplayedRecord.Splits[e.currentSplits.Count - 1];
+        long specifiedSplit = ClientBestRecord.Splits[e.currentSplits.Count - 1];
         long difference = currSplit - specifiedSplit;
 
         QueueSplit(e, difference);
@@ -566,10 +575,10 @@ public sealed class Plugin : IDalamudPlugin
         // Immediately handle UI updates and local player actions
         if (localPlayer != null && e.Item1.actor.EntityId == localPlayer.EntityId)
         {
-            if (DisplayedRecord != null && DisplayedRecord.Splits != null && DisplayedRecord.Splits.Length != 0)
+            if (ClientBestRecord != null && ClientBestRecord.Splits != null && ClientBestRecord.Splits.Length != 0)
             {
                 long currSplit = (long)e.Item2.Time.TotalMilliseconds;
-                long specifiedSplit = (long)DisplayedRecord.Time.TotalMilliseconds;
+                long specifiedSplit = (long)ClientBestRecord.Time.TotalMilliseconds;
                 long difference = currSplit - specifiedSplit;
                 QueueSplit(e.Item1, difference);
             }

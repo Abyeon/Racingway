@@ -326,6 +326,7 @@ namespace Racingway.Race
         public void Finished(Player player, Record record)
         {
             player.currentSplits.Clear();
+            player.lapsFinished = 0;
             FixLoopTriggers(player);
             OnFinished?.Invoke(this, (player, record));
         }
@@ -333,6 +334,7 @@ namespace Racingway.Race
         public void Failed(Player player)
         {
             player.currentSplits.Clear();
+            player.lapsFinished = 0;
             FixLoopTriggers(player);
             OnFailed?.Invoke(this, player);
         }
