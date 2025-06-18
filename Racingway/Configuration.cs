@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Reflection;
 using Dalamud.Configuration;
 using Dalamud.Interface.FontIdentifier;
 using Dalamud.Plugin;
@@ -35,10 +36,7 @@ public class Configuration : IPluginConfiguration
     // Timer Style
     public float TimerSize { get; set; } = 2f;
     public IFontSpec? TimerFont { get; set; } = null;
-    public Vector4 TimerColor { get; set; } = new Vector4(0, 0, 0, 0.75f);
-    public Vector4 NormalColor { get; set; } = new Vector4(1, 1, 1, 1);
-    public Vector4 FinishColor { get; set; } = new Vector4(0, 1, 1, 1);
-    public Vector4 FailColor { get; set; } = new Vector4(1, 0, 0, 1);
+    public Vector4 TimerColor { get; set; } = new Vector4(0, 0, 0, 0.235f);
 
     // Trigger Style
     public Vector4 ActivatedColor { get; set; } = new Vector4(0.479f, 1, 0.451f, 0.235f);

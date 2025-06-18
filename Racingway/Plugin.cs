@@ -629,8 +629,6 @@ public sealed class Plugin : IDalamudPlugin
             LocalTimer.Reset();
             HideTimer();
 
-            KickFromParkour(e);
-
             route.ClientFails++;
 
             // Store reference to route ID to avoid potential race conditions

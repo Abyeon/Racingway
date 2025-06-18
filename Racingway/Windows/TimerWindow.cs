@@ -36,7 +36,6 @@ namespace Racingway.Windows
                 | ImGuiWindowFlags.NoBackground;
 
             this.Plugin = Plugin;
-            //this.Size = Vector2.Zero;
         }
 
         public List<long> splits = new List<long>();
@@ -45,9 +44,6 @@ namespace Racingway.Windows
 
         public override void Draw()
         {
-            //ImGui.SetWindowFontScale(Plugin.Configuration.TimerSize);
-            //Vector2 startPos = ImGui.GetCursorPos();
-
             ImDrawListPtr drawList = ImGui.GetWindowDrawList();
 
             uint color = Plugin.Configuration.TimerColor.ToByteColor().RGBA;

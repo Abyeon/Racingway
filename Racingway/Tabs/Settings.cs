@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Reflection;
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
@@ -465,22 +466,20 @@ namespace Racingway.Tabs
 
         private void DisplayFontSelector()
         {
-            var chooser = SingleFontChooserDialog.CreateAuto(
-                (UiBuilder)Plugin.PluginInterface.UiBuilder
-            );
+            var chooser = SingleFontChooserDialog.CreateAuto((UiBuilder)Plugin.PluginInterface.UiBuilder);
+
             if (Plugin.Configuration.TimerFont is SingleFontSpec font)
             {
                 chooser.SelectedFont = font;
             }
+
             chooser.SelectedFontSpecChanged += Chooser_SelectedFontSpecChanged;
         }
 
         private void Chooser_SelectedFontSpecChanged(SingleFontSpec font)
         {
             Plugin.Configuration.TimerFont = font;
-            Plugin.FontManager.Handle = Plugin.Configuration.TimerFont.CreateFontHandle(
-                Plugin.PluginInterface.UiBuilder.FontAtlas
-            );
+            Plugin.FontManager.Handle = Plugin.Configuration.TimerFont.CreateFontHandle(Plugin.PluginInterface.UiBuilder.FontAtlas);
             Plugin.Configuration.Save();
         }
     }
