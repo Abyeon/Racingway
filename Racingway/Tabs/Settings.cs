@@ -288,7 +288,7 @@ namespace Racingway.Tabs
             }
 
             int maxLinePoints = Plugin.Configuration.MaxLinePoints;
-            if (ImGui.SliderInt("Max Line Points", ref maxLinePoints, 50, 2000))
+            if (ImGui.SliderInt("Max Line Points", ref maxLinePoints, 300, 2000))
             {
                 Plugin.Configuration.MaxLinePoints = maxLinePoints;
                 Plugin.Configuration.Save();
