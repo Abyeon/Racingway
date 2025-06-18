@@ -58,6 +58,7 @@ namespace Racingway.Race
         // Events
         [BsonIgnore] public event EventHandler<Player>? OnStarted;
         [BsonIgnore] public event EventHandler<Player>? OnCheckpoint;
+        [BsonIgnore] public event EventHandler<Player>? OnFinishedLap;
         [BsonIgnore] public event EventHandler<(Player, Record)>? OnFinished;
         [BsonIgnore] public event EventHandler<Player>? OnFailed;
 
@@ -321,6 +322,11 @@ namespace Racingway.Race
         public void HitCheckpoint(Player player)
         {
             OnCheckpoint?.Invoke(this, player);
+        }
+
+        public void FinishedLap(Player player)
+        {
+            OnFinishedLap?.Invoke(this, player);
         }
 
         public void Finished(Player player, Record record)

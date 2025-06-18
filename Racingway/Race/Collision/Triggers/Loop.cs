@@ -109,7 +109,8 @@ namespace Racingway.Race.Collision.Triggers
                                     player.currentSplits[i] = new TimedCheckpoint(null, player.currentSplits[i].offset);
                                 }
 
-                                Plugin.PayloadedChat(player, $" completed lap ({player.lapsFinished}/{Route.Laps}) in {player.timer}");
+                                Route.FinishedLap(player);
+
                                 return;
                             } else
                             {

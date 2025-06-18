@@ -478,10 +478,12 @@ public sealed class Plugin : IDalamudPlugin
         {
             route.OnStarted -= OnStart;
             route.OnCheckpoint -= OnCheckpoint;
+            route.OnFinishedLap -= OnFinishedLap;
             route.OnFinished -= OnFinish;
             route.OnFailed -= OnFailed;
             route.OnStarted += OnStart;
             route.OnCheckpoint += OnCheckpoint;
+            route.OnFinishedLap += OnFinishedLap;
             route.OnFinished += OnFinish;
             route.OnFailed += OnFailed;
         }
@@ -493,6 +495,7 @@ public sealed class Plugin : IDalamudPlugin
         {
             route.OnStarted -= OnStart;
             route.OnCheckpoint -= OnCheckpoint;
+            route.OnFinishedLap -= OnFinishedLap;
             route.OnFinished -= OnFinish;
             route.OnFailed -= OnFailed;
         }
@@ -521,6 +524,10 @@ public sealed class Plugin : IDalamudPlugin
             {
                 ClientBestRecord = records.First();
             }
+
+            // Get laps
+            TimerWindow.maxLap = route.Laps;
+            TimerWindow.currentLap = 1;
         }
 
         if (Configuration.LogStart)
@@ -560,6 +567,19 @@ public sealed class Plugin : IDalamudPlugin
         QueueSplit(e, difference);
     }
 
+    private void OnFinishedLap(object? sender, Player e)
+    {
+        Route? route = sender as Route;
+
+        if (e.isClient)
+        {
+            TimerWindow.currentLap = e.lapsFinished + 1;
+        }
+
+        if (Configuration.LogFinish && route != null)
+            PayloadedChat(e, $" completed lap ({e.lapsFinished}/{route.Laps}) in {e.timer}");
+    }
+
     // Triggered whenever a player finished any loaded route
     private void OnFinish(object? sender, (Player, Record) e)
     {
@@ -573,7 +593,7 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         // Immediately handle UI updates and local player actions
-        if (localPlayer != null && e.Item1.actor.EntityId == localPlayer.EntityId)
+        if (localPlayer != null && e.Item1.isClient)
         {
             if (ClientBestRecord != null && ClientBestRecord.Splits != null && ClientBestRecord.Splits.Length != 0)
             {
@@ -670,6 +690,9 @@ public sealed class Plugin : IDalamudPlugin
 
     private void HideTimer()
     {
+        TimerWindow.currentLap = 1;
+        TimerWindow.maxLap = 1;
+
         if (Configuration.DrawTimer)
             return;
         if (!Configuration.ShowWhenInParkour)
@@ -684,6 +707,8 @@ public sealed class Plugin : IDalamudPlugin
                 if (LocalTimer.IsRunning)
                     return; // Dont disable if we're back in parkour.
                 TimerWindow.IsOpen = false;
+                TimerWindow.currentLap = 1;
+                TimerWindow.maxLap = 1;
             });
     }
 
