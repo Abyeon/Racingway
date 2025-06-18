@@ -149,15 +149,14 @@ namespace Racingway.Tabs
             #region Timer Behavior
 
             bool showInParkour = Plugin.Configuration.ShowWhenInParkour;
-            if (ImGui.Checkbox("Display Timer When In Parkour", ref showInParkour))
+            if (ImGui.Checkbox("Display Timer When In Race", ref showInParkour))
             {
                 Plugin.Configuration.ShowWhenInParkour = showInParkour;
                 Plugin.Configuration.Save();
             }
 
             ImGuiComponents.HelpMarker(
-                "This will display the timer even if you have it toggled off.",
-                FontAwesomeIcon.ExclamationTriangle
+                "This will display the timer even if you have it toggled off. (When in race)"
             );
 
             int secondsShownAfter = Plugin.Configuration.SecondsShownAfter;
