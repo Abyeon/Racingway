@@ -50,6 +50,8 @@ namespace Racingway.Race.Collision.Triggers
             Route.Failed(player);
             player.inParkour = false;
             player.timer.Reset();
+            player.currentSplits.Clear();
+            player.lapsFinished = 0;
 
             player.ClearLine();
             Route.PlayersInParkour.RemoveAt(index);

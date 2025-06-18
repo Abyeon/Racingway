@@ -17,7 +17,7 @@ namespace Racingway.Tabs
 {
     public class Routes : ITab
     {
-        public string Name => "Routes";
+        public string Name => "Edit Routes";
 
         private Plugin Plugin { get; }
 
@@ -58,20 +58,12 @@ namespace Racingway.Tabs
                     foreach (Route route in Plugin.LoadedRoutes)
                     {
                         id++;
-                        if (
-                            ImGui.Selectable(
-                                $"{route.Name}##{id}",
-                                route.Id == Plugin.SelectedRoute
-                            )
-                        )
+                        if (ImGui.Selectable($"{route.Name}##{id}", route.Id == Plugin.SelectedRoute))
                         {
                             if (route.Id == Plugin.SelectedRoute)
                                 return;
+
                             Plugin.SelectedRoute = route.Id;
-                        }
-                        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-                        {
-                            ImGui.SetTooltip(route.Id.ToString());
                         }
                     }
                 }
@@ -187,6 +179,18 @@ namespace Racingway.Tabs
                     selectedRoute.RequireAllCheckpoints = requireAllCheckpoints;
                     updateRoute(selectedRoute);
                 }
+
+                int laps = selectedRoute.Laps;
+                if (ImGui.InputInt("Required Laps", ref laps, 1, 2, ImGuiInputTextFlags.None))
+                {
+                    if (laps > 0)
+                    {
+                        selectedRoute.Laps = laps;
+                        updateRoute(selectedRoute);
+                    }
+                }
+
+                ImGuiComponents.HelpMarker("Only applies if you have a Loop trigger as a start/finish.");
 
                 ImGui.Unindent();
             }

@@ -10,7 +10,7 @@ namespace Racingway.Race
 {
     public class TimedCheckpoint
     {
-        public Checkpoint checkpoint { get; set; }
+        public Checkpoint? checkpoint { get; set; }
         public long offset { get; set; }
 
         public TimedCheckpoint(Checkpoint checkpoint, long offset)

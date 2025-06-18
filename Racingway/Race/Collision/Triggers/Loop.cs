@@ -79,14 +79,44 @@ namespace Racingway.Race.Collision.Triggers
                 if (Route.RequireAllCheckpoints)
                 {
                     int totalCheckpoints = Route.Triggers.Where(x => x is Checkpoint).Count();
-                    int hitCheckpoints = player.currentSplits.Count;
+                    int hitCheckpoints = player.currentSplits.Count - (player.lapsFinished * totalCheckpoints);
+
+                    // Player failed
                     if (hitCheckpoints != totalCheckpoints)
                     {
                         playerStarted[player.id] = false;
                         Route.Failed(player);
+                        player.timer.Reset();
+                        player.currentSplits.Clear();
+                        player.lapsFinished = 0;
                         player.ClearLine();
 
                         return;
+                    } else
+                    {
+                        // Increment lap if necessary
+                        if (Route.Laps > 1)
+                        {
+                            player.lapsFinished++;
+                            
+                            // Dont process any more if the player needs to complete more laps
+                            if (player.lapsFinished != Route.Laps)
+                            {
+                                // Reset player's splits by removing reference to each checkpoint
+                                // This seems stupid, but logically it should work
+                                for (int i = 0; i < player.currentSplits.Count; i++)
+                                {
+                                    player.currentSplits[i] = new TimedCheckpoint(null, player.currentSplits[i].offset);
+                                }
+
+                                Plugin.PayloadedChat(player, $" completed lap ({player.lapsFinished}/{Route.Laps}) in {player.timer}");
+                                return;
+                            } else
+                            {
+                                // Reset player laps
+                                player.lapsFinished = 0;
+                            }
+                        }
                     }
                 }
 
@@ -129,6 +159,7 @@ namespace Racingway.Race.Collision.Triggers
                             splits.Add(player.currentSplits[i].offset);
                         }
 
+                        record.Splits = splits.ToArray();
                         record.IsClient = player.isClient;
 
                         Route.Finished(player, record);

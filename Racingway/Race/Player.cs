@@ -46,6 +46,8 @@ namespace Racingway.Race
         public Stopwatch timer = new Stopwatch();
         public int lastSeen;
 
+        public int lapsFinished = 0;
+
         public bool inParkour = false;
         public bool isGrounded = true;
         public bool inMount = false;
@@ -126,19 +128,26 @@ namespace Racingway.Race
         {
             this.position = pos;
 
-            delayRaceline++;
+            //delayRaceline++;
 
             if (inParkour && Plugin != null)
             {
-                if (delayRaceline >= Plugin.Configuration.LineQuality)
+                //if (delayRaceline >= Plugin.Configuration.LineQuality)
+                //{
+                //    // Only add points if we've moved a sufficient distance
+                //    if (lastAddedPosition == Vector3.Zero || Vector3.Distance(lastAddedPosition, this.position) >= MIN_DISTANCE_THRESHOLD)
+                //    {
+                //        AddPoint();
+                //        lastAddedPosition = this.position;
+                //    }
+                //    delayRaceline = 0;
+                //}
+
+                // Only add points if we've moved a sufficient distance
+                if (lastAddedPosition == Vector3.Zero || Vector3.Distance(lastAddedPosition, this.position) >= MIN_DISTANCE_THRESHOLD)
                 {
-                    // Only add points if we've moved a sufficient distance
-                    if (lastAddedPosition == Vector3.Zero || Vector3.Distance(lastAddedPosition, this.position) >= MIN_DISTANCE_THRESHOLD)
-                    {
-                        AddPoint();
-                        lastAddedPosition = this.position;
-                    }
-                    delayRaceline = 0;
+                    AddPoint();
+                    lastAddedPosition = this.position;
                 }
             }
 

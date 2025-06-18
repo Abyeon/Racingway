@@ -145,6 +145,11 @@ namespace Racingway.Utils.Storage
                                 newRoute.RequireAllCheckpoints = bson["requireAllCheckpoints"];
                         }
 
+                        if (bson.AsDocument.ContainsKey("laps"))
+                        {
+                            newRoute.Laps = bson["laps"];
+                        }
+
                         // Load route cleanup settings if they exist
                         if (bson.AsDocument.ContainsKey("autoCleanupEnabled"))
                         {

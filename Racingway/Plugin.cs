@@ -56,6 +56,7 @@ public sealed class Plugin : IDalamudPlugin
     public List<Route> LoadedRoutes { get; set; } = new();
 
     public Record? DisplayedRecord { get; set; }
+    public Record? ClientBestRecord { get; set; }
     public ObjectId? SelectedRoute { get; set; }
     public ITrigger? SelectedTrigger { get; set; }
     public ITrigger? HoveredTrigger { get; set; }
@@ -130,7 +131,10 @@ public sealed class Plugin : IDalamudPlugin
 
         CommandManager.AddHandler(
             CommandName,
-            new CommandInfo(OnCommand) { HelpMessage = "Open the main UI" }
+            new CommandInfo(OnCommand) {
+                HelpMessage = "Open the main UI\n" +
+                "/race quit → Quit current race"
+            }
         );
 
 
@@ -422,8 +426,7 @@ public sealed class Plugin : IDalamudPlugin
             // Kick everyone from parkour when you change zones
             foreach (var player in trackedPlayers)
             {
-                player.Value.inParkour = false;
-                player.Value.ClearLine();
+                KickFromParkour(player.Value);
             }
 
             if (LoadedRoutes.Count() > 0 && Configuration.AnnounceLoadedRoutes)
@@ -440,6 +443,33 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         SubscribeToRouteEvents();
+    }
+
+    public void KickFromParkour(Player player)
+    {
+        player.inParkour = false;
+        player.timer.Reset();
+        player.currentSplits.Clear();
+        player.lapsFinished = 0;
+        player.ClearLine();
+
+        foreach (var route in LoadedRoutes)
+        {
+            route.PlayersInParkour.RemoveAll(x => x.Item1 == player);
+        }
+    }
+
+    public void KickClientFromParkour()
+    {
+        foreach (Player player in trackedPlayers.Values)
+        {
+            if (player.isClient && player.inParkour)
+            {
+                KickFromParkour(player);
+                HideTimer();
+                LocalTimer.Reset();
+            }
+        }
     }
 
     public void SubscribeToRouteEvents()
@@ -476,20 +506,26 @@ public sealed class Plugin : IDalamudPlugin
 
         if (e.isClient)
         {
-            LocalTimer.Restart();
-
             // Display Timer
+            LocalTimer.Restart();
             if (Configuration.ShowWhenInParkour && !TimerWindow.IsOpen)
             {
                 TimerWindow.IsOpen = true;
+            }
+
+            // Get best time
+            List<Record> records = route.Records;
+            records.AsValueEnumerable().Where(x => x.IsClient).OrderBy(x => x.Time).ToArray();
+
+            if (records.Count > 0)
+            {
+                ClientBestRecord = records.First();
             }
         }
 
         if (Configuration.LogStart)
             PayloadedChat(e, $" just started {route.Name}");
     }
-
-    private readonly Lock _splitLock = new();
 
     private void QueueSplit(Player player, long difference)
     {
@@ -513,12 +549,12 @@ public sealed class Plugin : IDalamudPlugin
     {
         Route? route = sender as Route;
         if (route == null) return;
-        if (DisplayedRecord == null) return;
-        if (DisplayedRecord.Splits == null) return;
-        if (DisplayedRecord.Splits.Length == 0) return;
+        if (ClientBestRecord == null) return;
+        if (ClientBestRecord.Splits == null) return;
+        if (ClientBestRecord.Splits.Length == 0) return;
 
         long currSplit = e.currentSplits.Last().offset;
-        long specifiedSplit = DisplayedRecord.Splits[e.currentSplits.Count - 1];
+        long specifiedSplit = ClientBestRecord.Splits[e.currentSplits.Count - 1];
         long difference = currSplit - specifiedSplit;
 
         QueueSplit(e, difference);
@@ -539,10 +575,10 @@ public sealed class Plugin : IDalamudPlugin
         // Immediately handle UI updates and local player actions
         if (localPlayer != null && e.Item1.actor.EntityId == localPlayer.EntityId)
         {
-            if (DisplayedRecord != null && DisplayedRecord.Splits != null && DisplayedRecord.Splits.Length != 0)
+            if (ClientBestRecord != null && ClientBestRecord.Splits != null && ClientBestRecord.Splits.Length != 0)
             {
                 long currSplit = (long)e.Item2.Time.TotalMilliseconds;
-                long specifiedSplit = (long)DisplayedRecord.Time.TotalMilliseconds;
+                long specifiedSplit = (long)ClientBestRecord.Time.TotalMilliseconds;
                 long difference = currSplit - specifiedSplit;
                 QueueSplit(e.Item1, difference);
             }
@@ -711,7 +747,7 @@ public sealed class Plugin : IDalamudPlugin
         });
     }
 
-    public void PayloadedChat(Player player, string message)
+    public static void PayloadedChat(Player player, string message)
     {
         PlayerPayload payload = new PlayerPayload(
             player.Name,
@@ -764,8 +800,14 @@ public sealed class Plugin : IDalamudPlugin
     private void OnCommand(string command, string args)
     {
         // in response to the slash command, just toggle the display status of our main ui
-
-        ToggleMainUI();
+        if (args.ToLower().Trim().Contains("quit"))
+        {
+            KickClientFromParkour();
+        }
+        else
+        {
+            ToggleMainUI();
+        }
     }
 
     private void DrawUI() => WindowSystem.Draw();
