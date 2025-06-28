@@ -11,7 +11,6 @@ using Dalamud.Interface.ImGuiFontChooserDialog;
 using Dalamud.Interface.Utility.Raii;
 using ImGuiNET;
 using Racingway.Race.LineStyles;
-using Racingway.Windows;
 
 namespace Racingway.Tabs
 {
