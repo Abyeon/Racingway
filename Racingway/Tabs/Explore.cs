@@ -4,7 +4,7 @@ using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Utility.Numerics;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using LiteDB;
 using Lumina.Extensions;
 using Racingway.Race;
@@ -25,14 +25,19 @@ namespace Racingway.Tabs
 
         private Plugin Plugin { get; set; }
 
-        private ImGuiTextFilterPtr filter;
+        // Text filters are now handled differently in new bindings
+        private string filterText = string.Empty;
 
-        public unsafe Explore (Plugin plugin)
+        public Explore (Plugin plugin)
         {
             this.Plugin = plugin;
+        }
 
-            var filterPtr = ImGuiNative.ImGuiTextFilter_ImGuiTextFilter(null);
-            filter = new ImGuiTextFilterPtr(filterPtr);
+        private bool PassFilter(string text, string filter)
+        {
+            if (string.IsNullOrEmpty(filter))
+                return true;
+            return text.Contains(filter, StringComparison.OrdinalIgnoreCase);
         }
 
         public void Dispose()
@@ -114,7 +119,7 @@ namespace Racingway.Tabs
                     //    ShareHelper.ImportPackedRecord(Plugin);
                     //}
 
-                    filter.Draw("Filter");
+                    ImGui.InputTextWithHint("##Filter", "Filter", ref filterText, 256);
 
                     List<Route> routes = new List<Route>();
 
@@ -137,7 +142,7 @@ namespace Racingway.Tabs
                         for (int i = 0; i < routes.Count; i++)
                         {
                             Route route = routes[i];
-                            if (!filter.PassFilter(route.Name) && !filter.PassFilter(route.Address.ReadableName)) continue;
+                            if (!PassFilter(route.Name, filterText) && !PassFilter(route.Address.ReadableName, filterText)) continue;
 
                             ImGui.TableNextColumn();
                             var cursorPos = ImGui.GetCursorPos();
