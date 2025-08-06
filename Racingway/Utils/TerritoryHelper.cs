@@ -129,10 +129,9 @@ namespace Racingway.Utils
                 // This should be turned into good code at some point but.. This works for now :D
                 Plugin.polls.Add((() =>
                 {
-                    long id = GetHouseId();
-                    if (id != -1 && Plugin.ClientState.LocalPlayer != null)
+                    if (Plugin.ClientState.LocalPlayer != null)
                     {
-                        Address address = new Address(GetTerritoryId(), GetMapId(), id.ToString(), GetRoomAddress());
+                        Address address = new Address(GetTerritoryId(), GetMapId(), GetHouseId().ToString(), GetRoomAddress());
                         Plugin.AddressChanged(address);
 
                         return true;
@@ -242,7 +241,7 @@ namespace Racingway.Utils
             return Plugin.ClientState.TerritoryType;
         }
 
-        private unsafe long GetHouseId()
+        private unsafe ulong GetHouseId()
         {
             var manager = HousingManager.Instance();
             return manager->GetCurrentIndoorHouseId();

@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.FontIdentifier;
 using Dalamud.Interface.ImGuiFontChooserDialog;
 using Dalamud.Interface.Utility.Raii;
-using ImGuiNET;
 using Racingway.Race.LineStyles;
 
 namespace Racingway.Tabs
@@ -121,28 +121,6 @@ namespace Racingway.Tabs
             }
 
             #endregion
-
-            /* Commenting this out for now until I actually implement this feature
-            var normalColor = Plugin.Configuration.NormalColor;
-            if (ImGui.ColorEdit4("Normal Color", ref normalColor, ImGuiColorEditFlags.NoInputs))
-            {
-                Plugin.Configuration.NormalColor = normalColor;
-                Plugin.Configuration.Save();
-            }
-
-            var finishColor = Plugin.Configuration.FinishColor;
-            if (ImGui.ColorEdit4("Finish Color", ref finishColor, ImGuiColorEditFlags.NoInputs))
-            {
-                Plugin.Configuration.FinishColor = finishColor;
-                Plugin.Configuration.Save();
-            }
-
-            var failColor = Plugin.Configuration.FailColor;
-            if (ImGui.ColorEdit4("Fail Color", ref failColor, ImGuiColorEditFlags.NoInputs))
-            {
-                Plugin.Configuration.FailColor = failColor;
-                Plugin.Configuration.Save();
-            }*/
 
             SectionSeparator("Timer Behavior");
             #region Timer Behavior

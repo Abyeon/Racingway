@@ -1,10 +1,10 @@
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Utility.Numerics;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
-using ImGuiNET;
 using LiteDB;
 using Lumina.Extensions;
 using Racingway.Race;
@@ -31,7 +31,7 @@ namespace Racingway.Tabs
         {
             this.Plugin = plugin;
 
-            var filterPtr = ImGuiNative.ImGuiTextFilter_ImGuiTextFilter(null);
+            var filterPtr = ImGuiNative.ImGuiTextFilter(null);
             filter = new ImGuiTextFilterPtr(filterPtr);
         }
 
@@ -137,7 +137,7 @@ namespace Racingway.Tabs
                         for (int i = 0; i < routes.Count; i++)
                         {
                             Route route = routes[i];
-                            if (!filter.PassFilter(route.Name) && !filter.PassFilter(route.Address.ReadableName)) continue;
+                            //if (!filter.PassFilter(route.Name) && !filter.PassFilter(route.Address.ReadableName)) continue;
 
                             ImGui.TableNextColumn();
                             var cursorPos = ImGui.GetCursorPos();

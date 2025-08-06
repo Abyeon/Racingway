@@ -1,17 +1,9 @@
 using FFXIVClientStructs.FFXIV.Client.Graphics.Scene;
 using CameraManager = FFXIVClientStructs.FFXIV.Client.Game.Control.CameraManager;
-using ImGuiNET;
-using ImGuizmoNET;
 using Racingway.Race.Collision;
-using Racingway.Race.Collision.Triggers;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
-using System.Runtime.CompilerServices;
-using ImPlotNET;
+using Dalamud.Bindings.ImGui;
+using Dalamud.Bindings.ImGuizmo;
 
 namespace Racingway.Utils
 {
@@ -61,14 +53,15 @@ namespace Racingway.Utils
 
             Vector3 snap = Vector3.One * snapDistance;
 
-            OPERATION op = OPERATION.TRANSLATE;
+            ImGuizmoOperation op = ImGuizmoOperation.Translate;
 
             if (Io.KeyCtrl)
             {
-                op = OPERATION.SCALE;
+                op = ImGuizmoOperation.Scale;
             }
 
-            Manipulate(ref view.M11, ref proj.M11, op, MODE.LOCAL, ref matrix.M11, ref snap.X);
+            ImGuizmo.Manipulate(ref view.M11, ref proj.M11, op, ImGuizmoMode.Local, ref matrix.M11, ref snap.X);
+            //Manipulate(ref view.M11, ref proj.M11, op, ImGuizmoMode.Local, ref matrix.M11, ref snap.X);
 
             if (ImGuizmo.IsUsing())
             {
@@ -80,33 +73,33 @@ namespace Racingway.Utils
             }
         }
 
-        // Dont know why snapping doesnt work without this, but thanks BDTH for figuring that out for me.
-        private unsafe bool Manipulate(ref float view, ref float proj, OPERATION op, MODE mode, ref float matrix, ref float snap)
-        {
-            fixed (float* native_view = &view)
-            {
-                fixed (float* native_proj = &proj)
-                {
-                    fixed (float* native_matrix = &matrix)
-                    {
-                        fixed (float* native_snap = &snap)
-                        {
-                            return ImGuizmoNative.ImGuizmo_Manipulate(
-                                native_view,
-                                native_proj,
-                                op,
-                                mode,
-                                native_matrix,
-                                null,
-                                native_snap,
-                                null,
-                                null
-                            ) != 0;
-                        }
-                    }
-                }
-            }
-        }
+        //// Dont know why snapping doesnt work without this, but thanks BDTH for figuring that out for me.
+        //private unsafe bool Manipulate(ref float view, ref float proj, ImGuizmoOperation op, ImGuizmoMode mode, ref float matrix, ref float snap)
+        //{
+        //    fixed (float* native_view = &view)
+        //    {
+        //        fixed (float* native_proj = &proj)
+        //        {
+        //            fixed (float* native_matrix = &matrix)
+        //            {
+        //                fixed (float* native_snap = &snap)
+        //                {
+        //                    return ImGuizmoNative.ImGuizmo_Manipulate(
+        //                        native_view,
+        //                        native_proj,
+        //                        op,
+        //                        mode,
+        //                        native_matrix,
+        //                        null,
+        //                        native_snap,
+        //                        null,
+        //                        null
+        //                    ) != 0;
+        //                }
+        //            }
+        //        }
+        //    }
+        //}
 
         public void DrawTextWithBackground(string text, uint color)
         {

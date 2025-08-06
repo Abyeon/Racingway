@@ -71,9 +71,9 @@ public class Configuration : IPluginConfiguration
     /// List of github repos to pull routelist jsons from. Similar to how Dalamud does third party repos.
     /// Intended for users to be able to subscribe to different housing community lists for automatically updated routes
     /// </summary>
-    //public string[] RouteList { get; set; } = [
-    //    "https://raw.githubusercontent.com/Abyeon/RacingwayRoutes/main/routes.json"
-    //];
+    public string[] RouteList { get; set; } = [
+        "https://raw.githubusercontent.com/Abyeon/RacingwayRoutes/main/routes.json"
+    ];
 
     public void Save()
     {

@@ -1,23 +1,15 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
 using System.Text;
-using System.Threading.Tasks;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
-using Dalamud.Interface.Style;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
-using Dalamud.Utility;
 using Dalamud.Utility.Numerics;
-using ImGuiNET;
-using Lumina.Extensions;
-using Racingway.Race;
 using Racingway.Utils;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Racingway.Windows
 {
