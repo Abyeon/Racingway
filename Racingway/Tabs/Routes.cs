@@ -6,7 +6,7 @@ using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using LiteDB;
 using Racingway.Race;
 using Racingway.Race.Collision.Triggers;
@@ -181,7 +181,7 @@ namespace Racingway.Tabs
                 }
 
                 int laps = selectedRoute.Laps;
-                if (ImGui.InputInt("Required Laps", ref laps, 1, 2, ImGuiInputTextFlags.None) && laps > 0)
+                if (ImGui.InputInt("Required Laps", ref laps, 1, 2) && laps > 0)
                 {
                     selectedRoute.Laps = laps;
                     updateRoute(selectedRoute);
@@ -585,7 +585,8 @@ namespace Racingway.Tabs
                         id++;
 
                         ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0, 0, 0, 0));
-                        if (ImGui.ArrowButton($"arrowUp##{id}", ImGuiDir.Up))
+                        // Use triangle instead of ArrowButton
+                        if (ImGui.Button($"▲##arrowUp{id}"))
                         {
                             ITrigger currTrigger = selectedRoute.Triggers[i];
                             selectedRoute.Triggers.RemoveAt(i);
@@ -621,7 +622,8 @@ namespace Racingway.Tabs
                         id++;
 
                         ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0, 0, 0, 0));
-                        if (ImGui.ArrowButton($"arrowDown##{id}", ImGuiDir.Down))
+                        // Use triangle instead of ArrowButton
+                        if (ImGui.Button($"▼##arrowDown{id}"))
                         {
                             ITrigger currTrigger = selectedRoute.Triggers[i];
                             selectedRoute.Triggers.RemoveAt(i);

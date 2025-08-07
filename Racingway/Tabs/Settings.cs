@@ -9,7 +9,7 @@ using Dalamud.Interface.Components;
 using Dalamud.Interface.FontIdentifier;
 using Dalamud.Interface.ImGuiFontChooserDialog;
 using Dalamud.Interface.Utility.Raii;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using Racingway.Race.LineStyles;
 
 namespace Racingway.Tabs

@@ -245,7 +245,9 @@ namespace Racingway.Utils
         private unsafe long GetHouseId()
         {
             var manager = HousingManager.Instance();
-            return manager->GetCurrentIndoorHouseId();
+            var houseId = manager->GetCurrentIndoorHouseId();
+            // Convert HouseId struct to long (cast from ulong)
+            return (long)houseId.Id;
         }
 
         private unsafe short GetRoomId()

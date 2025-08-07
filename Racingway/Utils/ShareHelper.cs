@@ -1,4 +1,4 @@
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using LiteDB;
 using MessagePack;
 using MessagePack.Resolvers;
