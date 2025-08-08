@@ -2,13 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using System.Text;
 using System.Threading.Tasks;
-using Dalamud.Game.ClientState.Objects.SubKinds;
 using LiteDB;
-using MessagePack;
-using Newtonsoft.Json;
-using Racingway.Utils;
 
 namespace Racingway.Race.Collision.Triggers
 {

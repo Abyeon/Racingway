@@ -2,14 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Game.Command;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
-using Dalamud.Interface.ManagedFontAtlas;
 using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
 using Dalamud.Plugin;
@@ -32,7 +30,6 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IObjectTable ObjectTable { get; private set; } = null!;
     [PluginService] internal static IPluginLog Log { get; private set; } = null!;
     [PluginService] internal static IFramework Framework { get; private set; } = null!;
-    // [PluginService] internal static IGameNetwork GameNetwork { get; private set; } = null!; // Obsolete - will be removed in future release
     [PluginService] internal static IClientState ClientState { get; private set; } = null!;
     [PluginService] internal static IChatGui ChatGui { get; private set; } = null!;
     [PluginService] internal static IGameGui GameGui { get; private set; } = null!;
@@ -307,8 +304,8 @@ public sealed class Plugin : IDalamudPlugin
                 if (Configuration.TrackOthers)
                 {
                     // Check for people
-                    ICharacter[] players = GetPlayers(ObjectTable);
-                    foreach (var player in players)
+                    //ICharacter[] players = GetPlayers(ObjectTable);
+                    foreach (var player in (IEnumerable<ICharacter>)ObjectTable.PlayerObjects)
                     {
                         uint id = player.EntityId;
 
@@ -784,12 +781,12 @@ public sealed class Plugin : IDalamudPlugin
         Plugin.ChatGui.Print(chat);
     }
 
-    public ICharacter[] GetPlayers(IEnumerable<IGameObject> gameObjects)
-    {
-        IGameObject[] objects = gameObjects.AsValueEnumerable().Where(obj => obj is IPlayerCharacter).ToArray();
-        ICharacter[] players = objects.Cast<ICharacter>().ToArray();
-        return players;
-    }
+    //public ICharacter[] GetPlayers(IEnumerable<IGameObject> gameObjects)
+    //{
+    //    IGameObject[] objects = gameObjects.AsValueEnumerable().Where(obj => obj is IPlayerCharacter).ToArray();
+    //    ICharacter[] players = objects.Cast<ICharacter>().ToArray();
+    //    return players;
+    //}
 
     public IPlayerCharacter GetPlayer(IEnumerable<IGameObject> gameObjects, uint actorId)
     {

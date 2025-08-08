@@ -1,8 +1,5 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
-using System.Reflection;
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
@@ -106,12 +103,13 @@ namespace Racingway.Tabs
                 DisplayFontSelector();
             }
 
-            var size = Plugin.Configuration.TimerSize;
-            if (ImGui.DragFloat("Font Size", ref size, 0.01f, 1f, 20f))
-            {
-                Plugin.Configuration.TimerSize = size;
-                Plugin.Configuration.Save();
-            }
+            // Disabling since it's no longer used
+            //var size = Plugin.Configuration.TimerSize;
+            //if (ImGui.DragFloat("Font Size", ref size, 0.01f, 1f, 20f))
+            //{
+            //    Plugin.Configuration.TimerSize = size;
+            //    Plugin.Configuration.Save();
+            //}
 
             var bgColor = Plugin.Configuration.TimerColor;
             if (ImGui.ColorEdit4("Background Color", ref bgColor, ImGuiColorEditFlags.NoInputs))

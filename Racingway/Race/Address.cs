@@ -1,14 +1,4 @@
-using FFXIVClientStructs.FFXIV.Client.System.String;
 using LiteDB;
-using Racingway.Race.Collision.Triggers;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static Dalamud.Interface.Utility.Raii.ImRaii;
-using System.Xml.Linq;
-using Racingway.Utils;
 using MessagePack;
 
 namespace Racingway.Race

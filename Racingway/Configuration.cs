@@ -1,14 +1,7 @@
 using System;
-using System.Collections.Generic;
 using System.Numerics;
-using System.Reflection;
 using Dalamud.Configuration;
 using Dalamud.Interface.FontIdentifier;
-using Dalamud.Plugin;
-using Racingway.Race;
-using Racingway.Race.Collision;
-using Racingway.Race.Collision.Triggers;
-using Racingway.Tabs;
 
 namespace Racingway;
 
@@ -34,7 +27,7 @@ public class Configuration : IPluginConfiguration
     public bool AddMapMarkers { get; set; } = true;
 
     // Timer Style
-    public float TimerSize { get; set; } = 2f;
+    //public float TimerSize { get; set; } = 2f; -- no longer used
     public IFontSpec? TimerFont { get; set; } = null;
     public Vector4 TimerColor { get; set; } = new Vector4(0, 0, 0, 0.235f);
 

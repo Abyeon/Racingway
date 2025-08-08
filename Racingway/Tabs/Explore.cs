@@ -1,12 +1,7 @@
 using Dalamud.Interface.Colors;
-using Dalamud.Interface.Components;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
-using Dalamud.Utility.Numerics;
-using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using Dalamud.Bindings.ImGui;
 using LiteDB;
-using Lumina.Extensions;
 using Racingway.Race;
 using Racingway.Race.Collision.Triggers;
 using Racingway.Utils;
@@ -14,8 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Racingway.Tabs
 {

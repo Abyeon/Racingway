@@ -4,12 +4,7 @@ using Dalamud.Interface.Utility.Raii;
 using Dalamud.Utility;
 using Dalamud.Bindings.ImGui;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Racingway.Tabs
 {

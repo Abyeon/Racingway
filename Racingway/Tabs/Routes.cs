@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using Dalamud.Interface;
-using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Bindings.ImGui;
@@ -11,7 +10,6 @@ using LiteDB;
 using Racingway.Race;
 using Racingway.Race.Collision.Triggers;
 using Racingway.Utils;
-using static Dalamud.Interface.Utility.Raii.ImRaii;
 
 namespace Racingway.Tabs
 {

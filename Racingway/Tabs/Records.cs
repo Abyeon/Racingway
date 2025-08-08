@@ -3,17 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Text;
-using System.Threading.Tasks;
 using Dalamud.Interface;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
-using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using Dalamud.Bindings.ImGui;
 using LiteDB;
 using Racingway.Race;
 using Racingway.Utils;
 using ZLinq;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Racingway.Tabs
 {

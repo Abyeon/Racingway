@@ -3,15 +3,7 @@ using CameraManager = FFXIVClientStructs.FFXIV.Client.Game.Control.CameraManager
 using Dalamud.Bindings.ImGui;
 using Dalamud.Bindings.ImGuizmo;
 using Racingway.Race.Collision;
-using Racingway.Race.Collision.Triggers;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
-using System.Runtime.CompilerServices;
-// using ImPlotNET; // Not needed in this file
 
 namespace Racingway.Utils
 {

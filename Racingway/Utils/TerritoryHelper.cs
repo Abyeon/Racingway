@@ -1,21 +1,12 @@
-using Dalamud.Game.Text.SeStringHandling;
-using Dalamud.Interface.FontIdentifier;
-using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
-using FFXIVClientStructs.FFXIV.Client.System.String;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
-using Lumina.Excel.Sheets;
 using Racingway.Race;
 using Racingway.Utils.Structs;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Numerics;
 using System.Text;
-using System.Threading.Tasks;
-using static Dalamud.Interface.Utility.Raii.ImRaii;
 
 using Sheet = Lumina.Excel.Sheets;
 

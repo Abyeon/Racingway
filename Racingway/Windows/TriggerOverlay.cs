@@ -2,21 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
-using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Windowing;
 using Dalamud.Utility.Numerics;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Bindings.ImGuizmo;
 using LiteDB;
 using Racingway.Race;
 using Racingway.Race.Collision.Triggers;
 using Racingway.Race.LineStyles;
-using Racingway.Tabs;
 using Racingway.Utils;
-using Serilog;
 using ZLinq;
 
 namespace Racingway.Windows
