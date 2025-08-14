@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Numerics;
@@ -179,19 +180,19 @@ namespace Racingway.Utils.Storage
                             string type = trigger["Type"];
                             var cube = new Cube(
                                 new Vector3(
-                                    float.Parse(cubeArray[0]),
-                                    float.Parse(cubeArray[1]),
-                                    float.Parse(cubeArray[2])
+                                    float.Parse(cubeArray[0], CultureInfo.InvariantCulture),
+                                    float.Parse(cubeArray[1], CultureInfo.InvariantCulture),
+                                    float.Parse(cubeArray[2], CultureInfo.InvariantCulture)
                                 ),
                                 new Vector3(
-                                    float.Parse(cubeArray[3]),
-                                    float.Parse(cubeArray[4]),
-                                    float.Parse(cubeArray[5])
+                                    float.Parse(cubeArray[3], CultureInfo.InvariantCulture),
+                                    float.Parse(cubeArray[4], CultureInfo.InvariantCulture),
+                                    float.Parse(cubeArray[5], CultureInfo.InvariantCulture)
                                 ),
                                 new Vector3(
-                                    float.Parse(cubeArray[6]),
-                                    float.Parse(cubeArray[7]),
-                                    float.Parse(cubeArray[8])
+                                    float.Parse(cubeArray[6], CultureInfo.InvariantCulture),
+                                    float.Parse(cubeArray[7], CultureInfo.InvariantCulture),
+                                    float.Parse(cubeArray[8], CultureInfo.InvariantCulture)
                                 )
                             );
 
@@ -369,13 +370,13 @@ namespace Racingway.Utils.Storage
                     BsonValue bson = JsonSerializer.Deserialize(Json);
                     Route route = BsonMapper.Global.Deserialize<Route>(bson);
 
-                    // If the route is somehow null, lets log the JSON.
+                    // If the route is somehow null, let's log the JSON.
                     if (route == null)
                     {
-                        Plugin.Log.Warning(
+                        Plugin.Log.Error(
                             "Imported route was null, printing the uncompressed Base64... "
                         );
-                        Plugin.Log.Warning(Json);
+                        Plugin.Log.Error(Json);
                         throw new NullReferenceException("Route is null. Check /xllog.");
                     }
 
