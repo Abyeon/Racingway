@@ -771,14 +771,24 @@ public sealed class Plugin : IDalamudPlugin
 
     public static void PayloadedChat(Player player, string message)
     {
-        PlayerPayload payload = new PlayerPayload(
-            player.Name,
-            player.HomeworldRow
-        );
-        TextPayload text = new TextPayload(message);
-        SeString chat = new SeString(new Payload[] { payload, text });
+        Framework.RunOnFrameworkThread(() =>
+        {
+            // Never print the local player as a player payload...
+            if (ClientState.LocalPlayer != null && player.id == ClientState.LocalPlayer.EntityId)
+            {
+                ChatGui.Print(player.Name + message);
+                return;
+            }
+        
+            PlayerPayload payload = new PlayerPayload(
+                player.Name,
+                player.HomeworldRow
+            );
+            TextPayload text = new TextPayload(message);
+            SeString chat = new SeString(new Payload[] { payload, text });
 
-        Plugin.ChatGui.Print(chat);
+            Plugin.ChatGui.Print(chat);
+        });
     }
 
     //public ICharacter[] GetPlayers(IEnumerable<IGameObject> gameObjects)
