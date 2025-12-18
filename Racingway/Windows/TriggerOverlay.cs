@@ -81,7 +81,7 @@ namespace Racingway.Windows
         public override unsafe void Draw()
         {
             // Fast return if player is null
-            if (Plugin.ClientState.LocalPlayer == null) return;
+            if (Plugin.ObjectTable.LocalPlayer == null) return;
 
             ImGuiHelpers.SetWindowPosRelativeMainViewport("Trigger Overlay", new Vector2(0, 0));
 
@@ -102,7 +102,7 @@ namespace Racingway.Windows
                         if (!Plugin.TriggerToggles[trigger.GetType()]) continue;
 
                         // Skip if the distance is too high
-                        if (Vector3.Distance(trigger.Cube.Position, Plugin.ClientState.LocalPlayer.Position) > Plugin.Configuration.RenderDistance)
+                        if (Vector3.Distance(trigger.Cube.Position, Plugin.ObjectTable.LocalPlayer.Position) > Plugin.Configuration.RenderDistance)
                             continue;
 
                         try

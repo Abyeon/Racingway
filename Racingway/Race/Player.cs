@@ -65,7 +65,7 @@ namespace Racingway.Race
                 this.Name = playerCharacter.Name.ToString();
                 this.Homeworld = playerCharacter.HomeWorld.Value.Name.ToString();
                 this.HomeworldRow = playerCharacter.HomeWorld.Value.RowId;
-                this.isClient = playerCharacter.Equals(Plugin.ClientState.LocalPlayer);
+                this.isClient = playerCharacter.Equals(Plugin.ObjectTable.LocalPlayer);
             }
 
             Plugin = plugin;

@@ -226,10 +226,10 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnFrameworkTick(IFramework framework)
     {
-        if (!ClientState.IsLoggedIn || ClientState.IsPvP || ClientState.LocalPlayer == null || Storage == null)
+        if (!ClientState.IsLoggedIn || ClientState.IsPvP || ObjectTable.LocalPlayer == null || Storage == null)
             return;
 
-        localPlayer = ClientState.LocalPlayer;
+        localPlayer = ObjectTable.LocalPlayer;
 
         // Check if it's time to run auto-cleanup
         if (DateTime.Now - lastAutoCleanupTime > autoCleanupInterval)
@@ -774,7 +774,7 @@ public sealed class Plugin : IDalamudPlugin
         Framework.RunOnFrameworkThread(() =>
         {
             // Never print the local player as a player payload...
-            if (ClientState.LocalPlayer != null && player.id == ClientState.LocalPlayer.EntityId)
+            if (ObjectTable.LocalPlayer != null && player.id == ObjectTable.LocalPlayer.EntityId)
             {
                 ChatGui.Print(player.Name + message);
                 return;

@@ -38,14 +38,14 @@ namespace Racingway.Tabs
                 return;
             }
 
-            if (Plugin.ClientState.LocalPlayer == null)
+            if (Plugin.ObjectTable.LocalPlayer == null)
             {
                 ImGui.TextUnformatted("Player is currently null!");
                 return;
             }
 
-            if (Plugin.ClientState.LocalPlayer != null)
-                ImGui.Text($"Current position: {Plugin.ClientState.LocalPlayer.Position.ToString()}");
+            if (Plugin.ObjectTable.LocalPlayer != null)
+                ImGui.Text($"Current position: {Plugin.ObjectTable.LocalPlayer.Position.ToString()}");
 
             int id = 0;
 
@@ -405,7 +405,7 @@ namespace Racingway.Tabs
                     // We set the trigger position slightly below the player due to SE position jank.
                     Checkpoint newTrigger = new Checkpoint(
                         selectedRoute,
-                        Plugin.ClientState.LocalPlayer.Position - new Vector3(0, 0.1f, 0),
+                        Plugin.ObjectTable.LocalPlayer!.Position - new Vector3(0, 0.1f, 0),
                         Vector3.One,
                         Vector3.Zero
                     );
@@ -475,7 +475,7 @@ namespace Racingway.Tabs
                     {
                         // We set the trigger position slightly below the player due to SE position jank.
                         selectedRoute.Triggers[i].Cube.Position =
-                            Plugin.ClientState.LocalPlayer.Position - new Vector3(0, 0.1f, 0);
+                            Plugin.ObjectTable.LocalPlayer!.Position - new Vector3(0, 0.1f, 0);
                         Plugin.ChatGui.Print($"[RACE] Trigger position set to {trigger.Cube.Position}");
 
                         updateRoute(selectedRoute);

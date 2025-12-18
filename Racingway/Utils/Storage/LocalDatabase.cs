@@ -180,19 +180,19 @@ namespace Racingway.Utils.Storage
                             string type = trigger["Type"];
                             var cube = new Cube(
                                 new Vector3(
-                                    float.Parse(cubeArray[0], CultureInfo.InvariantCulture),
-                                    float.Parse(cubeArray[1], CultureInfo.InvariantCulture),
-                                    float.Parse(cubeArray[2], CultureInfo.InvariantCulture)
+                                    float.Parse((string)cubeArray[0], CultureInfo.InvariantCulture),
+                                    float.Parse((string)cubeArray[1], CultureInfo.InvariantCulture),
+                                    float.Parse((string)cubeArray[2], CultureInfo.InvariantCulture)
                                 ),
                                 new Vector3(
-                                    float.Parse(cubeArray[3], CultureInfo.InvariantCulture),
-                                    float.Parse(cubeArray[4], CultureInfo.InvariantCulture),
-                                    float.Parse(cubeArray[5], CultureInfo.InvariantCulture)
+                                    float.Parse((string)cubeArray[3], CultureInfo.InvariantCulture),
+                                    float.Parse((string)cubeArray[4], CultureInfo.InvariantCulture),
+                                    float.Parse((string)cubeArray[5], CultureInfo.InvariantCulture)
                                 ),
                                 new Vector3(
-                                    float.Parse(cubeArray[6], CultureInfo.InvariantCulture),
-                                    float.Parse(cubeArray[7], CultureInfo.InvariantCulture),
-                                    float.Parse(cubeArray[8], CultureInfo.InvariantCulture)
+                                    float.Parse((string)cubeArray[6], CultureInfo.InvariantCulture),
+                                    float.Parse((string)cubeArray[7], CultureInfo.InvariantCulture),
+                                    float.Parse((string)cubeArray[8], CultureInfo.InvariantCulture)
                                 )
                             );
 

@@ -1,27 +1,24 @@
 {
   "version": 1,
   "dependencies": {
-    "net9.0-windows7.0": {
+    "net10.0-windows7.0": {
       "DalamudPackager": {
         "type": "Direct",
-        "requested": "[13.0.0, )",
-        "resolved": "13.0.0",
-        "contentHash": "Mb3cUDSK/vDPQ8gQIeuCw03EMYrej1B4J44a1AvIJ9C759p9XeqdU9Hg4WgOmlnlPe0G7ILTD32PKSUpkQNa8w=="
+        "requested": "[14.0.0, )",
+        "resolved": "14.0.0",
+        "contentHash": "9c1q/eAeAs82mkQWBOaCvbt3GIQxAIadz5b/7pCXDIy9nHPtnRc+tDXEvKR+M36Wvi7n+qBTevRupkLUQp6DFA=="
       },
       "DotNet.ReproducibleBuilds": {
         "type": "Direct",
-        "requested": "[1.2.25, )",
-        "resolved": "1.2.25",
-        "contentHash": "xCXiw7BCxHJ8pF6wPepRUddlh2dlQlbr81gXA72hdk4FLHkKXas7EH/n+fk5UCA/YfMqG1Z6XaPiUjDbUNBUzg=="
+        "requested": "[1.2.39, )",
+        "resolved": "1.2.39",
+        "contentHash": "fcFN01tDTIQqDuTwr1jUQK/geofiwjG5DycJQOnC72i1SsLAk1ELe+apBOuZ11UMQG8YKFZG1FgvjZPbqHyatg=="
       },
       "LiteDB": {
         "type": "Direct",
-        "requested": "[5.0.21, )",
-        "resolved": "5.0.21",
-        "contentHash": "ykJ7ffFl7P9YQKR/PLci6zupiLrsSCNkOTiw6OtzntH7d2kCYp5L1+3a/pksKgTEHcJBoPXFtg7VZSGVBseN9w==",
-        "dependencies": {
-          "System.Buffers": "4.5.1"
-        }
+        "requested": "[6.0.0-prerelease.73, )",
+        "resolved": "6.0.0-prerelease.73",
+        "contentHash": "fW41gyC2vZSPMZJ0HjwvGHjxr5UQvnZqwv+XM5dde9EOokLX3ryGqGfo4bzgjYgrSfnF8UXqkWgtCowoXngRwQ=="
       },
       "MessagePack": {
         "type": "Direct",
@@ -36,9 +33,9 @@
       },
       "ZLinq": {
         "type": "Direct",
-        "requested": "[1.5.2, )",
-        "resolved": "1.5.2",
-        "contentHash": "Zd/afYvmwHMzAWFhK9XAEW9BN4iqXswuWUNsaVFPy4INnxZe/HdbC/DTMUkxmeG+8vPc/8VFVWnCvEYQcRwwmw=="
+        "requested": "[1.5.4, )",
+        "resolved": "1.5.4",
+        "contentHash": "Ogt0vjeHVPKJFOqcoEeHpBft4b1HD6CnOpeQSHWK2WPq0kMtietggm/2viwW44hdalf4F2mYeyWomDXMw9rv1g=="
       },
       "MessagePack.Annotations": {
         "type": "Transitive",
@@ -54,11 +51,6 @@
         "type": "Transitive",
         "resolved": "17.11.4",
         "contentHash": "mudqUHhNpeqIdJoUx2YDWZO/I9uEDYVowan89R6wsomfnUJQk6HteoQTlNjZDixhT2B4IXMkMtgZtoceIjLRmA=="
-      },
-      "System.Buffers": {
-        "type": "Transitive",
-        "resolved": "4.5.1",
-        "contentHash": "Rw7ijyl1qqRS0YQD/WycNst8hUUMgrMH4FCn1nNm27M4VxchZ1js3fVjQaANHO5f3sN4isvP4a+Met9Y4YomAg=="
       }
     }
   }

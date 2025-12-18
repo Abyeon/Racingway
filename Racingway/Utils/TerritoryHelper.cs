@@ -117,11 +117,11 @@ namespace Racingway.Utils
             if (isInside)
             {
                 // Funny way to wait for a value to change by polling
-                // This should be turned into good code at some point but.. This works for now :D
+                // This should be turned into good code at some point but... This works for now :D
                 Plugin.polls.Add((() =>
                 {
                     long id = GetHouseId();
-                    if (id != -1 && Plugin.ClientState.LocalPlayer != null)
+                    if (id != -1 && Plugin.ObjectTable.LocalPlayer != null)
                     {
                         Address address = new Address(GetTerritoryId(), GetMapId(), id.ToString(), GetRoomAddress());
                         Plugin.AddressChanged(address);
@@ -138,7 +138,7 @@ namespace Racingway.Utils
             {
                 Plugin.polls.Add((() =>
                 {
-                    if (Plugin.ClientState.LocalPlayer != null)
+                    if (Plugin.ObjectTable.LocalPlayer != null)
                     {
                         Address address = new Address(GetTerritoryId(), GetMapId(), territory.ToString(), GetAreaName());
                         Plugin.AddressChanged(address);
@@ -190,7 +190,7 @@ namespace Racingway.Utils
             var room = manager->GetCurrentRoom();
 
             StringBuilder sb = new StringBuilder();
-            sb.Append(Plugin.ClientState.LocalPlayer.CurrentWorld.Value.Name.ExtractText());
+            sb.Append(Plugin.ObjectTable.LocalPlayer!.CurrentWorld.Value.Name.ExtractText());
 
             sb.Append(" " + district);
             sb.Append($" w{ward+1}");
@@ -220,7 +220,7 @@ namespace Racingway.Utils
                 return Plugin.ClientState.TerritoryType;
             }
 
-            var character = Plugin.ClientState.LocalPlayer;
+            var character = Plugin.ObjectTable.LocalPlayer;
             if (character != null && manager->CurrentTerritory != null)
             {
                 var territoryType = manager->IndoorTerritory != null
