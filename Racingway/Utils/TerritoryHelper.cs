@@ -109,7 +109,7 @@ namespace Racingway.Utils
 
         public void GetLocationID()
         {
-            ushort territory = Plugin.ClientState.TerritoryType;
+            uint territory = Plugin.ClientState.TerritoryType;
             bool isInside = IsInside();
 
             Stopwatch timer = Stopwatch.StartNew();
@@ -180,9 +180,9 @@ namespace Racingway.Utils
 
             string district = string.Empty;
 
-            if (HousingDistricts.ContainsKey(rowId))
+            if (HousingDistricts.TryGetValue(rowId, out var housingDistrict))
             {
-                district = HousingDistricts[rowId];
+                district = housingDistrict;
             }
 
             var ward = manager->GetCurrentWard();

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project Sdk="Dalamud.NET.Sdk/14.0.1">
+<Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
-    <Version>0.1.1.5</Version>
+    <Version>0.1.1.6</Version>
     <Description>A speedrun timer intended for jump puzzle houses.</Description>
     <PackageProjectUrl>https://github.com/Abyeon/Racingway</PackageProjectUrl>
     <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
@@ -9,11 +9,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="LiteDB" Version="6.0.0-prerelease.73" />
+    <PackageReference Include="LiteDB" Version="6.0.0-prerelease.77" />
     <PackageReference Include="MessagePack" Version="3.1.4" />
-    <PackageReference Include="ZLinq" Version="1.5.4" />
-    <PackageReference Update="DalamudPackager" Version="14.0.1" />
-    <PackageReference Update="DotNet.ReproducibleBuilds" Version="1.2.39" />
+    <PackageReference Include="ZLinq" Version="1.5.6" />
+    <PackageReference Update="DotNet.ReproducibleBuilds" Version="2.0.2" />
   </ItemGroup>
 
   <ItemGroup>

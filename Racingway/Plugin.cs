@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Dalamud.Game.ClientState;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Game.Command;
@@ -138,7 +139,7 @@ public sealed class Plugin : IDalamudPlugin
         if (Storage != null)
         {
             Framework.Update += OnFrameworkTick;
-            ClientState.TerritoryChanged += OnTerritoryChange;
+            ClientState.ZoneInit += OnZoneInit;
             ClientState.Logout += OnLogout;
 
             PluginInterface.UiBuilder.Draw += DrawUI;
@@ -364,7 +365,7 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
-    private void OnTerritoryChange(ushort territory)
+    private void OnZoneInit(ZoneInitEventArgs args)
     {
         trackedPlayers.Clear();
 
@@ -821,6 +822,13 @@ public sealed class Plugin : IDalamudPlugin
         {
             Storage.Dispose();
         }
+        
+        Framework.Update -= OnFrameworkTick;
+        ClientState.ZoneInit -= OnZoneInit;
+        ClientState.Logout -= OnLogout;
+
+        PluginInterface.UiBuilder.Draw -= DrawUI;
+        PluginInterface.UiBuilder.OpenMainUi -= ToggleMainUI;
 
         Configuration.Save();
 

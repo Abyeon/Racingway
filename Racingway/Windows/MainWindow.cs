@@ -50,42 +50,31 @@ public class MainWindow : Window, IDisposable
 
     // Thanks to Asriel:
     //https://github.com/WorkingRobot/Waitingway/blob/5b97266c2f68f8a6f38d19e1d9a0337973254264/Waitingway/Windows/Settings.cs#L75
-    private ImRaii.IEndObject TabItem(string label)
+    private ImRaii.TabItemDisposable TabItem(string label)
     {
         var isSelected = string.Equals(SelectedTab, label, StringComparison.Ordinal);
         if (isSelected)
         {
             SelectedTab = null;
-            var open = true;
-            return ImRaii.TabItem(label, ref open, ImGuiTabItemFlags.SetSelected);
+            return ImRaii.TabItem(label, ImGuiTabItemFlags.SetSelected);
         }
         return ImRaii.TabItem(label);
     }
 
     public override void Draw()
     {
-        if (Plugin.ClientState == null) return;
-
-        using (var tabBar = ImRaii.TabBar("##race-tabs", ImGuiTabBarFlags.None))
+        using var tabBar = ImRaii.TabBar("##race-tabs", ImGuiTabBarFlags.None);
+        if (tabBar)
         {
-            if (tabBar)
+            foreach (var tab in Tabs)
             {
-                for (var i = 0; i < Tabs.Count; i++)
-                {
-                    var tab = Tabs[i];
+                using var child = TabItem(tab.Name);
+                if (!child.Success) continue;
 
-                    using (var child = TabItem(tab.Name))
-                    {
-                        if (!child.Success) continue;
-
-                        // Doing this so that if a tab requires a scrollbar, the tabbar stays on top.
-                        using (var tabChild = ImRaii.Child($"###{tab.Name}-child"))
-                        {
-                            if (!tabChild.Success) continue;
-                            tab.Draw();
-                        }
-                    }
-                }
+                // Doing this so that if a tab requires a scrollbar, the tabbar stays on top.
+                using var tabChild = ImRaii.Child($"###{tab.Name}-child");
+                if (!tabChild.Success) continue;
+                tab.Draw();
             }
         }
     }
