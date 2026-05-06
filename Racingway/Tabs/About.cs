@@ -40,10 +40,13 @@ namespace Racingway.Tabs
                     ImGui.TextWrapped(Plugin.PluginInterface.Manifest.Changelog.ToString());
                 }
 
-                string fileSize = Plugin.Storage.GetFileSizeString();
-                if (fileSize != string.Empty)
+                if (Plugin.Storage != null)
                 {
-                    ImGui.TextColored(ImGuiColors.DalamudGrey, $"Size on disk: {fileSize}");
+                    string fileSize = Plugin.Storage.GetFileSizeString();
+                    if (fileSize != string.Empty)
+                    {
+                        ImGui.TextColored(ImGuiColors.DalamudGrey, $"Size on disk: {fileSize}");
+                    }
                 }
 
                 ImGui.Dummy(new Vector2(0, 10));

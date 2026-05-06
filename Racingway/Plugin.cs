@@ -51,7 +51,7 @@ public sealed class Plugin : IDalamudPlugin
     public MainWindow MainWindow { get; init; }
     public TimerWindow TimerWindow { get; init; }
 
-    public List<Route> LoadedRoutes { get; set; }
+    public List<Route>? LoadedRoutes { get; set; }
 
     public Record? DisplayedRecord { get; set; }
     public Record? ClientBestRecord { get; set; }
@@ -200,7 +200,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public void CheckCollision(Player player)
     {
-        if (LoadedRoutes.Count == 0)
+        if (LoadedRoutes is { Count: 0 })
             return;
 
         // Disabling this for now
@@ -215,7 +215,7 @@ public sealed class Plugin : IDalamudPlugin
         // Ensure player state is updated
         player.UpdateState();
 
-        foreach (var route in LoadedRoutes)
+        foreach (var route in LoadedRoutes!)
         {
             // Run collision checks off-thread
             Task.Run(() =>
@@ -285,7 +285,7 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         // If we even have routes loaded, then we can track players
-        if (LoadedRoutes.Count > 0)
+        if (LoadedRoutes is { Count: > 0 })
         {
             try
             {
@@ -382,7 +382,7 @@ public sealed class Plugin : IDalamudPlugin
     private void OnLogout(int type, int code)
     {
         LocalTimer.Reset();
-        LoadedRoutes.Clear();
+        LoadedRoutes?.Clear();
     }
 
     // Triggered whenever TerritoryHelper learns the ID of the location we're at
@@ -396,7 +396,7 @@ public sealed class Plugin : IDalamudPlugin
 
         HideTimer();
         LocalTimer.Reset();
-        LoadedRoutes.Clear();
+        LoadedRoutes?.Clear();
 
         try
         {
@@ -446,6 +446,7 @@ public sealed class Plugin : IDalamudPlugin
         player.lapsFinished = 0;
         player.ClearLine();
 
+        if (LoadedRoutes == null) return;
         foreach (var route in LoadedRoutes)
         {
             route.PlayersInParkour.RemoveAll(x => x.Item1 == player);
@@ -467,6 +468,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public void SubscribeToRouteEvents()
     {
+        if (LoadedRoutes == null) return;
         foreach (var route in LoadedRoutes)
         {
             route.OnStarted -= OnStart;
@@ -484,6 +486,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public void UnsubscribeFromRouteEvents()
     {
+        if (LoadedRoutes == null) return;
         foreach (var route in LoadedRoutes)
         {
             route.OnStarted -= OnStart;
@@ -804,7 +807,7 @@ public sealed class Plugin : IDalamudPlugin
         WindowSystem.RemoveAllWindows();
 
         UnsubscribeFromRouteEvents();
-        LoadedRoutes.Clear();
+        LoadedRoutes?.Clear();
 
         LocalTimer.Stop();
         FontManager.Dispose();

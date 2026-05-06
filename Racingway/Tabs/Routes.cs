@@ -25,13 +25,15 @@ namespace Racingway.Tabs
         public Routes(Plugin plugin)
         {
             this.Plugin = plugin;
-            updateStartFinishBools();
+            UpdateStartFinishBools();
         }
 
         public void Dispose() { }
 
         public void Draw()
         {
+            if (Plugin.LoadedRoutes == null) return;
+            
             if (Plugin.CurrentAddress == null)
             {
                 ImGui.TextUnformatted("No address currently loaded!");
@@ -125,7 +127,7 @@ namespace Racingway.Tabs
                     return;
 
                 selectedRoute.Name = name;
-                updateRoute(selectedRoute);
+                UpdateRoute(selectedRoute);
             }
 
             string description = selectedRoute.Description;
@@ -135,7 +137,7 @@ namespace Racingway.Tabs
             )
             {
                 selectedRoute.Description = description;
-                updateRoute(selectedRoute);
+                UpdateRoute(selectedRoute);
             }
 
             if (selectedRoute != null && selectedRoute.Id != ObjectId.Empty &&
@@ -147,42 +149,42 @@ namespace Racingway.Tabs
                 if (ImGui.Checkbox("Allow Mounts", ref allowMounts))
                 {
                     selectedRoute.AllowMounts = allowMounts;
-                    updateRoute(selectedRoute);
+                    UpdateRoute(selectedRoute);
                 }
 
                 bool requireGroundedStart = selectedRoute.RequireGroundedStart;
                 if (ImGui.Checkbox("Start when not grounded", ref requireGroundedStart))
                 {
                     selectedRoute.RequireGroundedStart = requireGroundedStart;
-                    updateRoute(selectedRoute);
+                    UpdateRoute(selectedRoute);
                 }
 
                 bool requireGroundedCheckpoint = selectedRoute.RequireGroundedCheckpoint;
                 if (ImGui.Checkbox("Checkpoint when grounded", ref requireGroundedCheckpoint))
                 {
                     selectedRoute.RequireGroundedCheckpoint = requireGroundedCheckpoint;
-                    updateRoute(selectedRoute);
+                    UpdateRoute(selectedRoute);
                 }
 
                 bool requireGroundedFinish = selectedRoute.RequireGroundedFinish;
                 if (ImGui.Checkbox("Finish when grounded", ref requireGroundedFinish))
                 {
                     selectedRoute.RequireGroundedFinish = requireGroundedFinish;
-                    updateRoute(selectedRoute);
+                    UpdateRoute(selectedRoute);
                 }
 
                 bool requireAllCheckpoints = selectedRoute.RequireAllCheckpoints;
                 if (ImGui.Checkbox("Require all checkpoints", ref requireAllCheckpoints))
                 {
                     selectedRoute.RequireAllCheckpoints = requireAllCheckpoints;
-                    updateRoute(selectedRoute);
+                    UpdateRoute(selectedRoute);
                 }
 
                 int laps = selectedRoute.Laps;
                 if (ImGui.InputInt("Required Laps", ref laps, 1, 2) && laps > 0)
                 {
                     selectedRoute.Laps = laps;
-                    updateRoute(selectedRoute);
+                    UpdateRoute(selectedRoute);
                 }
 
                 ImGuiComponents.HelpMarker("Only applies if you have a Loop trigger as a start/finish.");
@@ -209,7 +211,7 @@ namespace Racingway.Tabs
                 if (ImGui.Checkbox("Enable Automatic Cleanup", ref autoCleanupEnabled))
                 {
                     selectedRoute.AutoCleanupEnabled = autoCleanupEnabled;
-                    updateRoute(selectedRoute);
+                    UpdateRoute(selectedRoute);
                 }
 
                 if (ImGui.IsItemHovered())
@@ -228,7 +230,7 @@ namespace Racingway.Tabs
                     if (ImGui.SliderInt("Maximum Records", ref maxRecordsToKeep, 10, 1000))
                     {
                         selectedRoute.MaxRecordsToKeep = maxRecordsToKeep;
-                        updateRoute(selectedRoute);
+                        UpdateRoute(selectedRoute);
                     }
 
                     if (ImGui.IsItemHovered())
@@ -241,7 +243,7 @@ namespace Racingway.Tabs
                     if (ImGui.SliderInt("Keep Top Records", ref keepTopNRecords, 1, 100))
                     {
                         selectedRoute.KeepTopNRecords = keepTopNRecords;
-                        updateRoute(selectedRoute);
+                        UpdateRoute(selectedRoute);
                     }
 
                     if (ImGui.IsItemHovered())
@@ -256,7 +258,7 @@ namespace Racingway.Tabs
                     if (ImGui.Checkbox("Keep Personal Best Times", ref keepPersonalBests))
                     {
                         selectedRoute.KeepPersonalBests = keepPersonalBests;
-                        updateRoute(selectedRoute);
+                        UpdateRoute(selectedRoute);
                     }
 
                     if (ImGui.IsItemHovered())
@@ -274,7 +276,7 @@ namespace Racingway.Tabs
                     if (ImGui.Checkbox("Delete Records Older Than", ref deleteOldRecordsEnabled))
                     {
                         selectedRoute.DeleteOldRecordsEnabled = deleteOldRecordsEnabled;
-                        updateRoute(selectedRoute);
+                        UpdateRoute(selectedRoute);
                     }
 
                     if (ImGui.IsItemHovered())
@@ -291,7 +293,7 @@ namespace Racingway.Tabs
                         if (ImGui.SliderInt("##DaysToKeep", ref maxDaysToKeep, 1, 365, "%d days"))
                         {
                             selectedRoute.MaxDaysToKeep = maxDaysToKeep;
-                            updateRoute(selectedRoute);
+                            UpdateRoute(selectedRoute);
                         }
                     }
 
@@ -300,7 +302,7 @@ namespace Racingway.Tabs
                     if (ImGui.Checkbox("Filter By Time Range", ref filterByTimeEnabled))
                     {
                         selectedRoute.FilterByTimeEnabled = filterByTimeEnabled;
-                        updateRoute(selectedRoute);
+                        UpdateRoute(selectedRoute);
                     }
 
                     if (ImGui.IsItemHovered())
@@ -327,7 +329,7 @@ namespace Racingway.Tabs
                         )
                         {
                             selectedRoute.MinTimeThreshold = minTimeThreshold;
-                            updateRoute(selectedRoute);
+                            UpdateRoute(selectedRoute);
                         }
 
                         if (ImGui.IsItemHovered())
@@ -350,7 +352,7 @@ namespace Racingway.Tabs
                         )
                         {
                             selectedRoute.MaxTimeThreshold = maxTimeThreshold;
-                            updateRoute(selectedRoute);
+                            UpdateRoute(selectedRoute);
                         }
 
                         if (ImGui.IsItemHovered())
@@ -369,7 +371,7 @@ namespace Racingway.Tabs
                     if (ImGui.Button("Run Cleanup Now"))
                     {
                         int removed = selectedRoute.ApplyCleanupRules();
-                        updateRoute(selectedRoute);
+                        UpdateRoute(selectedRoute);
                         Plugin.ChatGui.Print(
                             $"[RACE] Removed {removed} records from '{selectedRoute.Name}'"
                         );
@@ -410,7 +412,7 @@ namespace Racingway.Tabs
                         Vector3.Zero
                     );
                     selectedRoute.Triggers.Add(newTrigger);
-                    updateRoute(selectedRoute);
+                    UpdateRoute(selectedRoute);
                 }
 
                 if (Plugin.SelectedTrigger != null)
@@ -458,9 +460,9 @@ namespace Racingway.Tabs
                     {
                         if (ImGuiComponents.IconButton(id, FontAwesomeIcon.Eraser))
                         {
-                            updateStartFinishBools();
+                            UpdateStartFinishBools();
                             selectedRoute.Triggers.Remove(trigger);
-                            updateRoute(selectedRoute);
+                            UpdateRoute(selectedRoute);
                             continue;
                         }
                         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
@@ -478,7 +480,7 @@ namespace Racingway.Tabs
                             Plugin.ObjectTable.LocalPlayer!.Position - new Vector3(0, 0.1f, 0);
                         Plugin.ChatGui.Print($"[RACE] Trigger position set to {trigger.Cube.Position}");
 
-                        updateRoute(selectedRoute);
+                        UpdateRoute(selectedRoute);
                     }
                     if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
                     {
@@ -525,7 +527,7 @@ namespace Racingway.Tabs
                                 else
                                 {
                                     selectedRoute.Triggers[i] = new Start(trigger.Route, trigger.Cube);
-                                    updateRoute(selectedRoute);
+                                    UpdateRoute(selectedRoute);
                                 }
                             }
 
@@ -535,7 +537,7 @@ namespace Racingway.Tabs
 
                                 selectedRoute.Triggers[i] = new Checkpoint(trigger.Route, trigger.Cube);
                                 Plugin.SelectedTrigger = selectedRoute.Triggers[i];
-                                updateRoute(selectedRoute);
+                                UpdateRoute(selectedRoute);
                             }
 
                             if (ImGui.Selectable("Fail", trigger is Fail))
@@ -543,7 +545,7 @@ namespace Racingway.Tabs
                                 if (trigger is Fail) return;
                                 selectedRoute.Triggers[i] = new Fail(trigger.Route, trigger.Cube);
                                 Plugin.SelectedTrigger = selectedRoute.Triggers[i];
-                                updateRoute(selectedRoute);
+                                UpdateRoute(selectedRoute);
                             }
 
                             if (ImGui.Selectable("Finish", trigger is Finish))
@@ -552,7 +554,7 @@ namespace Racingway.Tabs
 
                                 selectedRoute.Triggers[i] = new Finish(trigger.Route, trigger.Cube);
                                 Plugin.SelectedTrigger = selectedRoute.Triggers[i];
-                                updateRoute(selectedRoute);
+                                UpdateRoute(selectedRoute);
                             }
 
                             if (ImGui.Selectable("Loop", trigger is Loop))
@@ -561,7 +563,7 @@ namespace Racingway.Tabs
 
                                 selectedRoute.Triggers[i] = new Loop(trigger.Route, trigger.Cube);
                                 Plugin.SelectedTrigger = selectedRoute.Triggers[i];
-                                updateRoute(selectedRoute);
+                                UpdateRoute(selectedRoute);
                             }
                         }
                     }
@@ -571,7 +573,7 @@ namespace Racingway.Tabs
                     if (ImGui.DragFloat3($"Position##{id}", ref position, 0.1f))
                     {
                         selectedRoute.Triggers[i].Cube.Position = position;
-                        updateRoute(selectedRoute);
+                        UpdateRoute(selectedRoute);
                     }
 
                     // Move trigger UP button
@@ -589,7 +591,7 @@ namespace Racingway.Tabs
                             ITrigger currTrigger = selectedRoute.Triggers[i];
                             selectedRoute.Triggers.RemoveAt(i);
                             selectedRoute.Triggers.Insert(i - 1, currTrigger);
-                            updateRoute(selectedRoute);
+                            UpdateRoute(selectedRoute);
                         }
                         ImGui.PopStyleColor();
                     }
@@ -600,7 +602,7 @@ namespace Racingway.Tabs
                     {
                         selectedRoute.Triggers[i].Cube.Scale = scale;
                         selectedRoute.Triggers[i].Cube.UpdateVerts();
-                        updateRoute(selectedRoute);
+                        UpdateRoute(selectedRoute);
                     }
 
                     id++;
@@ -608,7 +610,7 @@ namespace Racingway.Tabs
                     if (ImGui.DragFloat3($"Rotation##{id}", ref rotation, 0.1f))
                     {
                         selectedRoute.Triggers[i].Cube.Rotation = rotation;
-                        updateRoute(selectedRoute);
+                        UpdateRoute(selectedRoute);
                     }
 
                     // Move trigger DOWN button
@@ -626,7 +628,7 @@ namespace Racingway.Tabs
                             ITrigger currTrigger = selectedRoute.Triggers[i];
                             selectedRoute.Triggers.RemoveAt(i);
                             selectedRoute.Triggers.Insert(i + 1, currTrigger);
-                            updateRoute(selectedRoute);
+                            UpdateRoute(selectedRoute);
                         }
                         ImGui.PopStyleColor();
                     }
@@ -662,9 +664,9 @@ namespace Racingway.Tabs
             }
         }
 
-        private void updateRoute(Route route)
+        private void UpdateRoute(Route? route)
         {
-            if (route == null)
+            if (route == null || Plugin.LoadedRoutes == null)
                 return;
 
             int index = Plugin.LoadedRoutes.FindIndex(x => x.Id == Plugin.SelectedRoute);
@@ -685,20 +687,20 @@ namespace Racingway.Tabs
             Plugin.SelectedRoute = route.Id;
 
             Plugin.SubscribeToRouteEvents();
-            updateStartFinishBools();
+            UpdateStartFinishBools();
 
             Plugin.DataQueue.QueueDataOperation(async () =>
             {
-                await Plugin.Storage.AddRoute(route);
+                await Plugin.Storage?.AddRoute(route)!;
                 Plugin.Storage.UpdateRouteCache();
             });
         }
 
-        private void updateStartFinishBools()
+        private void UpdateStartFinishBools()
         {
             try
             {
-                if (Plugin.LoadedRoutes.Count == 0)
+                if (Plugin.LoadedRoutes == null || Plugin.LoadedRoutes.Count == 0)
                     return;
 
                 Route selectedRoute = Plugin.LoadedRoutes.First(x => x.Id == Plugin.SelectedRoute);

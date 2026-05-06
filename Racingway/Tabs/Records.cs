@@ -305,7 +305,7 @@ namespace Racingway.Tabs
 
         public void Draw()
         {
-            if (Plugin.Storage == null) return;
+            if (Plugin.Storage == null || Plugin.LoadedRoutes == null) return;
             if (Plugin.LoadedRoutes.Count == 0)
             {
                 ImGui.TextUnformatted("No routes loaded for this area.");

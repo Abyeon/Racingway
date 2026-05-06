@@ -17,8 +17,8 @@ namespace Racingway.Utils
         /// <param name="baseEpsilon">The base epsilon value for simplification tolerance</param>
         /// <param name="minPoints">Minimum number of points to retain in the simplified line</param>
         /// <returns>A simplified racing line with fewer points</returns>
-        public static TimedVector3[] SimplifyLine(
-            TimedVector3[] points,
+        public static TimedVector3[]? SimplifyLine(
+            TimedVector3[]? points,
             float baseEpsilon = 0.5f,
             int minPoints = 10
         )

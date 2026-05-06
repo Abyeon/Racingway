@@ -75,7 +75,7 @@ namespace Racingway.Race.Collision.Triggers
                 // Do not process if player hasnt hit all checkpoints
                 if (Route.RequireAllCheckpoints)
                 {
-                    int totalCheckpoints = Route.Triggers.Where(x => x is Checkpoint).Count();
+                    int totalCheckpoints = Route.Triggers.Count(x => x is Checkpoint);
                     int hitCheckpoints = player.currentSplits.Count - (player.lapsFinished * totalCheckpoints);
 
                     // Player failed

@@ -74,7 +74,7 @@ namespace Racingway.Race
                 var simplifiedLine = LineSimplification.SimplifyLine(originalLine);
 
                 // Update the line with simplified version
-                Line = simplifiedLine;
+                if (simplifiedLine != null) Line = simplifiedLine;
                 _lineSimplified = true;
             }
             catch (Exception ex)

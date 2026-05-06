@@ -60,7 +60,7 @@ namespace Racingway.Utils
 
             plugin.DataQueue.QueueDataOperation(async () =>
             {
-                await plugin.Storage.ImportRouteFromBase64(data);
+                if (plugin.Storage != null) await plugin.Storage.ImportRouteFromBase64(data);
             });
         }
 
@@ -142,7 +142,7 @@ namespace Racingway.Utils
             }
 
             // update route hash.. because old records probably have a broken hash.. oops!
-            record.RouteHash = plugin.Storage.RouteCache[plugin.SelectedRoute.ToString()].GetHash();
+            record.RouteHash = plugin.Storage?.RouteCache[plugin.SelectedRoute.ToString()].GetHash() ?? throw new InvalidOperationException("Route hash cannot be null");
 
             var doc = BsonMapper.Global.ToDocument(record);
             string json = JsonSerializer.Serialize(doc);
@@ -172,7 +172,7 @@ namespace Racingway.Utils
             {
                 try
                 {
-                    await plugin.Storage.ImportRecordFromBase64(data);
+                    await plugin.Storage?.ImportRecordFromBase64(data)!;
                 }
                 catch (Exception ex)
                 {
@@ -185,41 +185,40 @@ namespace Racingway.Utils
         /// Try to import routes from a given URL
         /// </summary>
         /// <param name="url"></param>
+        /// <param name="plugin"></param>
         public static async void ImportRoutesFromURL(string url, Plugin plugin)
         {
             if (plugin.Storage == null) return;
 
             try
             {
-                using (var httpClient = new HttpClient())
+                using var httpClient = new HttpClient();
+                var json = await httpClient.GetStringAsync(url);
+                JToken[] array = JArray.Parse(json).Children().ToArray();
+                List<Route> routes = new List<Route>();
+
+                foreach (var jsonRoute in array)
                 {
-                    var json = await httpClient.GetStringAsync(url);
-                    JToken[] array = JArray.Parse(json).Children().ToArray();
-                    List<Route> routes = new List<Route>();
-
-                    foreach (var jsonRoute in array)
+                    var name = (jsonRoute["name"] ?? throw new InvalidOperationException("Route name cannot be null")).Value<string>();
+                    if (name != null)
                     {
-                        string? name = jsonRoute["name"].Value<string>();
-                        if (name != null)
-                        {
-                            Plugin.Log.Debug(name);
-                        }
-
-                        BsonValue bson = JsonSerializer.Deserialize(jsonRoute.ToString());
-                        Route route = BsonMapper.Global.Deserialize<Route>(bson);
-
-                        // If the route is null, lets log the JSON.
-                        if (route == null)
-                        {
-                            throw new NullReferenceException("Route is null.");
-                        } else
-                        {
-                            routes.Add(route);
-                        }
+                        Plugin.Log.Debug(name);
                     }
 
-                    plugin.AddRoutes(routes);
+                    BsonValue bson = JsonSerializer.Deserialize(jsonRoute.ToString());
+                    Route route = BsonMapper.Global.Deserialize<Route>(bson);
+
+                    // If the route is null, lets log the JSON.
+                    if (route == null)
+                    {
+                        throw new NullReferenceException("Route is null.");
+                    } else
+                    {
+                        routes.Add(route);
+                    }
                 }
+
+                plugin.AddRoutes(routes);
             } catch (Exception ex)
             {
                 Plugin.Log.Error(ex.ToString());

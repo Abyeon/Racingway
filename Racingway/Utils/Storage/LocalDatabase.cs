@@ -224,7 +224,7 @@ internal class LocalDatabase : IDisposable
                     Plugin.Log.Error(e.ToString());
                 }
 
-                return null;
+                return null!;
             }
         );
     }

@@ -415,6 +415,7 @@ namespace Racingway.Tabs
 #if DEBUG
             if (ImGui.Button("Debug Print Database"))
             {
+                if (Plugin.Storage == null) return;
                 var routes = Plugin.Storage.GetRoutes().Query().ToList();
 
                 foreach (var route in routes)

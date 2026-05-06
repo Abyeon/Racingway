@@ -55,6 +55,7 @@ namespace Racingway.Windows
         private void UpdateRouteFromGizmo(Route route)
         {
             if (Plugin.Storage == null) return;
+            if (Plugin.LoadedRoutes == null) return;
 
             int index = Plugin.LoadedRoutes.FindIndex(x => x.Id == route.Id);
             if (index == -1)
@@ -82,6 +83,7 @@ namespace Racingway.Windows
         {
             // Fast return if player is null
             if (Plugin.ObjectTable.LocalPlayer == null) return;
+            if (Plugin.LoadedRoutes == null) return;
 
             ImGuiHelpers.SetWindowPosRelativeMainViewport("Trigger Overlay", new Vector2(0, 0));
 

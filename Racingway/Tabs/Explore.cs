@@ -49,7 +49,7 @@ namespace Racingway.Tabs
 
         public void Draw()
         {
-            if (Plugin.Storage == null) return;
+            if (Plugin.Storage == null || Plugin.LoadedRoutes == null) return;
 
             Vector2 contentAvailable = ImGui.GetContentRegionAvail();
 
@@ -126,185 +126,183 @@ namespace Racingway.Tabs
                             break;
                     }
 
-                    using (var table = ImRaii.Table("###race-exploreTable", 2, ImGuiTableFlags.BordersInnerH | ImGuiTableFlags.Resizable | ImGuiTableFlags.NoBordersInBody))
+                    using var table = ImRaii.Table("###race-exploreTable", 2, ImGuiTableFlags.BordersInnerH | ImGuiTableFlags.Resizable | ImGuiTableFlags.NoBordersInBody);
+                    ImGui.TableSetupColumn("Route", ImGuiTableColumnFlags.None, 100f);
+                    ImGui.TableSetupColumn("Best Times", ImGuiTableColumnFlags.None, 75f);
+                    ImGui.TableHeadersRow();
+
+                    for (int i = 0; i < routes.Count; i++)
                     {
-                        ImGui.TableSetupColumn("Route", ImGuiTableColumnFlags.None, 100f);
-                        ImGui.TableSetupColumn("Best Times", ImGuiTableColumnFlags.None, 75f);
-                        ImGui.TableHeadersRow();
+                        Route route = routes[i];
+                        if (!PassFilter(route.Name, filterText) && !PassFilter(route.Address.ReadableName, filterText)) continue;
 
-                        for (int i = 0; i < routes.Count; i++)
+                        ImGui.TableNextColumn();
+                        var cursorPos = ImGui.GetCursorPos();
+
+                        ImGui.Text(route.Name);
+                        ImGui.TextColored(ImGuiColors.DalamudGrey, route.Address.ReadableName);
+
+                        ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudGrey);
+                        ImGui.TextWrapped(route.Description);
+                        ImGui.PopStyleColor();
+                        var afterPos = ImGui.GetCursorPos();
+
+                        using (_ = ImRaii.PushColor(ImGuiCol.HeaderHovered, new Vector4(1, 1, 1, 0.05f)))
                         {
-                            Route route = routes[i];
-                            if (!PassFilter(route.Name, filterText) && !PassFilter(route.Address.ReadableName, filterText)) continue;
-
-                            ImGui.TableNextColumn();
-                            var cursorPos = ImGui.GetCursorPos();
-
-                            ImGui.Text(route.Name);
-                            ImGui.TextColored(ImGuiColors.DalamudGrey, route.Address.ReadableName);
-
-                            ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudGrey);
-                            ImGui.TextWrapped(route.Description);
-                            ImGui.PopStyleColor();
-                            var afterPos = ImGui.GetCursorPos();
-
-                            using (_ = ImRaii.PushColor(ImGuiCol.HeaderHovered, new Vector4(1, 1, 1, 0.05f)))
+                            using (_ = ImRaii.PushColor(ImGuiCol.HeaderActive, new Vector4(1, 1, 1, 0.07f)))
                             {
-                                using (_ = ImRaii.PushColor(ImGuiCol.HeaderActive, new Vector4(1, 1, 1, 0.07f)))
-                                {
-                                    ImGui.SetCursorPos(cursorPos);
-                                    ImGui.Selectable($"###{route.Name}{i}", false, ImGuiSelectableFlags.AllowItemOverlap, afterPos - cursorPos);
-                                    ImGui.SetCursorPos(afterPos);
-                                }
+                                ImGui.SetCursorPos(cursorPos);
+                                ImGui.Selectable($"###{route.Name}{i}", false, ImGuiSelectableFlags.AllowItemOverlap, afterPos - cursorPos);
+                                ImGui.SetCursorPos(afterPos);
                             }
+                        }
 
-                            using (var popup = ImRaii.ContextPopupItem($"###{route.Name}{i}"))
+                        using (var popup = ImRaii.ContextPopupItem($"###{route.Name}{i}"))
+                        {
+                            if (popup.Success)
                             {
-                                if (popup.Success)
+                                if (ImGui.Selectable("Copy Address"))
                                 {
-                                    if (ImGui.Selectable("Copy Address"))
+                                    ImGui.SetClipboardText(route.Address.ReadableName);
+                                }
+                                if (ImGui.Selectable("Set Flag"))
+                                {
+                                    var start = route.Triggers.FirstOrDefault(t => t?.GetType() == typeof(Start) || t?.GetType() == typeof(Start), null);
+                                    if (start != null)
                                     {
-                                        ImGui.SetClipboardText(route.Address.ReadableName);
+                                        TerritoryHelper.SetFlagMarkerPosition(start.Cube.Position, route.Address.TerritoryId, route.Address.MapId, route.Name, (uint)start.FlagIcon!);
+                                    } else
+                                    {
+                                        Plugin.ChatGui.PrintError("[RACE] There appears to be no start trigger in this route.");
                                     }
-                                    if (ImGui.Selectable("Set Flag"))
+                                }
+                                if (ImGui.Selectable("Export to Clipboard"))
+                                {
+                                    ShareHelper.ExportRouteToClipboard(route);
+                                }
+                                if (ImGui.Selectable("Export JSON to Clipboard"))
+                                {
+                                    ShareHelper.ExportRouteJsonToClipboard(route);
+                                }
+
+                                if (ImGui.IsItemHovered(ImGuiHoveredFlags.None))
+                                {
+                                    ImGui.SetTooltip("Intended only for creating external route lists at the moment.");
+                                }
+
+                                if (selectedSearch == Search.Loaded) // Hide this button unless it's a loaded route for now
+                                {
+                                    if (ImGui.Selectable("Display Records"))
                                     {
-                                        var start = route.Triggers.FirstOrDefault(t => t.GetType() == typeof(Start) || t.GetType() == typeof(Start), null);
-                                        if (start != null)
+                                        if (Plugin.LoadedRoutes.Contains(route))
                                         {
-                                            TerritoryHelper.SetFlagMarkerPosition(start.Cube.Position, route.Address.TerritoryId, route.Address.MapId, route.Name, (uint)start.FlagIcon);
-                                        } else
-                                        {
-                                            Plugin.ChatGui.PrintError("[RACE] There appears to be no start trigger in this route.");
+                                            Plugin.MainWindow.SelectTab("Records");
+                                            Plugin.SelectedRoute = route.Id;
                                         }
                                     }
-                                    if (ImGui.Selectable("Export to Clipboard"))
-                                    {
-                                        ShareHelper.ExportRouteToClipboard(route);
-                                    }
-                                    if (ImGui.Selectable("Export JSON to Clipboard"))
-                                    {
-                                        ShareHelper.ExportRouteJsonToClipboard(route);
-                                    }
+                                }
 
-                                    if (ImGui.IsItemHovered(ImGuiHoveredFlags.None))
+                                if (Plugin.LoadedRoutes.Contains(route) && route.Records.Count > 0)
+                                {
+                                    if (ImGui.Selectable("Display Best Time"))
                                     {
-                                        ImGui.SetTooltip("Intended only for creating external route lists at the moment.");
+                                        Plugin.DisplayedRecord = route.Records[0];
                                     }
+                                }
 
-                                    if (selectedSearch == Search.Loaded) // Hide this button unless it's a loaded route for now
+                                var ctrl = ImGui.GetIO().KeyCtrl;
+
+                                // Disable delete button if not holding ctrl
+                                using (_ = ImRaii.Disabled(!ctrl))
+                                {
+                                    if (ImGui.Selectable("Delete"))
                                     {
-                                        if (ImGui.Selectable("Display Records"))
+                                        int index = Plugin.LoadedRoutes.FindIndex(r => r.Id == route.Id);
+                                        bool exists = Plugin.Storage.RouteCache.ContainsKey(route.Id.ToString());
+
+                                        if (index != -1)
                                         {
-                                            if (Plugin.LoadedRoutes.Contains(route))
+                                            Plugin.LoadedRoutes.RemoveAt(index);
+                                        }
+
+                                        if (exists)
+                                        {
+                                            Plugin.Storage.GetRoutes().Delete(route.Id);
+                                            Plugin.Storage.UpdateRouteCache();
+
+                                            if (Plugin.SelectedRoute == route.Id)
                                             {
-                                                Plugin.MainWindow.SelectTab("Records");
-                                                Plugin.SelectedRoute = route.Id;
+                                                Plugin.SelectedRoute = Plugin.LoadedRoutes.Count == 0 ? null : Plugin.LoadedRoutes[0].Id;
                                             }
                                         }
                                     }
+                                }
 
-                                    if (Plugin.LoadedRoutes.Contains(route) && route.Records.Count > 0)
-                                    {
-                                        if (ImGui.Selectable("Display Best Time"))
-                                        {
-                                            Plugin.DisplayedRecord = route.Records[0];
-                                        }
-                                    }
-
-                                    var ctrl = ImGui.GetIO().KeyCtrl;
-
-                                    // Disable delete button if not holding ctrl
-                                    using (_ = ImRaii.Disabled(!ctrl))
-                                    {
-                                        if (ImGui.Selectable("Delete"))
-                                        {
-                                            int index = Plugin.LoadedRoutes.FindIndex(r => r.Id == route.Id);
-                                            bool exists = Plugin.Storage.RouteCache.ContainsKey(route.Id.ToString());
-
-                                            if (index != -1)
-                                            {
-                                                Plugin.LoadedRoutes.RemoveAt(index);
-                                            }
-
-                                            if (exists)
-                                            {
-                                                Plugin.Storage.GetRoutes().Delete(route.Id);
-                                                Plugin.Storage.UpdateRouteCache();
-
-                                                if (Plugin.SelectedRoute == route.Id)
-                                                {
-                                                    Plugin.SelectedRoute = Plugin.LoadedRoutes.Count == 0 ? null : Plugin.LoadedRoutes[0].Id;
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-                                    {
-                                        ImGui.SetTooltip("Hold ctrl to enable the delete button.");
-                                    }
+                                if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                                {
+                                    ImGui.SetTooltip("Hold ctrl to enable the delete button.");
                                 }
                             }
-                            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                        }
+                        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                        {
+                            ImGui.SetTooltip("Right-click to open popup");
+                        }
+
+                        ImGui.TableNextColumn();
+
+                        try
+                        {
+                            if (route.Records == null)
                             {
-                                ImGui.SetTooltip("Right-click to open popup");
+                                route.Records = new List<Record>();
                             }
 
-                            ImGui.TableNextColumn();
+                            List<Record> records = route.Records.GroupBy(x => x.Name).Select(g => g.OrderByDescending(x => x.Time).Last()).ToList();
 
-                            try
+                            if (records.ElementAtOrDefault(0) != null)
                             {
-                                if (route.Records == null)
-                                {
-                                    route.Records = new List<Record>();
-                                }
-
-                                List<Record> records = route.Records.GroupBy(x => x.Name).Select(g => g.OrderByDescending(x => x.Time).Last()).ToList();
-
-                                if (records.ElementAtOrDefault(0) != null)
-                                {
-                                    ImGui.TextColored(new Vector4(1, 0.85f, 0, 1), Time.PrettyFormatTimeSpan(records[0].Time));
-                                    ImGui.SameLine();
-                                    ImGui.TextColored(ImGuiColors.DalamudGrey, records[0].Name);
-                                }
-
-                                if (records.ElementAtOrDefault(1) != null)
-                                {
-                                    ImGui.TextColored(new Vector4(0.82f, 0.82f, 0.82f, 1), Time.PrettyFormatTimeSpan(records[1].Time));
-                                    ImGui.SameLine();
-                                    ImGui.TextColored(ImGuiColors.DalamudGrey, records[1].Name);
-                                }
-
-                                if (records.ElementAtOrDefault(2) != null)
-                                {
-                                    ImGui.TextColored(new Vector4(0.84f, 0.49f, 0.078f, 1), Time.PrettyFormatTimeSpan(records[2].Time));
-                                    ImGui.SameLine();
-                                    ImGui.TextColored(ImGuiColors.DalamudGrey, records[2].Name);
-                                }
-
-                                if (route.ClientFails > 0)
-                                {
-                                    ImGui.TextColored(ImGuiColors.DalamudGrey, "Your Fails:");
-                                    ImGui.SameLine();
-                                    ImGui.TextColored(ImGuiColors.DalamudRed, route.ClientFails.ToString());
-                                }
-
-                                if (route.ClientFinishes > 0)
-                                {
-                                    if (route.ClientFails > 0) ImGui.SameLine();
-
-                                    ImGui.TextColored(ImGuiColors.DalamudGrey, "Your Finishes:");
-                                    ImGui.SameLine();
-                                    ImGui.TextColored(ImGuiColors.HealerGreen, route.ClientFinishes.ToString());
-                                }
+                                ImGui.TextColored(new Vector4(1, 0.85f, 0, 1), Time.PrettyFormatTimeSpan(records[0].Time));
+                                ImGui.SameLine();
+                                ImGui.TextColored(ImGuiColors.DalamudGrey, records[0].Name);
                             }
-                            catch (Exception ex)
+
+                            if (records.ElementAtOrDefault(1) != null)
                             {
-                                Plugin.Log.Error(ex.ToString());
+                                ImGui.TextColored(new Vector4(0.82f, 0.82f, 0.82f, 1), Time.PrettyFormatTimeSpan(records[1].Time));
+                                ImGui.SameLine();
+                                ImGui.TextColored(ImGuiColors.DalamudGrey, records[1].Name);
                             }
+
+                            if (records.ElementAtOrDefault(2) != null)
+                            {
+                                ImGui.TextColored(new Vector4(0.84f, 0.49f, 0.078f, 1), Time.PrettyFormatTimeSpan(records[2].Time));
+                                ImGui.SameLine();
+                                ImGui.TextColored(ImGuiColors.DalamudGrey, records[2].Name);
+                            }
+
+                            if (route.ClientFails > 0)
+                            {
+                                ImGui.TextColored(ImGuiColors.DalamudGrey, "Your Fails:");
+                                ImGui.SameLine();
+                                ImGui.TextColored(ImGuiColors.DalamudRed, route.ClientFails.ToString());
+                            }
+
+                            if (route.ClientFinishes > 0)
+                            {
+                                if (route.ClientFails > 0) ImGui.SameLine();
+
+                                ImGui.TextColored(ImGuiColors.DalamudGrey, "Your Finishes:");
+                                ImGui.SameLine();
+                                ImGui.TextColored(ImGuiColors.HealerGreen, route.ClientFinishes.ToString());
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Plugin.Log.Error(ex.ToString());
+                        }
 
                             
-                        }
                     }
                 }
             }
