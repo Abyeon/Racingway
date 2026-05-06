@@ -32,7 +32,7 @@ internal class LocalDatabase : IDisposable
     internal LocalDatabase(Plugin plugin, string path)
     {
         Plugin = plugin;
-        Database = new LiteDatabase($"filename={path};upgrade=true");
+        Database = new LiteDatabase($"filename={path};upgrade=true;Collation=en-US/IgnoreCase");
         cancellationTokenSource = new CancellationTokenSource();
 
         dbPath = path;
