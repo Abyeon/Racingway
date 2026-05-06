@@ -39,7 +39,7 @@ public sealed class Plugin : IDalamudPlugin
     internal LocalDatabase? Storage { get; init; }
     public DataQueue DataQueue { get; init; }
 
-    internal TerritoryHelper territoryHelper { get; set; }
+    internal TerritoryHelper TerritoryHelper { get; set; }
 
     private const string CommandName = "/race";
 
@@ -51,7 +51,7 @@ public sealed class Plugin : IDalamudPlugin
     public MainWindow MainWindow { get; init; }
     public TimerWindow TimerWindow { get; init; }
 
-    public List<Route> LoadedRoutes { get; set; } = new();
+    public List<Route> LoadedRoutes { get; set; }
 
     public Record? DisplayedRecord { get; set; }
     public Record? ClientBestRecord { get; set; }
@@ -62,11 +62,11 @@ public sealed class Plugin : IDalamudPlugin
 
     public Address? CurrentAddress { get; set; }
 
-    private IPlayerCharacter? localPlayer = null;
+    private IPlayerCharacter? localPlayer;
     private DateTime lastAutoCleanupTime = DateTime.MinValue;
     private readonly TimeSpan autoCleanupInterval = TimeSpan.FromHours(1); // Run cleanup once per hour
 
-    public Dictionary<uint, Player> trackedPlayers = new();
+    public readonly Dictionary<uint, Player> trackedPlayers = new();
 
     public Dictionary<Type, bool> TriggerToggles { get; set; } = new Dictionary<Type, bool>
     {
@@ -84,7 +84,7 @@ public sealed class Plugin : IDalamudPlugin
     public Plugin()
     {
         LocalTimer = new Stopwatch();
-        territoryHelper = new TerritoryHelper(this);
+        TerritoryHelper = new TerritoryHelper(this);
 
         Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
         FontManager = new FontManager(this);
@@ -102,7 +102,7 @@ public sealed class Plugin : IDalamudPlugin
                 Storage.GetRecords().DeleteAll();
                 Storage.GetRoutes().DeleteAll();
 
-                Plugin.ChatGui.PrintError(
+                ChatGui.PrintError(
                     $"[RACE] Due to changes in the database, Racingway has wiped your previous data.. Apologies for this!"
                 );
 
@@ -152,7 +152,7 @@ public sealed class Plugin : IDalamudPlugin
             ShowHideOverlay();
 
             // Update our address when plugin first loads
-            territoryHelper.GetLocationID();
+            TerritoryHelper.GetLocationID();
 
             // Disabling till I can get this stable
             // Try to fetch routes from RouteLists
@@ -200,7 +200,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public void CheckCollision(Player player)
     {
-        if (LoadedRoutes == null || LoadedRoutes.Count == 0)
+        if (LoadedRoutes.Count == 0)
             return;
 
         // Disabling this for now
@@ -371,7 +371,7 @@ public sealed class Plugin : IDalamudPlugin
 
         try
         {
-            territoryHelper.GetLocationID();
+            TerritoryHelper.GetLocationID();
         }
         catch (Exception e)
         {
@@ -412,11 +412,6 @@ public sealed class Plugin : IDalamudPlugin
             {
                 route.AddMapMarkers();
                 route.AddMinimapMarkers();
-
-                if (route.Records == null)
-                {
-                    route.Records = new();
-                }
             }
 
             DisplayedRecord = null;
@@ -427,7 +422,7 @@ public sealed class Plugin : IDalamudPlugin
                 KickFromParkour(player.Value);
             }
 
-            if (LoadedRoutes.Count() > 0 && Configuration.AnnounceLoadedRoutes)
+            if (LoadedRoutes.Any() && Configuration.AnnounceLoadedRoutes)
             {
                 ChatGui.Print($"[RACE] Loaded {LoadedRoutes.Count()} route(s) in this area.");
             }
@@ -461,7 +456,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         foreach (Player player in trackedPlayers.Values)
         {
-            if (player.isClient && player.inParkour)
+            if (player is { isClient: true, inParkour: true })
             {
                 KickFromParkour(player);
                 HideTimer();
@@ -529,18 +524,17 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         if (Configuration.LogStart)
-            PayloadedChat(e, $" just started {route.Name}");
+            PlayerTaggedChat(e, $" just started {route.Name}");
     }
 
     private void QueueSplit(Player player, long difference)
     {
         if (player.isClient)
         {
-            string pretty = Time.PrettyFormatTimeSpan(TimeSpan.FromMilliseconds(difference));
+            Time.PrettyFormatTimeSpan(TimeSpan.FromMilliseconds(difference));
 
             Task.Run(async () =>
             {
-                bool positive = difference > 0;
                 TimerWindow.splits.Add(difference);
                 await Task.Delay(3000);
                 TimerWindow.splits.Remove(difference);
@@ -575,7 +569,7 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         if (Configuration.LogFinish && route != null)
-            PayloadedChat(e, $" completed lap ({e.lapsFinished}/{route.Laps}) in {e.timer}");
+            PlayerTaggedChat(e, $" completed lap ({e.lapsFinished}/{route.Laps}) in {e.timer}");
     }
 
     // Triggered whenever a player finished any loaded route
@@ -593,7 +587,7 @@ public sealed class Plugin : IDalamudPlugin
         // Immediately handle UI updates and local player actions
         if (localPlayer != null && e.Item1.isClient)
         {
-            if (ClientBestRecord != null && ClientBestRecord.Splits != null && ClientBestRecord.Splits.Length != 0)
+            if (ClientBestRecord is { Splits: not null } && ClientBestRecord.Splits.Length != 0)
             {
                 long currSplit = (long)e.Item2.Time.TotalMilliseconds;
                 long specifiedSplit = (long)ClientBestRecord.Time.TotalMilliseconds;
@@ -609,7 +603,7 @@ public sealed class Plugin : IDalamudPlugin
         if (Configuration.LogFinish)
         {
             var prettyPrint = Time.PrettyFormatTimeSpan(e.Item2.Time);
-            PayloadedChat(e.Item1, $" just finished {route.Name} in {prettyPrint} and {e.Item2.Distance} units.");
+            PlayerTaggedChat(e.Item1, $" just finished {route.Name} in {prettyPrint} and {e.Item2.Distance} units.");
         }
 
         Record record = e.Item2;
@@ -682,7 +676,7 @@ public sealed class Plugin : IDalamudPlugin
 
         if (Configuration.LogFails)
         {
-            PayloadedChat(e, " just failed the parkour.");
+            PlayerTaggedChat(e, " just failed the parkour.");
         }
     }
 
@@ -703,7 +697,7 @@ public sealed class Plugin : IDalamudPlugin
             .ContinueWith(_ =>
             {
                 if (LocalTimer.IsRunning)
-                    return; // Dont disable if we're back in parkour.
+                    return; // Don't disable if we're back in parkour.
                 TimerWindow.IsOpen = false;
                 TimerWindow.currentLap = 1;
                 TimerWindow.maxLap = 1;
@@ -770,7 +764,7 @@ public sealed class Plugin : IDalamudPlugin
         });
     }
 
-    public static void PayloadedChat(Player player, string message)
+    public static void PlayerTaggedChat(Player player, string message)
     {
         Framework.RunOnFrameworkThread(() =>
         {
@@ -788,7 +782,7 @@ public sealed class Plugin : IDalamudPlugin
             TextPayload text = new TextPayload(message);
             SeString chat = new SeString(new Payload[] { payload, text });
 
-            Plugin.ChatGui.Print(chat);
+            ChatGui.Print(chat);
         });
     }
 
@@ -818,11 +812,8 @@ public sealed class Plugin : IDalamudPlugin
         MainWindow.Dispose();
         TriggerOverlay.Dispose();
 
-        if (Storage != null)
-        {
-            Storage.Dispose();
-        }
-        
+        Storage?.Dispose();
+
         Framework.Update -= OnFrameworkTick;
         ClientState.ZoneInit -= OnZoneInit;
         ClientState.Logout -= OnLogout;

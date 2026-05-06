@@ -212,7 +212,7 @@ namespace Racingway.Utils
         }
 
         //https://github.com/Critical-Impact/CriticalCommonLib/blob/bc358bd4acb1ce8110e51e9eaa495ff12a0300bc/Services/CharacterMonitor.cs#L899
-        private unsafe uint CorrectedTerritoryTypeId()
+        private static unsafe uint CorrectedTerritoryTypeId()
         {
             var manager = HousingManager.Instance();
             if (manager == null)
@@ -224,7 +224,7 @@ namespace Racingway.Utils
             if (character != null && manager->CurrentTerritory != null)
             {
                 var territoryType = manager->IndoorTerritory != null
-                    ? ((HousingTerritory2*)manager->CurrentTerritory)->TerritoryTypeId
+                    ? manager->IndoorTerritory->HouseId.TerritoryTypeId
                     : Plugin.ClientState.TerritoryType;
 
                 return territoryType;

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Racingway.Utils.Storage
 {
     // Optimized version of DataQueue to minimize main thread FPS impact
-    public class DataQueue
+    public class DataQueue : IDisposable
     {
         // Thread pool for database operations
         private readonly ThreadPool _threadPool = new ThreadPool(2); // Use 2 worker threads for database operations
@@ -19,7 +19,7 @@ namespace Racingway.Utils.Storage
         private SemaphoreSlim DataLock { get; init; } = new SemaphoreSlim(1, 1);
         internal DateTime LastTaskTime { get; set; }
 
-        internal void Dispose()
+        public void Dispose()
         {
             DataTaskQueue.Clear();
             _threadPool.Dispose();
