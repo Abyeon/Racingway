@@ -5,6 +5,7 @@ using Racingway.Race;
 using Racingway.Utils.Structs;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Numerics;
 using System.Text;
 
@@ -107,9 +108,8 @@ namespace Racingway.Utils
             });
         }
 
-        public void GetLocationID()
+        public void GetLocationID(uint territory)
         {
-            uint territory = Plugin.ClientState.TerritoryType;
             bool isInside = IsInside();
 
             Stopwatch timer = Stopwatch.StartNew();
@@ -140,7 +140,7 @@ namespace Racingway.Utils
                 {
                     if (Plugin.ObjectTable.LocalPlayer != null)
                     {
-                        Address address = new Address(GetTerritoryId(), GetMapId(), territory.ToString(), GetAreaName());
+                        Address address = new Address(GetTerritoryId(), GetMapId(), territory.ToString(CultureInfo.InvariantCulture), GetAreaName());
                         Plugin.AddressChanged(address);
 
                         return true;

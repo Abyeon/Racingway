@@ -1,3 +1,4 @@
+using System.Globalization;
 using LiteDB;
 using MessagePack;
 
@@ -34,8 +35,8 @@ namespace Racingway.Race
         {
             BsonDocument doc = new BsonDocument();
             doc["_id"] = Id;
-            doc["territoryId"] = TerritoryId.ToString();
-            doc["mapId"] = MapId.ToString();
+            doc["territoryId"] = TerritoryId.ToString(CultureInfo.InvariantCulture);
+            doc["mapId"] = MapId.ToString(CultureInfo.InvariantCulture);
             doc["locationId"] = LocationId;
             doc["readableName"] = ReadableName;
 

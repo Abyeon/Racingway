@@ -118,7 +118,7 @@ namespace Racingway.Race
             });
 
             doc["triggers"] = serializedTriggers;
-            doc["records"] = BsonMapper.Global.Serialize<List<Record>>(Records);
+            doc["records"] = BsonMapper.Global.Serialize(Records);
 
             doc["allowMounts"] = AllowMounts;
             doc["enabled"] = Enabled;
@@ -227,9 +227,9 @@ namespace Racingway.Race
 
             var sb = new StringBuilder();
 
-            for (int i = 0; i < data.Length; i++)
+            foreach (byte t in data)
             {
-                sb.Append(data[i].ToString("x2"));
+                sb.Append(t.ToString("x2"));
             }
 
             return sb.ToString();

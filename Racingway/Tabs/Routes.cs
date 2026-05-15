@@ -102,7 +102,7 @@ namespace Racingway.Tabs
             ImGui.SameLine();
             if (ImGuiComponents.IconButton(FontAwesomeIcon.Recycle))
             {
-                Plugin.TerritoryHelper.GetLocationID();
+                Plugin.TerritoryHelper.GetLocationID(Plugin.ClientState.TerritoryType);
             }
 
             if (selectedRoute == null)

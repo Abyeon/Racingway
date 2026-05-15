@@ -152,7 +152,7 @@ public sealed class Plugin : IDalamudPlugin
             ShowHideOverlay();
 
             // Update our address when plugin first loads
-            TerritoryHelper.GetLocationID();
+            TerritoryHelper.GetLocationID(ClientState.TerritoryType);
 
             // Disabling till I can get this stable
             // Try to fetch routes from RouteLists
@@ -371,11 +371,11 @@ public sealed class Plugin : IDalamudPlugin
 
         try
         {
-            TerritoryHelper.GetLocationID();
+            TerritoryHelper.GetLocationID(args.TerritoryType.RowId);
         }
         catch (Exception e)
         {
-            Plugin.Log.Error(e.ToString());
+            Log.Error(e.ToString());
         }
     }
 

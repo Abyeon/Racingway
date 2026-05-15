@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
@@ -195,15 +196,15 @@ namespace Racingway.Race.Collision.Triggers
 
             BsonArray cube =
             [
-                Cube.Position.X.ToString(),
-                Cube.Position.Y.ToString(),
-                Cube.Position.Z.ToString(), // Position
-                Cube.Scale.X.ToString(),
-                Cube.Scale.Y.ToString(),
-                Cube.Scale.Z.ToString(), // Scale
-                Cube.Rotation.X.ToString(),
-                Cube.Rotation.Y.ToString(),
-                Cube.Rotation.Z.ToString(), // Rotation
+                Cube.Position.X.ToString(CultureInfo.InvariantCulture),
+                Cube.Position.Y.ToString(CultureInfo.InvariantCulture),
+                Cube.Position.Z.ToString(CultureInfo.InvariantCulture), // Position
+                Cube.Scale.X.ToString(CultureInfo.InvariantCulture),
+                Cube.Scale.Y.ToString(CultureInfo.InvariantCulture),
+                Cube.Scale.Z.ToString(CultureInfo.InvariantCulture), // Scale
+                Cube.Rotation.X.ToString(CultureInfo.InvariantCulture),
+                Cube.Rotation.Y.ToString(CultureInfo.InvariantCulture),
+                Cube.Rotation.Z.ToString(CultureInfo.InvariantCulture), // Rotation
             ];
 
             doc["Cube"] = cube;
